@@ -9,7 +9,7 @@ export function UpdateNotification() {
         action: {
           label: '업데이트',
           onClick: () => {
-            // 업데이트 다운로드 요청ㄴㄴ
+            // 업데이트 다운로드 요청
             window.electron.ipcRenderer.send('download-update')
           }
         }
