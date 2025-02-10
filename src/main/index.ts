@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerIpcHandlers } from './ipcHandlers'
-import { checkForUpdates, initAutoUpdater, setMainWindow } from './autoUpdater'
+import { autoUpdater } from 'electron-updater'
 
 function createWindow(): void {
   // Create the browser window.
@@ -16,14 +16,12 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      contextIsolation: true,
+      contextIsolation: true
     },
-    titleBarStyle: "hidden",
+    titleBarStyle: 'hidden'
   })
 
   registerIpcHandlers(mainWindow)
-
-  setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -43,6 +41,29 @@ function createWindow(): void {
   }
 }
 
+function setupAutoUpdater() {
+  // private 저장소를 위한 토큰 설정은 빌드 시 자동으로 처리됨
+  // autoUpdater.setFeedURL() 설정은 제거
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('업데이트 확인 중...')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('업데이트가 있습니다:', info)
+  })
+
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('현재 최신 버전입니다:', info)
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('업데이트 중 오류 발생:', err)
+  })
+
+  autoUpdater.checkForUpdatesAndNotify()
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -59,8 +80,7 @@ app.whenReady().then(() => {
 
   createWindow()
 
-  initAutoUpdater()
-  checkForUpdates()
+  setupAutoUpdater()
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
