@@ -13,6 +13,9 @@ export function setMainWindow(window: BrowserWindow): void {
 
 // 자동 업데이트 이벤트 초기화 함수
 export function initAutoUpdater(): void {
+  autoUpdater.autoDownload = false // 자동 다운로드 비활성화
+  autoUpdater.autoInstallOnAppQuit = true
+
   // 로깅 설정
   autoUpdater.logger = log
   log.transports.file.level = 'info'
@@ -25,7 +28,13 @@ export function initAutoUpdater(): void {
 
   autoUpdater.on('update-available', (info) => {
     log.info('업데이트가 있습니다:', info)
-    mainWindow?.webContents.send('update-available', info)
+    // 업데이트 확인 시 사용자에게 선택지 제공
+    if (mainWindow) {
+      mainWindow.webContents.send('update-available', {
+        version: info.version,
+        releaseNotes: info.releaseNotes
+      })
+    }
   })
 
   autoUpdater.on('update-not-available', (info) => {
@@ -44,14 +53,19 @@ export function initAutoUpdater(): void {
     mainWindow?.webContents.send('download-progress', progressObj)
   })
 
-  autoUpdater.on('update-downloaded', (info) => {
-    log.info('업데이트 다운로드 완료:', info)
-    mainWindow?.webContents.send('update-downloaded', info)
+  autoUpdater.on('update-downloaded', () => {
+    log.info('업데이트 다운로드 완료')
+    mainWindow?.webContents.send('update-downloaded')
   })
 
-  // 렌더러로부터 업데이트 설치 요청 받기
+  // 사용자가 업데이트 다운로드를 승인했을 때
+  ipcMain.on('start-update-download', () => {
+    autoUpdater.downloadUpdate()
+  })
+
+  // 사용자가 업데이트 설치를 승인했을 때
   ipcMain.on('install-update', () => {
-    autoUpdater.quitAndInstall()
+    autoUpdater.quitAndInstall(false, true)
   })
 }
 
@@ -59,3 +73,21 @@ export function initAutoUpdater(): void {
 export function checkForUpdates(): void {
   autoUpdater.checkForUpdatesAndNotify()
 }
+
+// 개발 환경에서 테스트를 위한 코드
+if (process.env.NODE_ENV === 'development') {
+  autoUpdater.forceDevUpdateConfig = true
+  autoUpdater.checkForUpdates().catch((err) => {
+    log.error('업데이트 확인 중 오류 발생:', err)
+  })
+}
+
+// 주기적으로 업데이트 확인 (예: 1시간마다)
+setInterval(
+  () => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      log.error('업데이트 확인 중 오류 발생:', err)
+    })
+  },
+  60 * 60 * 1000
+)

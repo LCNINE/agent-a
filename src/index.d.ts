@@ -95,12 +95,21 @@ interface AgentContext {
   getStatus: () => Promise<BotStatus>
 }
 
+interface UpdateContext {
+  onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string }) => void) => void
+  onUpdateDownloaded: (callback: () => void) => void
+  onDownloadProgress: (callback: (progress: { percent: number }) => void) => void
+  startDownload: () => void
+  installUpdate: () => void
+}
+
 export {}
 declare global {
   interface Window {
     themeMode: ThemeModeContext
     electronWindow: ElectronWindow
     agent: AgentContext
+    update: UpdateContext
     electron: {
       ipcRenderer: {
         on: (channel: string, func: (...args: any[]) => void) => void
