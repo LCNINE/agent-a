@@ -1,12 +1,18 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { toast } from 'sonner'
 
 export function UpdateNotification() {
   useEffect(() => {
-    // 업데이트 이벤트 리스너 등록
     window.electron.ipcRenderer.on('update-available', (info) => {
-      toast.message('업데이트 발견', {
-        description: '새로운 버전이 다운로드됩니다.'
+      toast.message('새로운 버전이 있습니다', {
+        description: `버전 ${info.version}이 릴리즈되었습니다.`,
+        action: {
+          label: '업데이트',
+          onClick: () => {
+            // 업데이트 다운로드 요청ㄴㄴ
+            window.electron.ipcRenderer.send('download-update')
+          }
+        }
       })
     })
 

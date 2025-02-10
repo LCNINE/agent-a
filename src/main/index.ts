@@ -42,8 +42,9 @@ function createWindow(): void {
 }
 
 function setupAutoUpdater() {
-  // private 저장소를 위한 토큰 설정은 빌드 시 자동으로 처리됨
-  // autoUpdater.setFeedURL() 설정은 제거
+  // 자동 다운로드는 비활성화하고, 사용자가 선택할 수 있게 함
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true // 앱 종료시 자동 설치
 
   autoUpdater.on('checking-for-update', () => {
     console.log('업데이트 확인 중...')
@@ -51,17 +52,31 @@ function setupAutoUpdater() {
 
   autoUpdater.on('update-available', (info) => {
     console.log('업데이트가 있습니다:', info)
+    // 업데이트 가능할 때 사용자에게 알림
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send('update-available', {
+        version: info.version,
+        releaseNotes: info.releaseNotes
+      })
+    })
   })
 
-  autoUpdater.on('update-not-available', (info) => {
-    console.log('현재 최신 버전입니다:', info)
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('업데이트가 다운로드 되었습니다:', info)
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send('update-downloaded', info)
+    })
   })
 
   autoUpdater.on('error', (err) => {
     console.error('업데이트 중 오류 발생:', err)
+    BrowserWindow.getAllWindows().forEach((window) => {
+      window.webContents.send('update-error', err)
+    })
   })
 
-  autoUpdater.checkForUpdatesAndNotify()
+  // 앱 시작할 때 한 번만 업데이트 확인
+  autoUpdater.checkForUpdates()
 }
 
 // This method will be called when Electron has finished
