@@ -42,9 +42,16 @@ function createWindow(): void {
 }
 
 function setupAutoUpdater() {
-  // 자동 다운로드는 비활성화하고, 사용자가 선택할 수 있게 함
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true // 앱 종료시 자동 설치
+  autoUpdater.autoInstallOnAppQuit = true
+
+  // 15분마다 업데이트 확인
+  const CHECK_INTERVAL = 15 * 60 * 1000
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('업데이트 확인 중 오류 발생:', err)
+    })
+  }, CHECK_INTERVAL)
 
   autoUpdater.on('checking-for-update', () => {
     console.log('업데이트 확인 중...')
@@ -75,8 +82,10 @@ function setupAutoUpdater() {
     })
   })
 
-  // 앱 시작할 때 한 번만 업데이트 확인
-  autoUpdater.checkForUpdates()
+  // 초기 업데이트 확인
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('초기 업데이트 확인 중 오류 발생:', err)
+  })
 }
 
 // This method will be called when Electron has finished
