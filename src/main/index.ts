@@ -57,21 +57,24 @@ function setupAutoUpdater() {
   })
 
   autoUpdater.on('update-available', (info) => {
-    if (updateInProgress) return
-    console.log('업데이트가 있습니다:', info)
-
     dialog
       .showMessageBox({
         type: 'info',
-        title: '업데이트',
-        message: `새로운 버전(${info.version})이 확인되었습니다. 설치 파일을 다운로드 하시겠습니까?`,
-        detail: info.releaseNotes?.toString() || '',
-        buttons: ['지금 설치', '나중에 설치']
+        title: '업데이트 확인',
+        message: '새로운 버전이 있습니다. 지금 다운로드 하시겠습니까?',
+        buttons: ['지금 설치', '나중에']
       })
       .then((result) => {
         if (result.response === 0) {
-          updateInProgress = true
+          // 즉시 다운로드 시작
           autoUpdater.downloadUpdate()
+
+          // 프로그레스바 표시
+          if (!progressBar) {
+            progressBar = new ProgressBar({
+              title: '업데이트 다운로드 중...'
+            })
+          }
         }
       })
   })
