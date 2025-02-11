@@ -5,6 +5,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import fs from 'fs'
 import { AgentConfig } from '../..'
 import { waitRandom } from './common/timeUtils'
+import { app } from 'electron'
+import path from 'path'
 
 export interface InstagramPost {
   id: string
@@ -35,7 +37,11 @@ export class InstagramAgent {
     try {
       this.browser = await puppeteer.use(StealthPlugin()).launch({
         headless: false,
-        userDataDir: `./accountData/${this.config.credentials.username}`,
+        userDataDir: path.join(
+          app.getPath('userData'),
+          'accountData',
+          this.config.credentials.username
+        ),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
