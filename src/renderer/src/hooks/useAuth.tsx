@@ -9,7 +9,6 @@ export type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({ user: null })
 
-
 export function useAuthContext() {
   const auth = useContext(AuthContext)
   if (auth === undefined) {
