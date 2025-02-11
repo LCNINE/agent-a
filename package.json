@@ -118,7 +118,7 @@
       "owner": "LCNINE",
       "repo": "agent-a",
       "private": true,
-      "token": "${env.GH_TOKEN}"
+      "token": "${GH_TOKEN}"
     },
     "win": {
       "target": [
