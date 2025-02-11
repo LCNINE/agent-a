@@ -18,7 +18,12 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "publish": "electron-builder --win -p always",
+    "version:patch": "npm version patch && git push && git push --tags",
+    "version:minor": "npm version minor && git push && git push --tags",
+    "version:major": "npm version major && git push && git push --tags",
+    "release": "npm run version:patch && npm run publish"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
@@ -60,7 +65,8 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "electron-log": "^5.3.0",
-    "electron-updater": "^6.1.7",
+    "electron-progressbar": "^2.2.1",
+    "electron-updater": "^6.3.9",
     "embla-carousel-react": "^8.5.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.475.0",
@@ -85,6 +91,7 @@
     "@electron-toolkit/eslint-config-prettier": "^2.0.0",
     "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/electron-progressbar": "^1.2.7",
     "@types/node": "^20.17.17",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
@@ -102,5 +109,34 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.5.2",
     "vite": "^5.3.1"
+  },
+  "build": {
+    "appId": "com.lucide.agentApp",
+    "productName": "Agent A",
+    "publish": {
+      "provider": "github",
+      "owner": "LCNINE",
+      "repo": "agent-a",
+      "private": true,
+      "token": "${env.GH_TOKEN}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
