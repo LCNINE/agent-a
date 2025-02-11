@@ -1,9 +1,13 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerIpcHandlers } from './ipcHandlers'
 import { autoUpdater } from 'electron-updater'
+import { setMainWindow } from './autoUpdater'
+import ProgressBar from 'electron-progressbar'
+
+let progressBar: any = null
 
 function createWindow(): void {
   // Create the browser window.
@@ -22,6 +26,7 @@ function createWindow(): void {
   })
 
   registerIpcHandlers(mainWindow)
+  setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -45,34 +50,59 @@ function setupAutoUpdater() {
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
-  // 15분마다 업데이트 확인
-  const CHECK_INTERVAL = 15 * 60 * 1000
-  setInterval(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.error('업데이트 확인 중 오류 발생:', err)
-    })
-  }, CHECK_INTERVAL)
-
   autoUpdater.on('checking-for-update', () => {
     console.log('업데이트 확인 중...')
   })
 
   autoUpdater.on('update-available', (info) => {
     console.log('업데이트가 있습니다:', info)
-    // 업데이트 가능할 때 사용자에게 알림
-    BrowserWindow.getAllWindows().forEach((window) => {
-      window.webContents.send('update-available', {
-        version: info.version,
-        releaseNotes: info.releaseNotes
+    // 다이얼로그로 사용자 확인
+    dialog
+      .showMessageBox({
+        type: 'info',
+        title: '업데이트',
+        message: '새로운 버전이 확인되었습니다. 설치 파일을 다운로드 하시겠습니까?',
+        buttons: ['지금 설치', '나중에 설치']
       })
+      .then((result) => {
+        if (result.response === 0) {
+          autoUpdater.downloadUpdate()
+        }
+      })
+  })
+
+  autoUpdater.once('download-progress', () => {
+    progressBar = new ProgressBar({
+      text: '다운로드 중...'
     })
+
+    progressBar
+      .on('completed', () => {
+        console.log('다운로드 완료')
+      })
+      .on('aborted', () => {
+        console.log('다운로드 취소됨')
+      })
   })
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('업데이트가 다운로드 되었습니다:', info)
-    BrowserWindow.getAllWindows().forEach((window) => {
-      window.webContents.send('update-downloaded', info)
-    })
+    if (progressBar) {
+      progressBar.setCompleted()
+    }
+
+    dialog
+      .showMessageBox({
+        type: 'info',
+        title: '업데이트',
+        message: '새로운 버전이 다운로드 되었습니다. 다시 시작하시겠습니까?',
+        buttons: ['예', '아니오']
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          autoUpdater.quitAndInstall(false, true)
+        }
+      })
   })
 
   autoUpdater.on('error', (err) => {

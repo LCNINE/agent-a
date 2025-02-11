@@ -1,15 +1,15 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
 import React, { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useTranslation } from 'react-i18next'
+import { Toaster } from 'sonner'
+import { updateAppLanguage } from './helpers/language'
+import { syncThemeWithLocal } from './helpers/theme'
+import './index.css'
 import './localization/i18n'
 import { router } from './routes/router'
-import { RouterProvider } from '@tanstack/react-router'
-import { Toaster } from 'sonner'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import './index.css'
-import { syncThemeWithLocal } from './helpers/theme'
-import { updateAppLanguage } from './helpers/language'
-import UpdateAlert from './components/UpdateAlert'
+import UpdateNotification from './components/UpdateNotification'
 
 export default function App() {
   const { i18n } = useTranslation()
@@ -22,7 +22,7 @@ export default function App() {
   return (
     <>
       <RouterProvider router={router} />
-      <UpdateAlert />
+      <UpdateNotification />
     </>
   )
 }
