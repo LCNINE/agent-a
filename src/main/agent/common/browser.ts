@@ -53,12 +53,13 @@ async function ensureChromium(): Promise<string> {
       }
     }
 
-    const chromeExePath = join(chromePath, 'chrome-win', 'chrome.exe')
+    const chromeExePath = join(chromePath, 'chrome-win64', 'chrome.exe')
 
     if (!fs.existsSync(chromeExePath)) {
       log.info('Installing Chrome...')
 
-      const downloadUrl = `https://storage.googleapis.com/chromium-browser-snapshots/${platform}64/${version}/${getFileName(platform)}`
+      const downloadUrl = `https://storage.googleapis.com/chrome-for-testing-public/133.0.6943.53/win64/chrome-win64.zip`
+
       log.info('Download URL:', downloadUrl)
 
       const exists = await checkUrlExists(downloadUrl)
@@ -143,6 +144,10 @@ async function downloadFile(url: string, dest: string): Promise<void> {
 export async function startBrowser(credentials: LoginCredentials) {
   const chromePath = await ensureChromium()
   console.log('chromePath', chromePath)
+
+  if (!fs.existsSync(chromePath)) {
+    throw new Error('Chrome executable not found at: ' + chromePath)
+  }
 
   return await puppeteer.use(StealthPlugin()).launch({
     headless: false,
