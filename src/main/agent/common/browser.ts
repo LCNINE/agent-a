@@ -9,6 +9,7 @@ import ProgressBar from 'electron-progressbar'
 import fs from 'fs'
 import puppeteerCore from 'puppeteer-core'
 import isOnline from 'is-online'
+import log from 'electron-log'
 
 async function ensureChromium(): Promise<string> {
   const appPath = app.getPath('userData')
@@ -21,13 +22,12 @@ async function ensureChromium(): Promise<string> {
   while (currentRetry < maxRetries) {
     try {
       if (!fs.existsSync(chromeExePath)) {
-        // 네트워크 연결 확인
         const online = await isOnline()
         if (!online) {
           throw new Error('인터넷 연결이 필요합니다.')
         }
 
-        console.log('Chrome not found, installing...')
+        log.info('Chrome not found, installing...')
 
         const progressBar = new ProgressBar({
           indeterminate: false,
@@ -73,10 +73,9 @@ async function ensureChromium(): Promise<string> {
           detail: `오류: ${errorMessage}\n다시 시도해주세요.`,
           buttons: ['확인']
         })
-        throw error // 이 에러는 함수를 종료시킵니다
+        throw error
       }
 
-      // 재시도 전 사용자에게 알림
       const response = await dialog.showMessageBox({
         type: 'warning',
         title: 'Chrome 설치 재시도',
@@ -87,7 +86,6 @@ async function ensureChromium(): Promise<string> {
       })
 
       if (response.response === 1) {
-        // '취소' 선택시 에러를 던져 함수를 종료합니다
         throw new Error('사용자가 설치를 취소했습니다.')
       }
 
@@ -100,6 +98,7 @@ async function ensureChromium(): Promise<string> {
 }
 export async function startBrowser(credentials: LoginCredentials) {
   const chromePath = await ensureChromium()
+  console.log('chromePath', chromePath)
 
   return await puppeteer.use(StealthPlugin()).launch({
     headless: false,
