@@ -10,9 +10,10 @@ files:
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
   - '.cache/puppeteer/**/*'
+  - 'resources/**'
 asarUnpack:
-  - resources/**
   - '.cache/puppeteer/**/*'
+  - 'resources/**'
 win:
   executableName: agent-a
 nsis:
