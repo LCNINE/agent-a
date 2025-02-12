@@ -23,6 +23,11 @@ export function useAgent() {
   }, [])
 
   const startAgent = async (credentials: LoginCredentials) => {
+    if (!credentials.username || !credentials.password) {
+      toast.error('계정 정보가 올바르지 않습니다.')
+      return
+    }
+
     if (workList.length === 0) {
       toast.error('작업이 없습니다.')
       return
