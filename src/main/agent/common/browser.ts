@@ -52,7 +52,7 @@ async function ensureChromium(): Promise<string> {
           return 'chrome-win32.zip'
       }
     }
-    ㄴㄴ
+
     const chromeExePath = join(chromePath, 'chrome-win', 'chrome.exe')
 
     if (!fs.existsSync(chromeExePath)) {
