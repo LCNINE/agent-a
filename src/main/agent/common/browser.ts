@@ -4,60 +4,107 @@ import { USER_DATA_DIR } from './auth'
 import { LoginCredentials } from '../../..'
 import { install, Browser } from '@puppeteer/browsers'
 import { join } from 'path'
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import ProgressBar from 'electron-progressbar'
 import fs from 'fs'
+import puppeteerCore from 'puppeteer-core'
+import isOnline from 'is-online'
 
-async function ensureChromium() {
-  const cachePath = join(app.getPath('userData'), '.cache', 'puppeteer')
+async function ensureChromium(): Promise<string> {
+  const appPath = app.getPath('userData')
+  const chromePath = join(appPath, '.cache', 'puppeteer', 'chrome')
+  const chromeExePath = join(chromePath, 'win64-117.0.5938.149', 'chrome-win', 'chrome.exe')
 
-  try {
-    // 크롬 실행 파일 경로 확인
-    const chromePath = join(cachePath, 'chrome', 'win64-117.0.5938.149', 'chrome-win', 'chrome.exe')
+  const maxRetries = 3
+  let currentRetry = 0
 
-    // 파일이 존재하지 않으면 설치 진행
-    if (!fs.existsSync(chromePath)) {
-      console.log('Chrome not found, installing...')
-      await install({
-        browser: Browser.CHROMIUM,
-        buildId: '117.0.5938.149',
-        cacheDir: cachePath,
-        downloadProgressCallback: (downloadedBytes, totalBytes) => {
-          const progressBar = new ProgressBar({
-            indeterminate: false,
-            text: 'Chrome 다운로드 중...',
-            detail: '잠시만 기다려주세요',
-            browserWindow: {
-              parent: undefined,
-              modal: true,
-              closable: false
-            }
-          })
-
-          const percentage = Math.round((downloadedBytes / totalBytes) * 100)
-          progressBar.value = percentage
-
-          if (percentage >= 100) {
-            progressBar.close()
-          }
+  while (currentRetry < maxRetries) {
+    try {
+      if (!fs.existsSync(chromeExePath)) {
+        // 네트워크 연결 확인
+        const online = await isOnline()
+        if (!online) {
+          throw new Error('인터넷 연결이 필요합니다.')
         }
+
+        console.log('Chrome not found, installing...')
+
+        const progressBar = new ProgressBar({
+          indeterminate: false,
+          text: 'Chrome 다운로드 중...',
+          detail: '잠시만 기다려주세요...',
+          browserWindow: {
+            webPreferences: {
+              nodeIntegration: true
+            }
+          }
+        })
+
+        fs.mkdirSync(join(appPath, '.cache', 'puppeteer'), { recursive: true })
+
+        // Chrome 설치
+        await install({
+          browser: Browser.CHROMIUM,
+          buildId: '117.0.5938.149',
+          cacheDir: join(appPath, '.cache', 'puppeteer'),
+          downloadProgressCallback: (downloadedBytes, totalBytes) => {
+            const progress = Math.round((downloadedBytes / totalBytes) * 100)
+            progressBar.value = progress
+            progressBar.detail = `다운로드 중... ${progress}%`
+          }
+        })
+
+        progressBar.close()
+      }
+
+      return chromeExePath
+    } catch (error) {
+      currentRetry++
+      console.error(`Chrome installation attempt ${currentRetry} failed:`, error)
+
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+
+      if (currentRetry === maxRetries) {
+        await dialog.showMessageBox({
+          type: 'error',
+          title: 'Chrome 설치 실패',
+          message: 'Chrome 설치에 실패했습니다.',
+          detail: `오류: ${errorMessage}\n다시 시도해주세요.`,
+          buttons: ['확인']
+        })
+        throw error // 이 에러는 함수를 종료시킵니다
+      }
+
+      // 재시도 전 사용자에게 알림
+      const response = await dialog.showMessageBox({
+        type: 'warning',
+        title: 'Chrome 설치 재시도',
+        message: '설치에 실패했습니다. 다시 시도하시겠습니까?',
+        detail: `오류: ${errorMessage}`,
+        buttons: ['재시도', '취소'],
+        defaultId: 0
       })
+
+      if (response.response === 1) {
+        // '취소' 선택시 에러를 던져 함수를 종료합니다
+        throw new Error('사용자가 설치를 취소했습니다.')
+      }
+
+      // 잠시 대기 후 재시도
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
-
-    return join(cachePath, 'chrome', 'win64-117.0.5938.149', 'chrome-win')
-  } catch (error) {
-    console.error('Chrome installation failed:', error)
-    throw error
   }
-}
 
+  throw new Error('Chrome 설치에 실패했습니다.')
+}
 export async function startBrowser(credentials: LoginCredentials) {
   const chromePath = await ensureChromium()
 
   return await puppeteer.use(StealthPlugin()).launch({
     headless: false,
     userDataDir: join(app.getPath('userData'), 'accountData', credentials.username),
-    executablePath: join(chromePath, 'chrome'),
+    executablePath: chromePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -68,3 +115,5 @@ export async function startBrowser(credentials: LoginCredentials) {
     ]
   })
 }
+
+export { ensureChromium }
