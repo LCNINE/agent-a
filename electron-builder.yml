@@ -43,4 +43,4 @@ publish:
   owner: LCNINE
   repo: agent-a
   private: true
-  token: ${GH_TOKEN}
+  token: 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
