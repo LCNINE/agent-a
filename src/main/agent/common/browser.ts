@@ -8,22 +8,68 @@ import { app, dialog } from 'electron'
 import ProgressBar from 'electron-progressbar'
 import fs from 'fs'
 import puppeteerCore from 'puppeteer-core'
+import { execSync } from 'child_process'
+import https from 'https'
+import http from 'http'
+import { createWriteStream } from 'fs'
+import { pipeline } from 'stream'
 
 import log from 'electron-log'
+
+async function checkUrlExists(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const proto = !url.charAt(4).localeCompare('s') ? https : http
+
+    const request = proto.get(url, (response) => {
+      resolve(response.statusCode === 200)
+    })
+
+    request.on('error', () => {
+      resolve(false)
+    })
+  })
+}
 
 async function ensureChromium(): Promise<string> {
   const appPath = app.getPath('userData')
   const chromePath = join(appPath, '.cache', 'puppeteer', 'chrome')
-  const chromeExePath = join(chromePath, 'win64-133.0.6943.53', 'chrome-win', 'chrome.exe')
 
   try {
+    const version = '1108766'
+    const platform =
+      process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'
+    const arch = process.arch === 'x64' ? 'x64' : 'x86'
+
+    const getFileName = (platform: string) => {
+      switch (platform.toLowerCase()) {
+        case 'win':
+          return 'chrome-win32.zip'
+        case 'mac':
+          return 'chrome-mac.zip'
+        case 'linux':
+          return 'chrome-linux.zip'
+        default:
+          return 'chrome-win32.zip'
+      }
+    }
+    ㄴㄴ
+    const chromeExePath = join(chromePath, 'chrome-win', 'chrome.exe')
+
     if (!fs.existsSync(chromeExePath)) {
-      log.info('Chrome not found, installing...')
+      log.info('Installing Chrome...')
+
+      const downloadUrl = `https://storage.googleapis.com/chromium-browser-snapshots/${platform}64/${version}/${getFileName(platform)}`
+      log.info('Download URL:', downloadUrl)
+
+      const exists = await checkUrlExists(downloadUrl)
+      if (!exists) {
+        throw new Error(`Invalid Chromium version: ${version}`)
+      }
 
       const progressBar = new ProgressBar({
         indeterminate: false,
-        text: 'Chrome 다운로드 중...',
-        detail: '잠시만 기다려주세요...',
+        text: 'Chrome Downloading...',
+        detail: 'Please wait...',
         browserWindow: {
           webPreferences: {
             nodeIntegration: true
@@ -31,33 +77,69 @@ async function ensureChromium(): Promise<string> {
         }
       })
 
-      fs.mkdirSync(join(appPath, '.cache', 'puppeteer'), { recursive: true })
+      fs.mkdirSync(chromePath, { recursive: true })
+
+      const zipPath = join(chromePath, 'chrome.zip')
 
       try {
-        await install({
-          browser: Browser.CHROMIUM,
-          buildId: '133.0.6943.53',
-          cacheDir: join(appPath, '.cache', 'puppeteer'),
-          downloadProgressCallback: (downloadedBytes, totalBytes) => {
-            const progress = Math.round((downloadedBytes / totalBytes) * 100)
-            progressBar.value = progress
-            progressBar.detail = `다운로드 중... ${progress}%`
-          }
-        })
-      } finally {
+        await downloadFile(downloadUrl, zipPath)
+
+        if (process.platform === 'win32') {
+          execSync(
+            `powershell -command "Expand-Archive -Path '${zipPath}' -DestinationPath '${chromePath}'"`
+          )
+        } else {
+          execSync(`unzip -o '${zipPath}' -d '${chromePath}'`, { encoding: 'utf8' })
+        }
+
+        fs.unlinkSync(zipPath)
         progressBar.close()
+      } catch (error) {
+        progressBar.close()
+        log.error('Download or decompression failed:', error)
+        throw new Error(
+          `Chrome installation failed: ${error instanceof Error ? error.message : String(error)}`
+        )
       }
     }
 
     return chromeExePath
   } catch (error) {
-    log.error('Chrome installation failed:', error)
+    log.error('Chrome Installation failed:', error)
     throw new Error(
-      'Chrome 설치 중 오류가 발생했습니다: ' +
-        (error instanceof Error ? error.message : String(error))
+      `Chrome installation failed: ${error instanceof Error ? error.message : String(error)}`
     )
   }
 }
+
+async function downloadFile(url: string, dest: string): Promise<void> {
+  const proto = !url.charAt(4).localeCompare('s') ? https : http
+
+  return new Promise((resolve, reject) => {
+    const file = createWriteStream(dest)
+
+    const request = proto.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        reject(new Error(`Download failed: ${response.statusCode}`))
+        return
+      }
+
+      pipeline(response, file, (err) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    })
+
+    request.on('error', (err) => {
+      file.close()
+      fs.unlink(dest, () => reject(err))
+    })
+  })
+}
+
 export async function startBrowser(credentials: LoginCredentials) {
   const chromePath = await ensureChromium()
   console.log('chromePath', chromePath)
