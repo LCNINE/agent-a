@@ -13,8 +13,6 @@ export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuthContext();
   const { data: hasUsedFreeTrial, refetch } = useFreeTrialQuery(user?.id);
-		console.log("[HomePage] : hasUsedFreeTrial",hasUsedFreeTrial)
-		console.log("[HomePage] : user",user)
 
   const handleStartFreeTrial = async () => {
     if (!user?.id) return;
