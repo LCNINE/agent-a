@@ -5,20 +5,19 @@ import Footer from "@/components/template/Footer";
 import { AgentController } from "./AgentController";
 import { useAuthContext } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { useFreeTrialQuery } from "@/service/free-trial/queries";
+import { useFreeTrialQuery, useStartFreeTrialMutation } from "@/service/free-trial/queries";
 import { createClient } from "@/supabase/client";
 import FreeTrialService from "@/service/free-trial/freeTrialService";
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuthContext();
-  const { data: hasUsedFreeTrial, refetch } = useFreeTrialQuery(user?.id);
+  const { data: hasUsedFreeTrial } = useFreeTrialQuery(user?.id);
+  const startFreeTrial = useStartFreeTrialMutation();
 
   const handleStartFreeTrial = async () => {
     if (!user?.id) return;
-    const supabase = createClient();
-    await new FreeTrialService(supabase).startFreeTrial(user.id);
-    refetch();
+    await startFreeTrial.mutateAsync(user.id);
   };
 
   return (
@@ -29,8 +28,9 @@ export default function HomePage() {
           <Button 
             onClick={handleStartFreeTrial}
             className="mb-4"
+            disabled={startFreeTrial.isPending}
           >
-            3일 무료체험 시작하기
+            {startFreeTrial.isPending ? '처리중...' : '3일 무료체험 시작하기'}
           </Button>
         )}
         <AgentController/>
