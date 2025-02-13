@@ -42,14 +42,15 @@ async function ensureChromium(): Promise<string> {
       execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
     }
 
-    // Puppeteer에서 설치된 Chrome 경로 찾기
-    const chromeExecutablePath = execSync('npx puppeteer browsers path chrome', { encoding: 'utf8' }).trim();
+    const chromeExecutablePath = puppeteer.executablePath();
 
     if (!fs.existsSync(chromeExecutablePath)) {
       throw new Error(`Chrome executable not found at: ${chromeExecutablePath}`);
     }
+
+    console.log(`Using Chrome at: ${chromeExecutablePath}`);
+    return chromeExecutablePath;
     
-    return chromePath;
   } catch (error) {
     console.error('Chrome installation failed:', error);
     throw new Error(`Chrome installation failed: ${error instanceof Error ? error.message : String(error)}`);
