@@ -8,12 +8,19 @@ import { Button } from '@/components/ui/button';
 import { useFreeTrialQuery } from "@/service/free-trial/queries";
 import { createClient } from "@/supabase/client";
 import FreeTrialService from "@/service/free-trial/freeTrialService";
+// import { useSubscriptionQuery } from "@/service/subscription/queries";
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuthContext();
   const { data: hasUsedFreeTrial, refetch } = useFreeTrialQuery(user?.id);
+  // const { data: subscription } = useSubscriptionQuery(user?.id);
   const [isStarting, setIsStarting] = React.useState(false);
+
+  // const isSubscriptionActive = React.useMemo(() => {
+  //   if (!subscription) return false;
+  //   return new Date(subscription.expires_at) > new Date();
+  // }, [subscription]);
 
   const handleStartFreeTrial = async () => {
     if (!user?.id) return;
@@ -40,7 +47,14 @@ export default function HomePage() {
             {isStarting ? '처리중...' : '3일 무료체험 시작하기'}
           </Button>
         )}
-        <AgentController/>
+        <AgentController />
+        {/* {isSubscriptionActive ? (
+          <AgentController />
+        ) : (
+          <div className="text-center text-gray-500">
+            구독이 만료되었습니다. 서비스를 이용하시려면 구독을 갱신해주세요.
+          </div>
+        )} */}
       </div>
       <Footer />
     </div>
