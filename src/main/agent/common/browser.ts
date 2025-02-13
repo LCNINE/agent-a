@@ -48,8 +48,8 @@ async function ensureChromium(): Promise<string> {
     if (!fs.existsSync(chromeExecutablePath)) {
       throw new Error(`Chrome executable not found at: ${chromeExecutablePath}`);
     }
-
-    return chromeExecutablePath;
+    
+    return chromePath;
   } catch (error) {
     console.error('Chrome installation failed:', error);
     throw new Error(`Chrome installation failed: ${error instanceof Error ? error.message : String(error)}`);
