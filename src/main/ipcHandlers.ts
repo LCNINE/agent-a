@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { InstagramService } from './agent/InstagramService'
 import { StartAgentParams } from '..'
 import { AgentManager } from './agent/AgentManager'
+import log from 'electron-log'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
 const WIN_MAXIMIZE_CHANNEL = 'window:maximize'
@@ -55,10 +56,12 @@ export function addAgentEventListeners() {
   const manager = new AgentManager()
 
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
+    log.info('Start agent button clicked with params:', params)
     try {
       await manager.start(params.config, params.workList)
+      log.info('Agent started successfully')
     } catch (error) {
-      console.error('Agent start error:', error)
+      log.error('Failed to start agent:', error)
       throw error
     }
   })

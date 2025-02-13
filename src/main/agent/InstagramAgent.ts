@@ -7,6 +7,7 @@ import { AgentConfig } from '../..'
 import { waitRandom } from './common/timeUtils'
 import { app } from 'electron'
 import path from 'path'
+import { startBrowser } from './common/browser'
 
 export interface InstagramPost {
   id: string
@@ -35,22 +36,7 @@ export class InstagramAgent {
 
   async initialize() {
     try {
-      this.browser = await puppeteer.use(StealthPlugin()).launch({
-        headless: false,
-        userDataDir: path.join(
-          app.getPath('userData'),
-          'accountData',
-          this.config.credentials.username
-        ),
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--window-size=1920,1080'
-        ]
-      })
+      this.browser = await startBrowser(this.config.credentials)
 
       this.page = await this.browser.newPage()
       await this.page.setUserAgent(
