@@ -23,23 +23,14 @@ class FreeTrialService extends Service {
     return result;
   }
 
-  async createFreeTrialRecord(userId: string) {
-    
-    if (!userId) {
-      throw new Error("No user ID");
-    }
-
+  async startFreeTrial(userId: string) {
     const { data, error } = await this.supabase
-      .from('free_trial_records')
-      .insert([
-        { user_id: userId }
-      ])
-      .select()
-      .maybeSingle();
-
+    .rpc('start_free_trial', {
+      user_id_param: userId
+    });
 
     if (error) {
-      throw error;
+        throw new Error(`Failed to start free trial: ${error.message}`);
     }
 
     return data;

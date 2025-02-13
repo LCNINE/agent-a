@@ -17,7 +17,7 @@ export default function HomePage() {
   const handleStartFreeTrial = async () => {
     if (!user?.id) return;
     const supabase = createClient();
-    await new FreeTrialService(supabase).createFreeTrialRecord(user.id);
+    await new FreeTrialService(supabase).startFreeTrial(user.id);
     refetch();
   };
 
