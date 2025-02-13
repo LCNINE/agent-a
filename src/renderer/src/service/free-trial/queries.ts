@@ -26,8 +26,24 @@ export function useStartFreeTrialMutation() {
   return useMutation({
     mutationFn: async (userId: string) => {
       await new FreeTrialService(supabase).startFreeTrial(userId);
-      // 즉시 캐시 업데이트
+    },
+    onMutate: async (userId) => {
+      const previousData = queryClient.getQueryData(['freeTrial', userId]);
+      
       queryClient.setQueryData(['freeTrial', userId], true);
+      
+      return { previousData };
+    },
+    onError: (err, userId, context) => {
+      queryClient.setQueryData(
+        ['freeTrial', userId],
+        context?.previousData
+      );
+    },
+    onSettled: (_, __, userId) => {
+      queryClient.invalidateQueries({
+        queryKey: ['freeTrial', userId]
+      });
     }
   });
 }
