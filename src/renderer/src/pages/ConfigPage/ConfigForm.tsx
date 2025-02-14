@@ -35,7 +35,6 @@ export function ConfigForm() {
           name="prompt.preset"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("configForm.label.prompt")}</FormLabel>
               <ToggleGroup type="single" onValueChange={field.onChange} value={field.value}>
                 <ToggleGroupItem value="formal">{t("configForm.field.prompt.formal")}</ToggleGroupItem>
                 <ToggleGroupItem value="casual">{t("configForm.field.prompt.casual")}</ToggleGroupItem>

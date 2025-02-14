@@ -33,6 +33,6 @@ if (process.contextIsolated) {
       installUpdate: () => ipcRenderer.invoke('update:install')
     })
   } catch (error) {
-    console.error(error)
+    console.error('preload index error: ', error)
   }
 }

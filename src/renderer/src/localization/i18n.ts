@@ -107,11 +107,26 @@ i18n.use(initReactI18next).init({
           logout: "Logout"
         },
         "accountTable": {
+          // "changePassword": "Change Password",
+          // "enterPassword": "Enter Password",
+          // "passwordUpdated": "Password has been updated",
+          // "passwordSave": "Save",
+          // "editAccount": "Edit Account",
           "title": "Instagram Account Management",
-          "changePassword": "Change Password",
-          "enterPassword": "Enter Password",
-          "passwordUpdated": "Password has been updated",
-          "passwordSave": "Save"
+          "edit" : "edit",
+          "save" : "save",
+          "add": "add",
+          "delete": "delete",
+          "cancel" : "cancel",
+          "addAccount": "Add Account",
+          "deleteConfirmTitle": "Delete Account",
+          "deleteConfirmDescription": "Are you sure you want to delete account '{{username}}'?",
+          "accountAdded": "Account has been added",
+          "accountUpdated": "Account has been updated",
+          "accountDeleted": "Account has been deleted",
+          "requiredFields": "Please fill in all fields",
+          "usernameExists": "Username already exists",
+          "addError": "An error occurred while adding the account"
         }
 
       },
@@ -222,11 +237,26 @@ i18n.use(initReactI18next).init({
           logout: "로그아웃"
         },
         accountTable: {
+          // "changePassword": "비밀번호 변경",
+          // "enterPassword": "비밀번호 입력",
+          // "passwordUpdated": "비밀번호가 업데이트되었습니다",
+          // "passwordSave": "저장",
+          // "editAccount": "계정 수정",
           "title":"인스타그램 계정 관리",
-          "changePassword": "비밀번호 변경",
-          "enterPassword": "비밀번호 입력",
-          "passwordUpdated": "비밀번호가 업데이트되었습니다",
-          "passwordSave": "저장"
+          "edit" : "수정",
+          "save" : "저장",
+          "addAccount": "계정 추가",
+          "add": "추가",
+          "delete": "삭제",
+          "cancel": "취소",
+          "deleteConfirmTitle": "계정 삭제",
+          "deleteConfirmDescription": "'{{username}}' 계정을 삭제하시겠습니까?",
+          "accountAdded": "계정이 추가되었습니다",
+          "accountUpdated": "계정이 수정되었습니다",
+          "accountDeleted": "계정이 삭제되었습니다",
+          "requiredFields": "모든 필드를 입력해주세요",
+          "usernameExists": "이미 존재하는 사용자 이름입니다",
+          "addError": "계정 추가 중 오류가 발생했습니다"
         },
       },
     },

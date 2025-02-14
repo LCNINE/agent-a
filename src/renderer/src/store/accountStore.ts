@@ -1,3 +1,5 @@
+//src\renderer\src\store\accountStore.ts
+
 import { LoginCredentials } from "src"
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -6,10 +8,9 @@ interface AccountState {
   accountList: LoginCredentials[];
   selectedAccount: LoginCredentials | null;
   syncAccounts(accounts: LoginCredentials[]): void;
-  move(username: string, delta: number): void;
-  up(username: string): void;
-  down(username: string): void;
-  updatePassword(credentials: LoginCredentials): void;
+  addAccount(account: LoginCredentials): void;
+  deleteAccount(username: string): void;
+  updateAccount(params: { oldUsername: string; newUsername: string; password: string }): void;
   selectAccount(credentials: LoginCredentials): void;
 }
 
@@ -28,61 +29,48 @@ export const useAccountStore = create<AccountState>()(
         }));
       },
 
-      move(username, delta) {
+      addAccount(account) {
         set((state) => {
-          const fromIndex = state.accountList.findIndex((a) => a.username === username);
-          if (fromIndex < 0) return { accountList: state.accountList }; // 못 찾은 경우
+          // Check if account with same username already exists
+          if (state.accountList.some(a => a.username === account.username)) {
+            throw new Error("Account with this username already exists");
+          }
+          return {
+            accountList: [...state.accountList, account]
+          };
+        });
+      },
 
-          const toIndex = fromIndex + delta;
-          if (toIndex < 0 || toIndex >= state.accountList.length) {
-            return { accountList: state.accountList }; // 범위를 벗어나는 경우
+      deleteAccount(username) {
+        set((state) => {
+          const newList = state.accountList.filter(a => a.username !== username);
+          const newSelectedAccount = state.selectedAccount?.username === username
+            ? null
+            : state.selectedAccount;
+          
+          return {
+            accountList: newList,
+            selectedAccount: newSelectedAccount
+          };
+        });
+      },
+
+      updateAccount({ oldUsername, newUsername, password }) {
+        set((state) => {
+          // Check if new username already exists (except for the account being updated)
+          if (oldUsername !== newUsername && 
+              state.accountList.some(a => a.username === newUsername)) {
+            throw new Error("Account with this username already exists");
           }
 
-          const newList = [...state.accountList];
-          const [removed] = newList.splice(fromIndex, 1);
-          newList.splice(toIndex, 0, removed);
-
-          return { accountList: newList };
-        });
-      },
-
-      up(username) {
-        set((state) => {
-          const fromIndex = state.accountList.findIndex((a) => a.username === username);
-          if (fromIndex <= 0) return { accountList: state.accountList };
-
-          const newList = [...state.accountList];
-          const [removed] = newList.splice(fromIndex, 1);
-          newList.splice(fromIndex - 1, 0, removed);
-
-          return { accountList: newList };
-        });
-      },
-
-      down(username) {
-        set((state) => {
-          const fromIndex = state.accountList.findIndex((a) => a.username === username);
-          if (fromIndex < 0 || fromIndex === state.accountList.length - 1) {
-            return { accountList: state.accountList };
-          }
-
-          const newList = [...state.accountList];
-          const [removed] = newList.splice(fromIndex, 1);
-          newList.splice(fromIndex + 1, 0, removed);
-
-          return { accountList: newList };
-        });
-      },
-
-      updatePassword(credentials) {
-        set((state) => {
           const newList = state.accountList.map((a) => 
-            a.username === credentials.username ? credentials : a
+            a.username === oldUsername 
+              ? { username: newUsername, password } 
+              : a
           );
           
-          // selectedAccount도 함께 업데이트
-          const newSelectedAccount = state.selectedAccount?.username === credentials.username
-            ? credentials
+          const newSelectedAccount = state.selectedAccount?.username === oldUsername
+            ? { username: newUsername, password }
             : state.selectedAccount;
       
           return {

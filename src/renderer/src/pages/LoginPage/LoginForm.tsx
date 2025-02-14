@@ -51,7 +51,7 @@ export default function LoginForm({
       password: values.password,
     })
     if (error) {
-      console.error(error)
+      console.error('loginForm onsubmit Error', error)
       toast.error(t("loginForm.error"), { description: (error as Error).message })
       throw error
     }
