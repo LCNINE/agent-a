@@ -1,4 +1,3 @@
-// src/renderer/src/pages/HomePage/HomePage.tsx
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Footer from "@/components/template/Footer";
@@ -29,17 +28,20 @@ export default function HomePage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center gap-2">
-        <h1 className="text-4xl font-bold">{t("appName")}</h1>
-        {!hasUsedFreeTrial && (
+      {!hasUsedFreeTrial && (
+        <div className="absolute top-20 right-6">
           <Button 
             onClick={handleStartFreeTrial}
-            className="mb-4"
             disabled={isStarting}
+            variant="outline"
+            size="sm"
           >
             {isStarting ? '처리중...' : '3일 무료체험 시작하기'}
           </Button>
-        )}
+        </div>
+      )}
+      <div className="flex flex-1 flex-col items-center justify-center gap-4">
+        <h1 className="text-4xl font-bold">{t("appName")}</h1>
         <AgentController />
       </div>
       <Footer />
