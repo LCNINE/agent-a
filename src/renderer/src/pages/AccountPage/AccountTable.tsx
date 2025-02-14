@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Table,
   TableBody,
@@ -7,13 +7,31 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { UpdatePasswordDialog } from './UpdatePasswordDialog'
+import { EditAccountDialog } from './EditAccountDialog'
 import { useAccountStore } from '@/store/accountStore'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, Circle, Key, Lock, Unlock } from 'lucide-react'
+import { 
+  CheckCircle2, 
+  Circle, 
+  Edit2, 
+  Key, 
+  Lock,
+  Trash2
+} from 'lucide-react'
 import { cn } from '@/utils/tailwind'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { toast } from 'sonner'
 
 interface AccountTableProps {
   accounts: { username: string; password: string }[]
@@ -21,21 +39,18 @@ interface AccountTableProps {
 
 export function AccountTable({ accounts }: AccountTableProps) {
   const { t } = useTranslation()
-  const { updatePassword, selectAccount, selectedAccount } = useAccountStore()
-  const [tempPasswords, setTempPasswords] = useState<{ [key: string]: string }>({})
-
-  const handlePasswordSubmit = (username: string, password: string) => {
-    updatePassword({ username, password })
-    setTempPasswords((prev) => ({ ...prev, [username]: '' }))
-  }
+  const { deleteAccount, selectAccount, selectedAccount } = useAccountStore()
 
   const handleAccountSelect = (username: string) => {
-    console.log('handleAccountSelectBtn Clicked Event username:', username)
     const account = accounts.find((acc) => acc.username === username)
-    console.log('handleAccountSelectBtn Clicked Event account:', account)
     if (account && account.password) {
       selectAccount(account)
     }
+  }
+
+  const handleDeleteAccount = (username: string) => {
+    deleteAccount(username)
+    toast.success(t("accountTable.accountDeleted"))
   }
 
   return (
@@ -46,6 +61,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
             <TableHead className="w-[40px]"></TableHead>
             <TableHead className="w-[120px] md:w-[200px]">username</TableHead>
             <TableHead>password</TableHead>
+            <TableHead className="w-[180px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -56,18 +72,14 @@ export function AccountTable({ accounts }: AccountTableProps) {
                 'transition-colors hover:bg-muted/50 cursor-pointer group',
                 selectedAccount?.username === account.username && 'bg-muted/30'
               )}
-              onClick={() => account.password && handleAccountSelect(account.username)}
+              onClick={() => handleAccountSelect(account.username)}
             >
               <TableCell className="px-2">
                 <div className="flex items-center justify-center">
-                  {account.password ? (
-                    selectedAccount?.username === account.username ? (
-                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground" />
-                    )
+                  {selectedAccount?.username === account.username ? (
+                    <CheckCircle2 className="w-5 h-5 text-primary" />
                   ) : (
-                    <Lock className="w-5 h-5 text-muted-foreground/50" />
+                    <Circle className="w-5 h-5 text-muted-foreground" />
                   )}
                 </div>
               </TableCell>
@@ -78,59 +90,63 @@ export function AccountTable({ accounts }: AccountTableProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <div className="flex items-center justify-between gap-2">
-                  {account.password ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <span className="font-mono">••••••••</span>
-                      </div>
-                      <UpdatePasswordDialog
-                        username={account.username}
-                        trigger={
-                          <Button variant="ghost" size="sm" className="ml-auto">
-                            <Key className="w-4 h-4" />
-                            <span className="hidden sm:inline ml-2">
-                              {t('accountTable.changePassword')}
-                            </span>
-                          </Button>
-                        }
-                      />
-                    </>
-                  ) : (
-                    <form
-                      className="flex items-center justify-between gap-2 w-full"
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        handlePasswordSubmit(
-                          account.username,
-                          tempPasswords[account.username] || ''
-                        )
-                      }}
-                    >
-                      <div className="flex items-center gap-2 flex-1">
-                        <Unlock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <Input
-                          type="password"
-                          value={tempPasswords[account.username] || ''}
-                          onChange={(e) =>
-                            setTempPasswords((prev) => ({
-                              ...prev,
-                              [account.username]: e.target.value
-                            }))
-                          }
-                          placeholder={t('accountTable.enterPassword')}
-                          className="max-w-[200px]"
-                        />
-                      </div>
-                      <Button type="submit" size="sm" variant="outline">
-                        <Key className="w-4 h-4" />
+                <div className="flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-mono">••••••••</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center justify-end gap-2">
+                  <EditAccountDialog
+                    account={account}
+                    trigger={
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Edit2 className="w-4 h-4" />
                         <span className="hidden sm:inline ml-2">
-                          {t('accountTable.passwordSave')}
+                          {t('accountTable.edit')}
                         </span>
                       </Button>
-                    </form>
-                  )}
+                    }
+                  />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                        <span className="hidden sm:inline ml-2 text-destructive">
+                          {t('accountTable.delete')}
+                        </span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {t('accountTable.deleteConfirmTitle')}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('accountTable.deleteConfirmDescription', { username: account.username })}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>
+                          {t('accountTable.cancel')}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteAccount(account.username)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t('accountTable.delete')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </TableCell>
             </TableRow>
