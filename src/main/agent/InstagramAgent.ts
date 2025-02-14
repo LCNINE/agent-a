@@ -214,6 +214,7 @@ export class InstagramAgent {
 
       if (ariaLabel === 'Like' || ariaLabel === '좋아요') {
         await likeButton!.click()
+        await this.page.keyboard.press('Enter')
         // 좋아요 후 2초 대기
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
@@ -282,7 +283,7 @@ export class InstagramAgent {
 
         if (postButton) {
           await (postButton as any).click()
-          console.log('댓글 작성 완료')
+          console.log('comment success')
           postIndex++ // 댓글 작성 성공시에만 카운트 증가
         }
       }
@@ -292,7 +293,8 @@ export class InstagramAgent {
       
       await nextButton?.click()
     }
-    console.log(`작업 완료: 총 ${postIndex}개의 게시물에 댓글을 작성했습니다.`)
+    console.log(`work complete: total ${postIndex}posts.`)
+    this.browser?.close()
   }
 
   async interactWithPosts() {
@@ -481,6 +483,7 @@ export class InstagramAgent {
         break
       }
     }
+    this.browser?.close()
   }
 
   private getSystemPrompt(): string {
