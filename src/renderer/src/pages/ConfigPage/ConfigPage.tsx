@@ -12,7 +12,9 @@ export default function ConfigPage() {
       <div className="flex flex-1 min-h-0 flex-col justify-center gap-2">
         <h1 className="text-3xl font-bold">{t("configPage.title")}</h1>
         <ScrollArea>
-          <ConfigForm/>
+          <div className="mb-20">
+           <ConfigForm/>
+          </div>
         </ScrollArea>
       </div>
       <Footer />

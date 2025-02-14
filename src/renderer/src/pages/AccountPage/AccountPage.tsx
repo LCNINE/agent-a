@@ -1,24 +1,15 @@
-// src>pages>AccountPage>AccountPage.tsx
 import Footer from "@/components/template/Footer";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { AccountTable } from "./AccountTable";
-import { useAccount } from "@/hooks/use-account";
-import { useAuthContext } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { useAccountStore } from "@/store/accountStore";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { AddAccountDialog } from "./AddAccountDialog";
 
 export default function AccountPage() {
   const { t } = useTranslation();
-  const { user } = useAuthContext();
-  const { accountList, isLoading } = useAccount(user?.id);
-
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
+  const accountList = useAccountStore(state => state.accountList);
 
   return (
     <div className="flex h-full flex-col">
@@ -27,9 +18,17 @@ export default function AccountPage() {
           <h1 className="text-2xl font-bold md:text-3xl">
             {t("accountTable.title")}
           </h1>
+          <AddAccountDialog
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("accountTable.addAccount")}
+              </Button>
+            }
+          />
         </div>
         <div className="rounded-lg border bg-card">
-          <AccountTable accounts={accountList || []} />
+          <AccountTable accounts={accountList} />
         </div>
       </div>
       <Footer />

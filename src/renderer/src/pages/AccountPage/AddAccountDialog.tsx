@@ -2,7 +2,6 @@ import React from "react"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -15,27 +14,43 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
-interface UpdatePasswordForm {
+interface AddAccountForm {
+  username: string;
   password: string;
 }
 
-export function UpdatePasswordDialog({ 
-  username, 
+export function AddAccountDialog({ 
   trigger 
 }: { 
-  username: string;
   trigger: React.ReactNode;
 }) {
   const { t } = useTranslation();
-  const updatePassword = useAccountStore(state => state.updatePassword);
-  const form = useForm<UpdatePasswordForm>();
+  const addAccount = useAccountStore(state => state.addAccount);
+  const form = useForm<AddAccountForm>();
   const [open, setOpen] = React.useState(false);
 
-  async function onSubmit(values: UpdatePasswordForm) {
-    updatePassword({ username, password: values.password });
-    toast.success(t("accountTable.passwordUpdated"));
-    form.reset();
-    setOpen(false);
+  async function onSubmit(values: AddAccountForm) {
+    console.log("add버튼 눌림")
+    if (!values.username || !values.password) {
+      toast.error(t("accountTable.requiredFields"));
+      return;
+    }
+    try{
+			addAccount(values);
+			toast.success(t("accountTable.accountAdded"));
+			form.reset();
+			setOpen(false);
+    }catch(error){
+      if (error instanceof Error) {
+        if (error.message === "Account with this username already exists") {
+          toast.error(t("accountTable.usernameExists"));
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.error(t("accountTable.addError"));
+      }
+    }
   }
 
   return (
@@ -43,13 +58,22 @@ export function UpdatePasswordDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("accountTable.changePassword")}</DialogTitle>
-          <DialogDescription>
-            {username}
-          </DialogDescription>
+          <DialogTitle>{t("accountTable.addAccount")}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>username</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="password"
@@ -62,7 +86,7 @@ export function UpdatePasswordDialog({
                 </FormItem>
               )}
             />
-            <Button type="submit">{t("accountTable.passwordSave")}</Button>
+            <Button type="submit">{t("accountTable.add")}</Button>
           </form>
         </Form>
       </DialogContent>

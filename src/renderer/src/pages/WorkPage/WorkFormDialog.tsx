@@ -49,8 +49,8 @@ export function WorkFormDialog({ work, trigger }: WorkFormDialogProps) {
     name: "type"
   })
 
-  console.log(watchedType)
-  console.log(form.formState.errors)
+  console.log('watchedType: ', watchedType)
+  console.error('form.formState.errors: ',form.formState.errors)
   
   const { add, update } = useWorkStore()
 

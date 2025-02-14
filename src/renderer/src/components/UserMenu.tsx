@@ -27,7 +27,7 @@ export default function UserMenu() {
     const supabase = createClient()
     const { error } = await supabase.auth.signOut()
     if (error) {
-      console.error(error)
+      console.error('userMenu logout Error: ', error)
       toast.error(t("userMenu.logout.error"))
       throw error
     }
