@@ -24,6 +24,7 @@ class FreeTrialService extends Service {
   }
 
   async startFreeTrial(userId: string) {
+    console.log('startFreeTrial', userId);
     const { data, error } = await this.supabase
     .rpc('start_free_trial', {
       user_id_param: userId
