@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useFreeTrialQuery } from "@/service/free-trial/queries";
 import { createClient } from "@/supabase/client";
 import FreeTrialService from "@/service/free-trial/freeTrialService";
+import { toast } from "sonner";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -21,6 +22,9 @@ export default function HomePage() {
       const supabase = createClient();
       await new FreeTrialService(supabase).startFreeTrial(user.id);
       await refetch();
+      toast.success("3일 무료체험이 시작되었습니다.");
+    } catch (error) {
+      toast.error("무료체험 시작에 실패했습니다. 다시 시도해주세요.");
     } finally {
       setIsStarting(false);
     }
