@@ -117,9 +117,14 @@ export default function LoginForm({
               </div>
               <div className="mt-4 text-center text-sm">
                 {t("loginForm.noAccount")}{" "}
-                <Link to="." className="underline underline-offset-4">
+                <a 
+                  href="https://www.agent-a.me/auth" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="underline underline-offset-4"
+                >
                   {t("loginForm.applyForAccount")}
-                </Link>
+                </a>
               </div>
               
             </form>
