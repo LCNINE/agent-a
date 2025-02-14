@@ -117,14 +117,15 @@ export class InstagramAgent {
   async interactWithHashtag(tag: string): Promise<void> {
     if (!this.page) return
 
+    // 초기 인스타그램 페이지 로딩
     await this.page.goto('https://www.instagram.com')
-    await waitRandom(500, 0.2)
+    await new Promise((resolve) => setTimeout(resolve, 5000)) // 초기 페이지 로딩 대기
 
     const searchMenu = await this.page.$('.x1iyjqo2.xh8yej3 > div:nth-child(2)')
     if (!searchMenu) throw Error('searchMenu not found')
 
     await searchMenu.click()
-    await waitRandom(500, 0.2)
+    await new Promise((resolve) => setTimeout(resolve, 3000)) // 검색 메뉴 로딩 대기
 
     const searchInputSelector =
       '.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.x1d52u69.xktsk01.x1n2onr6.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1 input'
@@ -133,8 +134,7 @@ export class InstagramAgent {
       await new Promise((resolve) => setTimeout(resolve, 2000000))
 
     await this.page.type(searchInputSelector, `#${tag}`, { delay: 50 })
-
-    await waitRandom(3000, 0.2)
+    await new Promise((resolve) => setTimeout(resolve, 5000)) // 검색 결과 로딩 대기
 
     const firstSearchResultTitleSelector =
       '.x9f619.x78zum5.xdt5ytf.x1iyjqo2.x6ikm8r.x1odjw0f.xh8yej3.xocp1fn > a:nth-child(1) .x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft'
@@ -148,43 +148,34 @@ export class InstagramAgent {
     if (`#${tag}` !== firstSearchResultTitleText) throw Error('proper tag not found')
 
     await firstSearchResultTitle.click()
-
-    await waitRandom(3000, 0.1)
+    await new Promise((resolve) => setTimeout(resolve, 5000)) // 해시태그 페이지 로딩 대기
 
     const postSelector =
       'div.x1qjc9v5.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1lliihq.xdt5ytf.x2lah0s'
     const modalSelector = `div.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.x1n2onr6.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.x1q0g3np.xqjyukv.x1qjc9v5.x1oa3qoh.xl56j7k`
     const sectionSelector = `section.x78zum5.x1q0g3np.xwib8y2.x1yrsyyn.x1xp8e9x.x13fuv20.x178xt8z.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xo1ph6p.x1pi30zi.x1swvt13`
-    const closeButtonSelector =
-      'div.x9f619.x1n2onr6.x1ja2u2z svg[aria-label]:is([aria-label="Close"], [aria-label="닫기"])'
 
-    let loadedPosts: ElementHandle<HTMLDivElement>[] = []
-    let lastCount = 0
-    let loopCount = 0
-
-    while (true) {
-      await this.page.evaluate(() => {
-        window.scrollBy(0, window.innerHeight)
-      })
-
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      loadedPosts = await this.page.$$(postSelector)
-
-      if (loadedPosts.length > lastCount) {
-        lastCount = loadedPosts.length
-        console.log(`now Loaded Post: ${loadedPosts.length}`)
-      } else {
-        if (loopCount >= 2) break
-        loopCount++
-      }
-
-      if (loadedPosts.length >= 10) break
+    const post = await this.page.$(postSelector)
+    if(!post){
+      throw Error('post not found')
     }
 
-    for (const post of loadedPosts) {
-      if (!post) break
+    post.click()
+    await new Promise((resolve) => setTimeout(resolve, 5000)) // 첫 번째 게시물 모달 로딩 대기
 
-      await post.click()
+    let postIndex = 0 // 실제 작업 완료한 게시물 수
+    const maxPosts = 10 // 목표 작업 수
+    
+    const nextButtonSelector = "div._aaqg._aaqh > button"
+    
+    while (postIndex < maxPosts) {
+      const nextButton = await this.page.$(nextButtonSelector)
+      if(!nextButton){
+        throw Error('nextButton not found')
+      }
+
+      // 게시물 내용 로딩 대기
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       try {
         const replySelector = 'h3.x6s0dn4.x3nfvp2'
@@ -193,39 +184,42 @@ export class InstagramAgent {
 
         let shouldSkipPost = false
 
-        // Loop through each reply element
+        // 내 댓글이 있는지 확인
         for (const reply of replys) {
-          // Find the a tag within the reply and get its text content
           const linkText = await reply.$eval('a', (el) => el.textContent)
           if (linkText === this.config.credentials.username) {
-            shouldSkipPost = true // 내 댓글 발견 시 플래그 설정
+            shouldSkipPost = true
             break
           }
         }
-
+        
         if (shouldSkipPost) {
-          const closeButton = await this.page.$(`${closeButtonSelector}`)
-          if (closeButton) {
-            console.log('my reply is already exsist')
-            await closeButton.click()
-          }
-          continue // 다음 게시물로 진행
+          console.log('skip : reply alread exist')
+          await nextButton.click()
+          // 다음 게시물로 이동 전 대기
+          await new Promise((resolve) => setTimeout(resolve, this.config.postIntervalSeconds * 1000))
+          continue
         }
       } catch (error) {
-        console.error(error)
+        console.error('Error checking replies:', error)
       }
 
       const section = await this.page.$(sectionSelector)
       if (!section) throw Error('post modal button section not found')
 
+      // 좋아요 처리
       const likeButtonSelector = `${sectionSelector} svg[aria-label]:is([aria-label="Like"], [aria-label="좋아요"])`
       const likeButton = await this.page.$(likeButtonSelector)
       const ariaLabel = await likeButton?.evaluate((el) => el.getAttribute('aria-label'))
 
       if (ariaLabel === 'Like' || ariaLabel === '좋아요') {
         await likeButton!.click()
-        await this.page.keyboard.press('Enter')
+        // 좋아요 후 2초 대기
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
+
+      // 게시물 내용 로딩 대기
+      await new Promise((resolve) => setTimeout(resolve, 3000))
 
       const liHandle = await this.page.$('li._a9zj._a9zl._a9z5')
       const h1Handle = await liHandle?.$('h1._ap3a._aaco._aacu._aacx._aad7._aade')
@@ -260,6 +254,9 @@ export class InstagramAgent {
         })
       }
 
+      // 댓글창 로딩 대기
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
       const commentBox = await this.page.$(`${modalSelector} textarea`)
       if (!commentBox) {
         console.log("can't type comment")
@@ -285,22 +282,17 @@ export class InstagramAgent {
 
         if (postButton) {
           await (postButton as any).click()
-          console.log('2초 대기 시작')
-          await new Promise((resolve) => setTimeout(resolve, 2000))
-          console.log('2초 대기 끝')
+          console.log('댓글 작성 완료')
+          postIndex++ // 댓글 작성 성공시에만 카운트 증가
         }
       }
 
-      const closeButton = await this.page.$(`${closeButtonSelector}`)
-
-      const closeAriaLabel = await closeButton?.evaluate((el) => el.getAttribute('aria-label'))
-
-      if (closeAriaLabel === 'Close' || closeAriaLabel === '닫기') {
-        await closeButton!.click()
-      }
-
+      // 다음 게시물로 이동 전 대기
       await new Promise((resolve) => setTimeout(resolve, this.config.postIntervalSeconds * 1000))
+      
+      await nextButton?.click()
     }
+    console.log(`작업 완료: 총 ${postIndex}개의 게시물에 댓글을 작성했습니다.`)
   }
 
   async interactWithPosts() {
