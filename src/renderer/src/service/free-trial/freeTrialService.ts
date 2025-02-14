@@ -1,42 +1,40 @@
-// src>renderer>src>service>free-trial>freeTrialService.ts
+// src/renderer/src/service/free-trial/freeTrialService.ts
 import Service from "../Service";
 
-export interface FreeTrial {
-  user_id: string;
-  created_at: string;
-}
-
 class FreeTrialService extends Service {
-  async checkFreeTrial(userId: string): Promise<boolean> {
+  async hasUsedFreeTrial(userId: string): Promise<boolean> {
+    
     if (!userId) {
       throw new Error("No user ID");
     }
 
     const { data, error } = await this.supabase
       .from('free_trial_records')
-      .select('user_id')
+      .select('*')
       .eq('user_id', userId)
-      .limit(1);
+      .maybeSingle()
+
 
     if (error) {
-      throw error;
+      return false;
     }
 
-    return (data?.length ?? 0) === 0;
+    const result = !!data;
+    return result;
   }
 
-  async createFreeTrial(userId: string): Promise<void> {
-    if (!userId) {
-      throw new Error("No user ID");
-    }
-
-    const { error } = await this.supabase
-      .from('free_trial_records')
-      .insert([{ user_id: userId }]);
+  async startFreeTrial(userId: string) {
+    console.log('startFreeTrial', userId);
+    const { data, error } = await this.supabase
+    .rpc('start_free_trial', {
+      user_id_param: userId
+    });
 
     if (error) {
-      throw error;
+        throw new Error(`Failed to start free trial: ${error.message}`);
     }
+
+    return data;
   }
 }
 
