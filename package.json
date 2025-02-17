@@ -23,7 +23,8 @@
     "version:patch": "npm version patch && git push && git push --tags",
     "version:minor": "npm version minor && git push && git push --tags",
     "version:major": "npm version major && git push && git push --tags",
-    "release": "npm run version:patch && npm run publish"
+    "release": "npm run version:patch && npm run publish",
+    "gen:types": "npx supabase gen types typescript --project-id xszdgbmgwnaxbyekqons --schema public > src/renderer/src/supabase/database.types.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
