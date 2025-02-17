@@ -159,7 +159,7 @@ export async function startBrowser(credentials: LoginCredentials) {
       '--disable-dev-shm-usage',
       '--disable-accelerated-2d-canvas',
       '--disable-gpu',
-      '--window-size=1920x1080'
+      '--window-size=1920,1080'
     ]
   })
 }
