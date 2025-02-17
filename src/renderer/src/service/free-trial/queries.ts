@@ -4,6 +4,12 @@ import FreeTrialService from "./freeTrialService";
 import { createClient } from "@/supabase/client";
 import { toast } from "sonner";
 
+interface Subscription {
+  subscription_id: number;  
+  end_date: Date;         
+  is_active: boolean;
+}
+
 export function useFreeTrialQuery(userId: string | undefined) {
   const supabase = createClient()
   
@@ -30,10 +36,13 @@ export function useStartFreeTrialMutation() {
     },
     onSuccess: (_, userId) => {
       queryClient.setQueryData(['freeTrial', userId], true);
-      queryClient.invalidateQueries({ 
-        queryKey: ['currentSubscription', userId] 
-      });
+      // 현재 구독 상태만 active로 설정
+      queryClient.setQueryData(['currentSubscription', userId], (old: Subscription) => ({
+        ...old,
+        isActive: true
+      }));
       toast.success("3일 무료체험이 시작되었습니다.");
+
     },
     onError: (error) => {
       toast.error("무료체험 시작에 실패했습니다. 다시 시도해주세요.");

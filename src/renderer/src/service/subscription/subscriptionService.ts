@@ -4,7 +4,7 @@ interface Subscription {
     subscription_id: number;  
     end_date: Date;         
     is_active: boolean;
-  }
+}
   
 interface SubscriptionResponse {
     subscriptionId: number;
