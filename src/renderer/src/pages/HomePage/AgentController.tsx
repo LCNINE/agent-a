@@ -7,7 +7,11 @@ import { useAccountStore } from '@/store/accountStore'
 import { toast } from 'sonner'
 import { useAgent } from '@renderer/hooks/useAgent'
 
-export function AgentController() {
+interface AgentControllerProps {
+  isSubscriptionActive: boolean;
+}
+
+export function AgentController({ isSubscriptionActive }: AgentControllerProps) {
   const { t } = useTranslation()
   const selectedAccount = useAccountStore((state) => state.selectedAccount)
   const { status, startAgent, stopAgent } = useAgent()
@@ -30,7 +34,7 @@ export function AgentController() {
               toast.error(t('AgentController.error.noAccountSelected'))
             }
           }}
-          disabled={!selectedAccount}
+          disabled={!selectedAccount || !isSubscriptionActive}
         >
           {t('AgentController.action.start')}
         </Button>

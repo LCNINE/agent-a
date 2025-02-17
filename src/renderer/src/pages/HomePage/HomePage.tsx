@@ -6,12 +6,17 @@ import { AgentController } from "./AgentController";
 import { useAuthContext } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useFreeTrialQuery, useStartFreeTrialMutation } from "@/service/free-trial/queries";
+import { useCurrentSubscriptionQuery } from "@/service/subscription/queries";
 
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuthContext();
   const { data: hasUsedFreeTrial, refetch } = useFreeTrialQuery(user?.id);
+  const { data: subscription } = useCurrentSubscriptionQuery(user?.id ?? '');
   const startFreeTrial = useStartFreeTrialMutation();
+  console.log("subscription", subscription);
+
+  const isSubscriptionActive = subscription?.isActive ?? false;
 
   const handleStartFreeTrial = () => {
     if (!user?.id) return;
@@ -34,7 +39,12 @@ export default function HomePage() {
       )}
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <h1 className="text-4xl font-bold">{t("appName")}</h1>
-        <AgentController />
+        {!isSubscriptionActive && (
+          <p className="text-red-500 mb-2">
+            {t("subscription.inactive")}
+          </p>
+        )}
+        <AgentController isSubscriptionActive={isSubscriptionActive} />
       </div>
       <Footer />
     </div>

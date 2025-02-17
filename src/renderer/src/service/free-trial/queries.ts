@@ -30,6 +30,9 @@ export function useStartFreeTrialMutation() {
     },
     onSuccess: (_, userId) => {
       queryClient.setQueryData(['freeTrial', userId], true);
+      queryClient.invalidateQueries({ 
+        queryKey: ['currentSubscription', userId] 
+      });
       toast.success("3일 무료체험이 시작되었습니다.");
     },
     onError: (error) => {
