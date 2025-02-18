@@ -25,7 +25,7 @@ export default function HomePage() {
 
   return (
     <div className="flex h-full flex-col">
-      {!hasUsedFreeTrial && (
+      {!hasUsedFreeTrial && !isSubscriptionActive && (
         <div className="absolute top-20 right-6">
           <Button 
             onClick={handleStartFreeTrial}
