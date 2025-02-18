@@ -34,7 +34,18 @@ root.render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
-      <Toaster />
+      <Toaster
+        theme="system"
+        richColors
+        toastOptions={{
+          style: {
+            background: 'hsl(var(--background))',
+            color: 'hsl(var(--foreground))',
+            border: '1px solid hsl(var(--border))',
+            padding: '12px'
+          }
+        }}
+      />
     </QueryClientProvider>
   </React.StrictMode>
 )
