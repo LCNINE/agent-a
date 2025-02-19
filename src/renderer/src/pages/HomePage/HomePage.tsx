@@ -11,17 +11,20 @@ import { useCurrentSubscriptionQuery } from "@/service/subscription/queries";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuthContext();
+  
   const { data: hasUsedFreeTrial, refetch } = useFreeTrialQuery(user?.id);
   const { data: subscription } = useCurrentSubscriptionQuery(user?.id ?? '');
   const startFreeTrial = useStartFreeTrialMutation();
-  console.log("subscription", subscription);
 
-  const isSubscriptionActive = subscription?.isActive ?? false;
+  // useMemo를 사용하여 subscription 상태 메모이제이션
+  const isSubscriptionActive = React.useMemo(() => 
+    subscription?.isActive ?? false
+  , [subscription]);
 
-  const handleStartFreeTrial = () => {
+  const handleStartFreeTrial = React.useCallback(() => {
     if (!user?.id) return;
     startFreeTrial.mutateAsync(user.id);
-  };
+  }, [user?.id, startFreeTrial]);
 
   return (
     <div className="flex h-full flex-col">

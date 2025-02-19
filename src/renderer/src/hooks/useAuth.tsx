@@ -3,7 +3,6 @@ import { createClient } from "@/supabase/client"
 import { User } from "@supabase/supabase-js"
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 
-// Supabase 클라이언트를 한 번만 생성
 const supabase = createClient()
 
 export type AuthContextType = {
@@ -30,20 +29,28 @@ export function AuthProvider({ unauthenticatedFallback, children }: AuthProvider
 
   useEffect(() => {
     // 초기 사용자 상태 설정
-    supabase.auth.getUser().then(({ data }) => {
+    const initUser = async () => {
+      const { data } = await supabase.auth.getUser()
       setUser(data.user ?? null)
-    })
+    }
+    initUser()
 
-    const event = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
+    const event = supabase.auth.onAuthStateChange((_event, session) => {
+      // 이전 상태와 비교하여 변경이 있을 때만 업데이트
+      setUser(prevUser => {
+        if (prevUser?.id === session?.user?.id) return prevUser
+        return session?.user ?? null
+      })
     })
 
     return event.data.subscription.unsubscribe
   }, [])
 
+  const memoizedValue = React.useMemo(() => ({ user }), [user])
+
   if (!user) return unauthenticatedFallback
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={memoizedValue}>
       {children}
     </AuthContext.Provider>
   )
