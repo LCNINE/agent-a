@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
+import { BrowserWindow, ipcMain, nativeTheme, dialog } from 'electron'
 import { InstagramService } from './agent/InstagramService'
 import { StartAgentParams } from '..'
 import { AgentManager } from './agent/AgentManager'
@@ -52,6 +52,19 @@ function addThemeEventListeners() {
   })
 }
 
+function addDialogEventListeners() {
+  ipcMain.handle('dialog:show-confirmation', async () => {
+    const result = await dialog.showMessageBox({
+      type: 'warning',
+      buttons: ['이 페이지에 머무르기', '저장하지 않고 나가기'],
+      title: '저장되지 않은 변경사항',
+      message: '변경사항이 저장되지 않았습니다.',
+      detail: '저장하지 않고 나가시면 변경사항이 모두 사라집니다. 계속하시겠습니까?'
+    })
+    return result.response === 0
+  })
+}
+
 export function addAgentEventListeners() {
   const manager = new AgentManager()
 
@@ -79,4 +92,5 @@ export function registerIpcHandlers(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow)
   addThemeEventListeners()
   addAgentEventListeners()
+  addDialogEventListeners()
 }

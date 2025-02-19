@@ -1,26 +1,28 @@
-import React from "react"
+import React from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useAuthContext } from "@/hooks/useAuth"
-import { UserRoundIcon } from "lucide-react"
-import { createClient } from "@/supabase/client"
-import { toast } from "sonner"
-import { useTranslation } from "react-i18next"
-import { Button } from "./ui/button"
-import { Link } from "@tanstack/react-router"
-
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { useAuthContext } from '@/hooks/useAuth'
+import { UserRoundIcon } from 'lucide-react'
+import { createClient } from '@/supabase/client'
+import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
+import { Button } from './ui/button'
+import { Link } from '@tanstack/react-router'
+import { useConfigStore } from '@renderer/store/configStore'
+import ProtectedLink from './ProtectedLink'
 export default function UserMenu() {
   const { t } = useTranslation()
   const { user } = useAuthContext()
+  const { config } = useConfigStore()
 
   if (user == null) {
-    return <div/>
+    return <div />
   }
 
   async function logout() {
@@ -28,32 +30,36 @@ export default function UserMenu() {
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('userMenu logout Error: ', error)
-      toast.error(t("userMenu.logout.error"))
+      toast.error(t('userMenu.logout.error'))
       throw error
     }
-    toast.success(t("userMenu.logout.success"))
+    toast.success(t('userMenu.logout.success'))
   }
 
   return (
     <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="ghost" size="icon">
-        <UserRoundIcon/>
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent>
-      <DropdownMenuLabel>{ user.email }</DropdownMenuLabel>
-      <DropdownMenuSeparator />
-      {/* 계정 관리 메뉴 추가 */}
-      <DropdownMenuItem asChild>
-        <Link to="/account">
-          {t("userMenu.manageAccount")}
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem className="text-destructive" onClick={logout}>
-        {t("userMenu.logout")}
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <UserRoundIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {/* 계정 관리 메뉴 추가 */}
+        <DropdownMenuItem asChild>
+          <ProtectedLink
+            to="/account"
+            isDirty={config.isDirty}
+            btnClassName="px-2 py-1.5 text-sm hover:bg-accent"
+          >
+            {t('userMenu.manageAccount')}
+          </ProtectedLink>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="text-destructive" onClick={logout}>
+          {t('userMenu.logout')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

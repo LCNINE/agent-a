@@ -103,6 +103,10 @@ interface UpdateContext {
   installUpdate: () => void
 }
 
+interface DialogContext {
+  showConfirmation: () => Promise<boolean>
+}
+
 export {}
 declare global {
   interface Window {
@@ -110,6 +114,7 @@ declare global {
     electronWindow: ElectronWindow
     agent: AgentContext
     update: UpdateContext
+    dialog: DialogContext
     electron: {
       ipcRenderer: {
         on: (channel: string, func: (...args: any[]) => void) => void
