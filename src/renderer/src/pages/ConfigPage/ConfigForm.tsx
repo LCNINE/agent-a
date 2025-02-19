@@ -1,31 +1,40 @@
-import React from "react"
-import { useConfigStore } from "@/store/configStore";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { AgentConfig } from "@/store/configStore";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Textarea } from "@/components/ui/textarea";
-import { Form, FormField, FormItem, FormLabel, FormMessage, FormControl, FormDescription } from "@/components/ui/form";
-import { configSchema, ConfigSchema } from "./schema";
-import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
-
-
+import { Button } from '@/components/ui/button'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useConfigStore } from '@/store/configStore'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { configSchema, ConfigSchema } from './schema'
 
 export function ConfigForm() {
   const { t } = useTranslation()
-  const { config, setConfig } = useConfigStore();
+  const { config, setConfig, setIsDirty } = useConfigStore()
   const form = useForm<ConfigSchema>({
     resolver: zodResolver(configSchema),
-    defaultValues: config,
-  });
+    defaultValues: config
+  })
 
-  function onSubmit(values: ConfigSchema) {
-    setConfig(values);
-    toast.success(t("configForm.toast.submitSuccess"))
+  async function onSubmit(values: ConfigSchema) {
+    setConfig(values)
+    form.reset(values)
+    toast.success(t('configForm.toast.submitSuccess'))
   }
+
+  useEffect(() => {
+    setIsDirty(form.formState.isDirty)
+  }, [form.formState.isDirty])
 
   return (
     <Form {...form}>
@@ -36,10 +45,18 @@ export function ConfigForm() {
           render={({ field }) => (
             <FormItem>
               <ToggleGroup type="single" onValueChange={field.onChange} value={field.value}>
-                <ToggleGroupItem value="formal">{t("configForm.field.prompt.formal")}</ToggleGroupItem>
-                <ToggleGroupItem value="casual">{t("configForm.field.prompt.casual")}</ToggleGroupItem>
-                <ToggleGroupItem value="hyper">{t("configForm.field.prompt.hyper")}</ToggleGroupItem>
-                <ToggleGroupItem value="custom">{t("configForm.field.prompt.custom")}</ToggleGroupItem>
+                <ToggleGroupItem value="formal">
+                  {t('configForm.field.prompt.formal')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="casual">
+                  {t('configForm.field.prompt.casual')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="hyper">
+                  {t('configForm.field.prompt.hyper')}
+                </ToggleGroupItem>
+                <ToggleGroupItem value="custom">
+                  {t('configForm.field.prompt.custom')}
+                </ToggleGroupItem>
               </ToggleGroup>
             </FormItem>
           )}
@@ -50,7 +67,7 @@ export function ConfigForm() {
           name="commentLength.min"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("configForm.label.commentLength.min")}</FormLabel>
+              <FormLabel>{t('configForm.label.commentLength.min')}</FormLabel>
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
@@ -58,13 +75,13 @@ export function ConfigForm() {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="commentLength.max"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("configForm.label.commentLength.max")}</FormLabel>
+              <FormLabel>{t('configForm.label.commentLength.max')}</FormLabel>
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
@@ -78,13 +95,11 @@ export function ConfigForm() {
           name="postIntervalSeconds"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("configForm.label.postIntervalSeconds")}</FormLabel>
+              <FormLabel>{t('configForm.label.postIntervalSeconds')}</FormLabel>
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
-              <FormDescription>
-                {t("configForm.description.postIntervalSeconds")}
-              </FormDescription>
+              <FormDescription>{t('configForm.description.postIntervalSeconds')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -95,13 +110,11 @@ export function ConfigForm() {
           name="workIntervalSeconds"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("configForm.label.workIntervalSeconds")}</FormLabel>
+              <FormLabel>{t('configForm.label.workIntervalSeconds')}</FormLabel>
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
-              <FormDescription>
-                {t("configForm.description.workIntervalSeconds")}
-              </FormDescription>
+              <FormDescription>{t('configForm.description.workIntervalSeconds')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -112,20 +125,18 @@ export function ConfigForm() {
           name="loopIntervalSeconds"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("configForm.label.loopIntervalSeconds")}</FormLabel>
+              <FormLabel>{t('configForm.label.loopIntervalSeconds')}</FormLabel>
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
-              <FormDescription>
-                {t("configForm.description.loopIntervalSeconds")}
-              </FormDescription>
+              <FormDescription>{t('configForm.description.loopIntervalSeconds')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit">{t("configForm.submit")}</Button>
+        <Button type="submit">{t('configForm.submit')}</Button>
       </form>
     </Form>
-  );
+  )
 }
