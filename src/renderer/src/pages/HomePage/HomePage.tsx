@@ -10,7 +10,10 @@ import { useCurrentSubscriptionQuery } from "@/service/subscription/queries";
 
 export default function HomePage() {
   const { t } = useTranslation();
-  const { user } = useAuthContext();
+  // const { user } = useAuthContext();
+  const user ={
+    id:'0a1f7515-1f9b-4205-94f4-103ec162f9d3'
+  }
   const { data: hasUsedFreeTrial, refetch } = useFreeTrialQuery(user?.id);
   const { data: subscription } = useCurrentSubscriptionQuery(user?.id ?? '');
   const startFreeTrial = useStartFreeTrialMutation();

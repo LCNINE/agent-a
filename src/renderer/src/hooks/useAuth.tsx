@@ -3,6 +3,9 @@ import { createClient } from "@/supabase/client"
 import { User } from "@supabase/supabase-js"
 import { createContext, ReactNode, useContext, useEffect, useState } from "react"
 
+// Supabase 클라이언트를 한 번만 생성
+const supabase = createClient()
+
 export type AuthContextType = {
   user: User | null,
 }
@@ -17,16 +20,20 @@ export function useAuthContext() {
   return auth
 }
 
-
 type AuthProviderProps = {
   unauthenticatedFallback: ReactNode,
   children: ReactNode,
 }
+
 export function AuthProvider({ unauthenticatedFallback, children }: AuthProviderProps) {
   const [user, setUser] = useState<User|null>(null)
 
   useEffect(() => {
-    const supabase = createClient()
+    // 초기 사용자 상태 설정
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null)
+    })
+
     const event = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
     })
