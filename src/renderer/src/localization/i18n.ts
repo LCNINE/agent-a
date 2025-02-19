@@ -127,6 +127,9 @@ i18n.use(initReactI18next).init({
           "requiredFields": "Please fill in all fields",
           "usernameExists": "Username already exists",
           "addError": "An error occurred while adding the account"
+        },
+        subscription: {
+          "inactive": "Subscription is inactive. Start your subscription to use the service."
         }
 
       },
@@ -258,6 +261,9 @@ i18n.use(initReactI18next).init({
           "usernameExists": "이미 존재하는 사용자 이름입니다",
           "addError": "계정 추가 중 오류가 발생했습니다"
         },
+        subscription: {
+          "inactive": "구독이 비활성화되었습니다. 구독을 시작하고 서비스를 이용해보세요."
+        }
       },
     },
   },
