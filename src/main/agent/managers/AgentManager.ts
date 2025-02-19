@@ -1,5 +1,6 @@
-import { AgentConfig, Work } from '../..';
-import { InstagramAgent } from './InstagramAgent';
+
+import { AgentConfig, Work } from '../../..';
+import { InstagramAgent } from '../InstagramAgent';
 
 
 export interface BotStatus {

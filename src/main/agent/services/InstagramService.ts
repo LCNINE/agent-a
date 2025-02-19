@@ -1,6 +1,6 @@
 import path from "node:path";
 import { Worker } from "node:worker_threads";
-import { AgentConfig, Work, WorkerStatus } from "../..";
+import { AgentConfig, Work, WorkerStatus } from "../../..";
 
 export class InstagramService {
   private worker: Worker | null = null;
