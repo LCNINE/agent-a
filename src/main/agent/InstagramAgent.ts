@@ -4,10 +4,12 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import Anthropic from '@anthropic-ai/sdk'
 import fs from 'fs'
 import { AgentConfig } from '../..'
-import { waitRandom } from './common/timeUtils'
+import { randomSleep } from './common/timeUtils'
 import { app } from 'electron'
 import path from 'path'
 import { startBrowser } from './common/browser'
+import { BaseAgent } from './common/BaseAgent'
+import { ScanFeedService } from './services/ScanFeedService'
 
 export interface InstagramPost {
   id: string
@@ -18,43 +20,14 @@ export interface InstagramPost {
   isAd: boolean
 }
 
-export class InstagramAgent {
-  private browser: Browser | null = null
-  private page: Page | null = null
-  private isLoggedIn = false
+export class InstagramAgent extends BaseAgent {
+  protected browser: Browser | null = null
+  protected page: Page | null = null
+  protected isLoggedIn = false
   private processedShortcodes: Set<string> = new Set()
-  private config: AgentConfig
-  private anthropic: Anthropic
 
   constructor(config: AgentConfig) {
-    this.config = config
-    this.anthropic = new Anthropic({
-      apiKey:
-        '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'
-    })
-  }
-
-  async initialize() {
-    try {
-      this.browser = await startBrowser(this.config.credentials)
-
-      this.page = await this.browser.newPage()
-      await this.page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      )
-
-      // try {
-      //   const cookiesString = await fs.readFile(path.join(this.userDataDir, 'cookies.json'), 'utf8');
-      //   this.cookies = JSON.parse(cookiesString);
-      //   if (this.cookies.length > 0) {
-      //     await this.browser.setCookie(...this.cookies);
-      //   }
-      // } catch (error) {
-      //   console.log('No saved cookies found');
-      // }
-    } catch (error) {
-      throw new Error(`Failed to initialize browser: ${(error as Error).message}`)
-    }
+    super(config)
   }
 
   async login(username: string, password: string): Promise<void> {
@@ -91,14 +64,9 @@ export class InstagramAgent {
   async scanFeed(): Promise<void> {
     if (!this.page || !this.isLoggedIn) throw new Error('Not logged in')
 
-    try {
-      await this.page.goto('https://www.instagram.com/')
-      await this.interactWithPosts()
-    } catch (error) {
-      if ((error as Error).message == 'searchMenu not found')
-        await new Promise((resolve) => setTimeout(resolve, 2000000))
-      throw new Error(`Failed to scan feed: ${(error as Error).message}`)
-    }
+    const scanFeedService = new ScanFeedService(this.page, this.isLoggedIn, this.config)
+
+    await scanFeedService.execute()
   }
 
   async scanHashtag(tag: string): Promise<void> {
@@ -118,13 +86,13 @@ export class InstagramAgent {
     if (!this.page) return
 
     await this.page.goto('https://www.instagram.com')
-    await waitRandom(500, 0.2)
+    await randomSleep(500, 0.2)
 
     const searchMenu = await this.page.$('.x1iyjqo2.xh8yej3 > div:nth-child(2)')
     if (!searchMenu) throw Error('searchMenu not found')
 
     await searchMenu.click()
-    await waitRandom(500, 0.2)
+    await randomSleep(500, 0.2)
 
     const searchInputSelector =
       '.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.x1d52u69.xktsk01.x1n2onr6.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1 input'
@@ -134,7 +102,7 @@ export class InstagramAgent {
 
     await this.page.type(searchInputSelector, `#${tag}`, { delay: 50 })
 
-    await waitRandom(3000, 0.2)
+    await randomSleep(3000, 0.2)
 
     const firstSearchResultTitleSelector =
       '.x9f619.x78zum5.xdt5ytf.x1iyjqo2.x6ikm8r.x1odjw0f.xh8yej3.xocp1fn > a:nth-child(1) .x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft'
@@ -149,7 +117,7 @@ export class InstagramAgent {
 
     await firstSearchResultTitle.click()
 
-    await waitRandom(3000, 0.1)
+    await randomSleep(3000, 0.1)
 
     const postSelector =
       'div.x1qjc9v5.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1lliihq.xdt5ytf.x2lah0s'
@@ -326,13 +294,6 @@ export class InstagramAgent {
           el.setAttribute('data-test-id', `${index}`)
         }, postIndex)
 
-        // const adFlagSelector = `${postSelector} .x1fhwpqd.x132q4wb.x5n08af`;
-        // const adFlag = await this.page.$(adFlagSelector);
-        // if (adFlag) {
-        //   console.log("Ad detected, continue...");
-        //   continue;
-        // }
-
         const adSpanSelector = `${postSelector} div > span > div > span.x1fhwpqd.x132q4wb.x5n08af`
         const adSpan = await this.page.$(adSpanSelector)
         if (adSpan) {
@@ -458,7 +419,7 @@ export class InstagramAgent {
           await this.page.evaluate(() => {
             window.scrollBy(0, 100)
           })
-          await waitRandom(2000, 0.5)
+          await randomSleep(2000, 0.5)
 
           // 다음 게시물의 댓글창 확인 및 가시성 체크
           const isVisible = await this.page.evaluate(() => {
@@ -482,7 +443,7 @@ export class InstagramAgent {
           }
         }
 
-        await waitRandom(2000, 0)
+        await randomSleep(2000, 0)
         // Scroll to the next post
       } catch (error) {
         console.error(`Error interacting with post ${postIndex}:`, error)
