@@ -105,17 +105,29 @@ export class InstagramAgent extends BaseAgent {
     await randomSleep(3000, 0.2)
 
     const firstSearchResultTitleSelector =
-      '.x9f619.x78zum5.xdt5ytf.x1iyjqo2.x6ikm8r.x1odjw0f.xh8yej3.xocp1fn > a:nth-child(1) .x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft'
-    const firstSearchResultTitle = await this.page.$(firstSearchResultTitleSelector)
-    if (!firstSearchResultTitle) throw Error('firstSearchResultTitle not found')
+      '.x9f619.x78zum5.xdt5ytf.x1iyjqo2.x6ikm8r.x1odjw0f.xh8yej3.xocp1fn > a'
+    await this.page.waitForSelector(firstSearchResultTitleSelector)
 
-    const firstSearchResultTitleText = await firstSearchResultTitle.evaluate((el) => {
-      return el.textContent
-    })
-    if (!firstSearchResultTitleText) throw Error('firstSearchResultTitleText not found')
-    if (`#${tag}` !== firstSearchResultTitleText) throw Error('proper tag not found')
+    const searchResults = await this.page.$$(firstSearchResultTitleSelector)
+    let targetResult: ElementHandle<HTMLAnchorElement> | null = null
 
-    await firstSearchResultTitle.click()
+    for (const result of searchResults) {
+      const titleText = await result.evaluate((el) => {
+        const titleElement = el.querySelector('.x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft')
+        return titleElement ? titleElement.textContent : null
+      })
+
+      if (titleText === `#${tag}`) {
+        targetResult = result
+        break
+      }
+    }
+
+    if (!targetResult) {
+      throw Error(`Hashtag #${tag} not found in search results`)
+    }
+
+    await targetResult.click()
 
     await randomSleep(3000, 0.1)
 
