@@ -14,6 +14,7 @@ export class SearchInputService {
     // 인스타그램 메인 페이지로 이동
     await this.page.goto('https://www.instagram.com')
     await waitRandom(500, 0.2)
+    await this.page.goto('https://www.instagram.com')
 
     // 검색 메뉴 클릭
     const searchMenu = await this.page.locator('.x1iyjqo2.xh8yej3 > div:nth-child(2)').first()

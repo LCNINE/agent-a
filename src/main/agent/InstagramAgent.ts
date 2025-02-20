@@ -3,6 +3,7 @@ import { Browser, Page } from 'playwright'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import Anthropic from '@anthropic-ai/sdk'
+import { BaseAgent } from './common/BaseAgent'
 import fs from 'fs'
 import { AgentConfig } from '../..'
 import { waitRandom } from './common/timeUtils'
@@ -11,8 +12,8 @@ import path from 'path'
 import { startBrowser } from './common/browser'
 import { LoginService } from './services/loginService'
 import { chromium } from 'playwright'
-import { InitializeService } from './services/initializeService'
 import { SearchInputService } from './services/interactWithHashtagService/searchInput'
+
 
 export interface InstagramPost {
   id: string
@@ -23,34 +24,21 @@ export interface InstagramPost {
   isAd: boolean
 }
 
-export class InstagramAgent {
-  private browser: Browser | null = null
-  private page: Page | null = null
-  private loginService: LoginService | null = null
-  private initializeService: InitializeService
-  private isLoggedIn = false
+export class InstagramAgent extends BaseAgent {
+  protected browser: Browser | null = null
+  protected page: Page | null = null
+  protected loginService: LoginService | null = null
+  protected isLoggedIn = false
   private processedShortcodes: Set<string> = new Set()
-  private config: AgentConfig
-  private anthropic: Anthropic
 
   constructor(config: AgentConfig) {
-    this.config = config
-    this.anthropic = new Anthropic({
-      apiKey:
-        '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'
-    })
-    this.initializeService = new InitializeService()
+    super(config)
   }
 
   async initialize() {
-    try {
-      const { browser, page, loginService } = await this.initializeService.initialize()
-      this.browser = browser
-      this.page = page
-      this.loginService = loginService
-    } catch (error) {
-      throw new Error(`브라우저 초기화 실패: ${(error as Error).message}`)
-    }
+    await super.initialize()
+    if (!this.page) throw new Error('페이지가 초기화되지 않았습니다')
+    this.loginService = new LoginService(this.page)
   }
 
   async login(username: string, password: string): Promise<void> {

@@ -1,20 +1,16 @@
-import puppeteer from 'puppeteer-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import { USER_DATA_DIR } from './auth'
-import { LoginCredentials } from '../../..'
-import { install, Browser } from '@puppeteer/browsers'
-import { join } from 'path'
-import { app, dialog } from 'electron'
-import ProgressBar from 'electron-progressbar'
-import fs from 'fs'
-import puppeteerCore from 'puppeteer-core'
+// src/main/agent/common/browser.ts
+import { chromium } from 'playwright-core'
 import { execSync } from 'child_process'
-import https from 'https'
-import http from 'http'
-import { createWriteStream } from 'fs'
-import { pipeline } from 'stream'
-
+import { app } from 'electron'
 import log from 'electron-log'
+import ProgressBar from 'electron-progressbar'
+import fs, { createWriteStream } from 'fs'
+import http from 'http'
+import https from 'https'
+import { join } from 'path'
+import { pipeline } from 'stream'
+import { LoginCredentials } from '../../..'
+
 
 async function checkUrlExists(url: string): Promise<boolean> {
   return new Promise((resolve) => {
@@ -142,26 +138,29 @@ async function downloadFile(url: string, dest: string): Promise<void> {
 }
 
 export async function startBrowser(credentials: LoginCredentials) {
-  const chromePath = await ensureChromium()
-  console.log('chromePath', chromePath)
-
-  if (!fs.existsSync(chromePath)) {
-    throw new Error('Chrome executable not found at: ' + chromePath)
+  try {
+    const userDataDirPath = join(app.getPath('userData'), 'accountData', credentials.username);
+    const context = await chromium.launchPersistentContext(userDataDirPath, {
+      headless: false,
+      channel: 'chrome',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920,1080'
+      ],
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
+    return context
+  } catch (error) {
+    log.error('브라우저 시작 실패:', error);
+    throw new Error(
+      `브라우저 시작 실패: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
-
-  return await puppeteer.use(StealthPlugin()).launch({
-    headless: false,
-    userDataDir: join(app.getPath('userData'), 'accountData', credentials.username),
-    executablePath: chromePath,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-gpu',
-      '--window-size=1920,1080'
-    ]
-  })
 }
 
 export { ensureChromium }
+

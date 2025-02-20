@@ -17,21 +17,26 @@ export class LoginService {
       }
 
       // 아이디 입력
-      const usernameInput = this.page.getByLabel('전화번호, 사용자 이름 또는 이메일')
+      const usernameInput = this.page
+        .getByLabel(/전화번호, 사용자 이름 또는 이메일|phone number, username, or email/i)
       await usernameInput.click()
       await usernameInput.pressSequentially(username, { delay: 50 })
       
       await this.page.waitForTimeout(1000)
 
       // 비밀번호 입력
-      const passwordInput = this.page.getByLabel('비밀번호')
+      const passwordInput = this.page
+      .getByLabel(/비밀번호|password/i)
       await passwordInput.click()
       await passwordInput.pressSequentially(password, { delay: 50 })
 
       await this.page.waitForTimeout(1000)
 
       // 로그인 버튼 클릭 
-      await this.page.getByRole('button', { name: '로그인', exact: true }).click()
+      await this.page
+        .getByRole('button', { name: /로그인|log in/i })
+        .first()
+        .click()
 
       // 로그인 완료 대기
       await this.page.waitForURL('https://www.instagram.com/', { timeout: 30000 })

@@ -1,10 +1,13 @@
-import { Browser, Page } from 'puppeteer'
+// src/main/agent/common/BaseAgent.ts
+import { Browser, Page, BrowserContext } from 'playwright'
 import Anthropic from '@anthropic-ai/sdk'
 import { AgentConfig } from '../../..'
 import { startBrowser } from './browser'
+import { log } from 'electron-log'
 
 export abstract class BaseAgent {
-  protected browser: Browser | null = null
+  protected context: BrowserContext | null = null
+  // protected browser: Browser | null = null
   protected page: Page | null = null
   protected isLoggedIn = false
   protected config: AgentConfig
@@ -18,21 +21,27 @@ export abstract class BaseAgent {
   }
 
   async initialize() {
+    // try {
+    //   this.browser = await startBrowser(this.config.credentials)  
+      
+    //   if (!this.browser) throw new Error('브라우저 시작 실패 여기다')
+    //   this.page = await this.browser.newPage()
+    // } catch (error) {
+    //   throw new Error(`Failed to initialize browser: ${(error as Error).message}`)
+    // }
     try {
-      this.browser = await startBrowser(this.config.credentials)
-      this.page = await this.browser.newPage()
-      await this.page.setUserAgent(
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      )
+      this.context = await startBrowser(this.config.credentials)
+      if (!this.context) throw new Error('브라우저 시작 실패')
+      this.page = await this.context.newPage()
     } catch (error) {
       throw new Error(`Failed to initialize browser: ${(error as Error).message}`)
     }
   }
 
   async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close()
-      this.browser = null
+    if (this.context) {
+      await this.context.close()
+      this.context = null
       this.page = null
     }
     this.isLoggedIn = false
