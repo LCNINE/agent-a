@@ -12,6 +12,7 @@ import { startBrowser } from './common/browser'
 import { LoginService } from './services/loginService'
 import { chromium } from 'playwright'
 import { InitializeService } from './services/initializeService'
+import { SearchInputService } from './services/interactWithHashtagService/searchInput'
 
 export interface InstagramPost {
   id: string
@@ -56,6 +57,18 @@ export class InstagramAgent {
     if (!this.loginService) throw new Error('브라우저가 초기화되지 않았습니다')
     
     this.isLoggedIn = await this.loginService.login(username, password)
+  }
+
+  async scanHashtag(tag: string): Promise<void> {
+    if (!this.page || !this.isLoggedIn) throw new Error('로그인되지 않았습니다')
+
+    try {
+      await this.page.goto('https://www.instagram.com')
+      const searchInputService = new SearchInputService(this.page)
+      await searchInputService.searchHashtag(tag)
+    } catch (error) {
+      throw new Error(`해시태그 스캔 실패: ${(error as Error).message}`)
+    }
   }
 
   // async scanFeed(): Promise<void> {
