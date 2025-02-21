@@ -14,9 +14,9 @@ export async function waitRandom(ms: number, randomFactor: number) {
 
 // 게시물 상호작용(좋아요, 댓글) 사이의 대기 시간
 export const postInteractionDelays = [
-  { delayMs: 10000, frequency: 10 },  
-  { delayMs: 20000, frequency: 5 },  
-  { delayMs: 35000, frequency: 2 }   
+  { delayMs: 3000, frequency: 10 },  
+  { delayMs: 5000, frequency: 5 },  
+  { delayMs: 15000, frequency: 2 }   
 ]
 
 // 해시태그 검색과 같은 큰 동작 사이의 대기 시간

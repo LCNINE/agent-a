@@ -1,5 +1,4 @@
 // src/main/agent/common/browser.ts
-import { chromium } from 'playwright-core'
 import { execSync } from 'child_process'
 import { app } from 'electron'
 import log from 'electron-log'
@@ -10,6 +9,8 @@ import https from 'https'
 import { join } from 'path'
 import { pipeline } from 'stream'
 import { LoginCredentials } from '../../..'
+import { chromium } from "playwright-extra"
+import StealthPlugin from "puppeteer-extra-plugin-stealth"
 
 
 async function checkUrlExists(url: string): Promise<boolean> {
@@ -140,7 +141,7 @@ async function downloadFile(url: string, dest: string): Promise<void> {
 export async function startBrowser(credentials: LoginCredentials) {
   try {
     const userDataDirPath = join(app.getPath('userData'), 'accountData', credentials.username);
-    const context = await chromium.launchPersistentContext(userDataDirPath, {
+    const context = await chromium.use(StealthPlugin()).launchPersistentContext(userDataDirPath, {
       headless: false,
       channel: 'chrome',
       args: [
@@ -151,7 +152,6 @@ export async function startBrowser(credentials: LoginCredentials) {
         '--disable-gpu',
         '--window-size=1920,1080'
       ],
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
     return context
   } catch (error) {
