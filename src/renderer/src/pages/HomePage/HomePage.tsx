@@ -47,10 +47,13 @@ export default function HomePage() {
             {t("subscription.inactive")}
           </div>
         )}
-        {isSubscriptionActive && subscription?.remainingDays && (
+        {isSubscriptionActive && subscription?.remainingDays !== undefined && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-green-600 text-sm font-medium">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
-            잔여 {subscription.remainingDays}일
+            {subscription.formattedEndDate}까지
+            <span className="text-gray-500">
+              ({subscription.remainingDays}일 {subscription.remainingHours}시간)
+            </span>
           </div>
         )}
       </div>

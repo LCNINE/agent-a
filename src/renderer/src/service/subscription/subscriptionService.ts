@@ -1,4 +1,6 @@
 import Service from "../Service";
+import { differenceInDays, differenceInHours, format } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface Subscription {
     subscription_id: number;  
@@ -12,6 +14,8 @@ interface SubscriptionResponse {
     endDate: Date;
     isActive: boolean;
     remainingDays: number;
+    remainingHours: number;
+    formattedEndDate: string;
 }
   
 class SubscriptionService extends Service {
@@ -29,15 +33,20 @@ class SubscriptionService extends Service {
         return null;
       }
   
-      const today = new Date();
+      const now = new Date();
       const endDate = new Date(data.end_date);
-      const remainingDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const remainingDays = differenceInDays(endDate, now);
+      const remainingHours = differenceInHours(endDate, now) % 24;
+      const formattedEndDate = format(endDate, 'PPP', { locale: ko });
 
       return {
         subscriptionId: data.subscription_id,
         endDate: new Date(data.end_date),
         isActive: data.is_active,
-        remainingDays: remainingDays
+        remainingDays,
+        remainingHours,
+        formattedEndDate
       };
     }
   }
