@@ -4,12 +4,14 @@ interface Subscription {
     subscription_id: number;  
     end_date: Date;         
     is_active: boolean;
+    start_date: Date;
 }
   
 interface SubscriptionResponse {
     subscriptionId: number;
     endDate: Date;
     isActive: boolean;
+    remainingDays: number;
 }
   
 class SubscriptionService extends Service {
@@ -27,10 +29,15 @@ class SubscriptionService extends Service {
         return null;
       }
   
+      const today = new Date();
+      const endDate = new Date(data.end_date);
+      const remainingDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
       return {
         subscriptionId: data.subscription_id,
         endDate: new Date(data.end_date),
-        isActive: data.is_active
+        isActive: data.is_active,
+        remainingDays: remainingDays
       };
     }
   }

@@ -28,25 +28,35 @@ export default function HomePage() {
 
   return (
     <div className="flex h-full flex-col">
-      {!hasUsedFreeTrial && !isSubscriptionActive && (
-        <div className="absolute top-20 right-6">
+      <div className="absolute top-20 right-6 flex flex-col gap-2 items-end">
+        {!hasUsedFreeTrial && !isSubscriptionActive && (
           <Button 
             onClick={handleStartFreeTrial}
             disabled={startFreeTrial.isPending}
             variant="outline"
             size="sm"
+            className="w-[160px]"
           >
             {startFreeTrial.isPending ? '처리중...' : '3일 무료체험 시작하기'}
           </Button>
-        </div>
-      )}
+        )}
+        
+        {/* 구독 상태 표시 영역 */}
+        {!isSubscriptionActive && (
+          <div className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-medium">
+            {t("subscription.inactive")}
+          </div>
+        )}
+        {isSubscriptionActive && subscription?.remainingDays && (
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-green-600 text-sm font-medium">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
+            잔여 {subscription.remainingDays}일
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <h1 className="text-4xl font-bold">{t("appName")}</h1>
-        {!isSubscriptionActive && (
-          <p className="text-red-500 mb-2">
-            {t("subscription.inactive")}
-          </p>
-        )}
         <AgentController isSubscriptionActive={isSubscriptionActive} />
       </div>
       <Footer />
