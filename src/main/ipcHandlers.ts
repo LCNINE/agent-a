@@ -1,8 +1,7 @@
-import { BrowserWindow, ipcMain, nativeTheme, dialog } from 'electron'
-import { InstagramService } from './agent/services/InstagramService'
+import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
+import log from 'electron-log'
 import { StartAgentParams } from '..'
 import { AgentManager } from './agent/managers/AgentManager'
-import log from 'electron-log'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
 const WIN_MAXIMIZE_CHANNEL = 'window:maximize'
