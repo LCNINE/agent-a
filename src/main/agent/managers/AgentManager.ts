@@ -1,10 +1,11 @@
-import { Browser, BrowserContext, ElementHandle, Locator } from 'playwright-core'
+import { BrowserContext, Locator } from 'playwright-core'
 import { AgentConfig, Work } from '../../..'
 import { startBrowser } from '../common/browser'
-import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { isLoggedIn } from '../common/browserUtils'
 import { callGenerateComments } from '../common/fetchers'
 import { chooseRandomSleep, postInteractionDelays, waitRandom } from '../common/timeUtils'
+import { ArticleProcessingService } from '../services/ArticleProcessingService'
+import { HashtagService } from '../services/HashtagProcessingService'
 
 export interface BotStatus {
   isRunning: boolean
@@ -15,25 +16,24 @@ export interface BotStatus {
   } | null
 }
 
-
 export class AgentManager {
   private browser: BrowserContext | null = null
-  private _status: BotStatus = { 
+  private _status: BotStatus = {
     isRunning: false,
     currentWork: null,
-    waiting: null, 
+    waiting: null
   }
 
-  constructor(private works: Work[], private config: AgentConfig) {
-
-  }
+  constructor(
+    private works: Work[],
+    private config: AgentConfig
+  ) {}
 
   async start() {
     this.browser = await startBrowser(this.config.credentials)
     this._status.isRunning = true
   }
 
-  
   async runWork(work: Work) {
     if (this.browser == null) {
       await this.start()
@@ -43,76 +43,192 @@ export class AgentManager {
     switch (work.type) {
       case 'feed': {
         const loggedIn = await isLoggedIn(this.browser!, this.config.credentials)
-        if (!loggedIn) throw Error("로그인 실패")
-        new ArticleProcessingService(page, async (articleLocator: Locator) => {
-          const adIndicatorLocs = await articleLocator.getByText(/광고|Sponsor/).all()
-          if (adIndicatorLocs.length !== 0) {
-            console.log("[runWork] 광고 스킵")
-            return;
-          }
+        if (!loggedIn) throw Error('로그인 실패')
+        new ArticleProcessingService(
+          page,
+          async (articleLocator: Locator) => {
+            const adIndicatorLocs = await articleLocator.getByText(/광고|Sponsor/).all()
+            if (adIndicatorLocs.length !== 0) {
+              console.log('[runWork] 광고 스킵')
+              return
+            }
 
-          const likeButtonLoc = articleLocator.locator(`svg[aria-label]:is([aria-label="Like"], [aria-label="좋아요"])`)
-          if (await likeButtonLoc.isVisible()) {
-            await likeButtonLoc.click()
+            const likeButtonLoc = articleLocator.locator(
+              `svg[aria-label]:is([aria-label="Like"], [aria-label="좋아요"])`
+            )
+            if (await likeButtonLoc.isVisible()) {
+              await likeButtonLoc.click()
+              await chooseRandomSleep(postInteractionDelays)
+            }
+
+            const moreButtonLoc = articleLocator
+              .filter({ has: articleLocator.getByRole('button') })
+              .filter({ hasText: /더 보기|More/ })
+            if (await moreButtonLoc.isVisible()) {
+              await moreButtonLoc.click()
+              await chooseRandomSleep(postInteractionDelays)
+            }
+
+            const articleScreenshot = await articleLocator.screenshot({ type: 'jpeg' })
+            const base64Image = articleScreenshot.toString('base64')
+
+            const contentLoc = articleLocator.locator('._ap3a._aaco._aacu._aacx._aad7._aade')
+            const content = await contentLoc.textContent()
+            if (content == null) {
+              console.log('[runWork] 내용이 없는 게시글 스킵')
+              return
+            }
+
+            const commentRes = await callGenerateComments({
+              image: base64Image,
+              content: content,
+              minLength: this.config.commentLength.min,
+              maxLength: this.config.commentLength.max,
+              prompt: this.config.prompt
+            })
+
+            if (!commentRes.isAllowed) {
+              console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
+              return
+            }
+
+            const commentTextarea = articleLocator.getByRole('textbox')
+            if (!(await commentTextarea.isVisible())) {
+              console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
+              return
+            }
+            await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
+
+            const postButton = articleLocator.getByText(/게시|Post/)
+            await postButton.click()
             await chooseRandomSleep(postInteractionDelays)
-          }
-
-          const moreButtonLoc = articleLocator
-            .filter({ has: articleLocator.getByRole("button") })
-            .filter({ hasText: /더 보기|More/})
-          if (await moreButtonLoc.isVisible()) {
-            await moreButtonLoc.click()
-            await chooseRandomSleep(postInteractionDelays)
-          }
-
-          const articleScreenshot = await articleLocator.screenshot({ type: "jpeg" })
-          const base64Image = articleScreenshot.toString("base64")
-
-          const contentLoc = articleLocator.locator("._ap3a._aaco._aacu._aacx._aad7._aade")
-          const content = await contentLoc.textContent()
-          if (content == null) {
-            console.log("[runWork] 내용이 없는 게시글 스킵")
-            return;
-          }
-
-          const commentRes = await callGenerateComments({
-            image: base64Image,
-            content: content,
-            minLength: this.config.commentLength.min,
-            maxLength: this.config.commentLength.max,
-            prompt: this.config.prompt,
-          })
-
-          if (!commentRes.isAllowed) {
-            console.log("[runWork] AI가 댓글 작성을 거부한 게시글 스킵")
-            return;
-          }
-
-          const commentTextarea = articleLocator.getByRole("textbox")
-          if (!await commentTextarea.isVisible()) {
-            console.log("[runWork] 댓글 작성이 불가능한 게시글 스킵")
-            return;
-          }
-          await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
-
-          const postButton = articleLocator.getByText(/게시|Post/)
-          await postButton.click()
-          await chooseRandomSleep(postInteractionDelays)
-
-        }, {})
+          },
+          {}
+        )
       }
-      case 'hashtag':
-      default: throw Error(`지원하지 않는 작업 타입: ${work.type}`)
+      case 'hashtag': {
+        if (work.type !== 'hashtag') break
+
+        const loggedIn = await isLoggedIn(this.browser!, this.config.credentials)
+        if (!loggedIn) throw Error('login failed')
+
+        const hashtagService = new HashtagService(
+          page,
+          async (postLoc: Locator) => {
+            try {
+              await postLoc.click()
+              await chooseRandomSleep(postInteractionDelays)
+
+              // 내 댓글이 있는지 확인
+              const myUsername = this.config.credentials.username
+              const comments = page.locator('h3.x6s0dn4.x3nfvp2')
+              const commentAuthors = await comments.locator('a').allTextContents()
+
+              if (commentAuthors.includes(myUsername)) {
+                console.log('이미 댓글을 작성한 게시물 스킵')
+                await page.getByLabel(/닫기|Close/).click()
+                return
+              }
+
+              const adIndicator = page.getByText(/광고|Sponsored/)
+              if (await adIndicator.isVisible()) {
+                console.log('광고 게시물 스킵')
+                await page.getByLabel(/닫기|Close/).click()
+                return
+              }
+
+              const likeButton = page.locator(
+                'svg[aria-label]:is([aria-label="Like"], [aria-label="좋아요"])'
+              )
+              if (await likeButton.isVisible()) {
+                await likeButton.click()
+                await chooseRandomSleep(postInteractionDelays)
+              }
+
+              const moreButtonLoc = postLoc
+                .filter({ has: postLoc.getByRole('button') })
+                .filter({ hasText: /더 보기|More/ })
+              if (await moreButtonLoc.isVisible()) {
+                await moreButtonLoc.click()
+                await chooseRandomSleep(postInteractionDelays)
+              }
+
+              const contentLoc = page.locator(
+                'li._a9zj._a9zl._a9z5 h1._ap3a._aaco._aacu._aacx._aad7._aade'
+              )
+              const content = await contentLoc.textContent()
+              if (content == null) {
+                console.log('[runWork] 내용이 없는 게시글 스킵')
+                return
+              }
+
+              const mediaLoc = page.locator('div._aatk._aatl')
+              const mediaBase64 = await mediaLoc.screenshot({ type: 'jpeg' })
+              const base64Image = mediaBase64.toString('base64')
+
+              const commentRes = await callGenerateComments({
+                image: base64Image,
+                content: content || '',
+                minLength: this.config.commentLength.min,
+                maxLength: this.config.commentLength.max,
+                prompt: this.config.prompt
+              })
+
+              if (!commentRes.isAllowed) {
+                console.log('AI가 댓글 작성을 거부한 게시글 스킵')
+                await page.getByLabel(/닫기|Close/).click()
+                return
+              }
+
+              const commentTextarea = page.locator(
+                'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+              )
+              if (await commentTextarea.isVisible()) {
+                await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
+                await chooseRandomSleep(postInteractionDelays)
+
+                const postButton = page.getByRole('button', { name: /게시|Post/i })
+                await postButton.click()
+                await chooseRandomSleep(postInteractionDelays)
+              }
+
+              await page.getByLabel(/닫기|Close/).click()
+              await chooseRandomSleep(postInteractionDelays)
+            } catch (error) {
+              console.error('게시물 처리 중 오류:', error)
+              await page.getByLabel(/닫기|Close/).click()
+            }
+          },
+
+          {
+            maxPosts: 10
+          }
+        )
+
+        await hashtagService.processHashtag(work.tag)
+      }
+      default:
+        throw Error(`지원하지 않는 작업 타입: ${work.type}`)
     }
   }
 
-  // work list를 받아서 하나씩 수행
-  // 각 work type별로 적절한 service를 생성하고 browser 넘겨주기
-  // browser의 생명 주기 관리리
+  async stop(): Promise<void> {
+    if (this.browser) {
+      await this.browser.close()
+      this.browser = null
+    }
+
+    this._status = {
+      isRunning: false,
+      currentWork: null,
+      waiting: null
+    }
+  }
+
+  getStatus(): BotStatus {
+    return this._status
+  }
 }
-
-
-
 
 // export class AgentManager {
 //   private agent: InstagramAgent | null = null
@@ -208,20 +324,20 @@ export class AgentManager {
 //     }
 //   }
 
-//   async stop(): Promise<void> {
-//     if (this.agent) {
-//       await this.agent.close()
-//       this.agent = null
-//     }
-
-//     this.status = {
-//       isRunning: false,
-//       currentWork: null,
-//       waiting: null
-//     }
+// async stop(): Promise<void> {
+//   if (this.agent) {
+//     await this.agent.close()
+//     this.agent = null
 //   }
 
-//   getStatus(): BotStatus {
-//     return this.status
+//   this.status = {
+//     isRunning: false,
+//     currentWork: null,
+//     waiting: null
 //   }
+// }
+
+// getStatus(): BotStatus {
+//   return this.status
+// }
 // }

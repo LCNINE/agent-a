@@ -29,57 +29,62 @@ export class ArticleProcessingService {
   private articleProcessor: ArticleProcessor
   private options: ScrollOptions
   private processedArticles: Set<string> = new Set()
-  
+
   constructor(page: Page, articleProcessor: ArticleProcessor, options: Partial<ScrollOptions>) {
     this.page = page
     this.articleProcessor = articleProcessor
     this.options = {
       ...DEFAULT_OPTIONS,
-      ...options,
+      ...options
     }
   }
 
   async processArticles() {
     while (true) {
       const articleLocators = await this.page.locator('article').all()
-      
+
       if (articleLocators.length === 0 || this.processedArticles.size >= this.options.maxArticles) {
         console.log(`Processed ${this.processedArticles.size} articles`)
         break
       }
-      
+
       for (const articleLoc of articleLocators) {
         const articleElementHandle = await articleLoc.elementHandle()
         if (articleElementHandle == null) {
-          console.log("[processArticles] articleElementHandle is null")
-          continue;
+          console.log('[processArticles] articleElementHandle is null')
+          continue
         }
-        const articleId = await this.ensureArticleId(articleLoc, "data-article-id", this.processedArticles.size)
-        
+        const articleId = await this.ensureArticleId(
+          articleLoc,
+          'data-article-id',
+          this.processedArticles.size
+        )
+
         if (this.processedArticles.has(articleId)) continue
-        
+
         await smoothScrollToElement(this.page, articleElementHandle)
-        
-        const delay = Math.random() * 
-          (this.options.processingDelay.max - this.options.processingDelay.min) + 
+
+        const delay =
+          Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
           this.options.processingDelay.min
         await this.page.waitForTimeout(delay)
-        
+
         try {
           await this.articleProcessor(articleLoc)
         } catch (error) {
-          console.error(`articleProcessor 실행 실패: ${error instanceof Error ? error.message : String(error)}`)
+          console.error(
+            `articleProcessor 실행 실패: ${error instanceof Error ? error.message : String(error)}`
+          )
           continue
         } finally {
           this.processedArticles.add(articleId)
           chooseRandomSleep(majorActionDelays)
         }
       }
-      
+
       await this.page.waitForTimeout(1000)
     }
   }
-
 
   private async ensureArticleId(
     articleLoc: Locator,
@@ -88,7 +93,7 @@ export class ArticleProcessingService {
   ): Promise<string> {
     const existingId = await articleLoc.getAttribute(idAttribute)
     if (existingId) return existingId
-  
+
     const newId = `article-${currentCount}`
 
     await articleLoc.evaluate(
