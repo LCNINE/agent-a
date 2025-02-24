@@ -6,6 +6,9 @@ interface SubscriptionResponse {
     subscriptionId: number;
     endDate: Date;
     isActive: boolean;
+    remainingDays: number;
+    remainingHours: number;
+    formattedEndDate: string;
 }
 
 export function useCurrentSubscriptionQuery(userId: string) {
@@ -18,6 +21,9 @@ export function useCurrentSubscriptionQuery(userId: string) {
   return {
     data,
     isLoading,
-    error
+    error,
+    remainingDays: data?.remainingDays,
+    remainingHours: data?.remainingHours,
+    formattedEndDate: data?.formattedEndDate,
   };
 }
