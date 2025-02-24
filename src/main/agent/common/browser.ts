@@ -9,9 +9,8 @@ import https from 'https'
 import { join } from 'path'
 import { pipeline } from 'stream'
 import { LoginCredentials } from '../../..'
-import { chromium } from "playwright-extra"
-import StealthPlugin from "puppeteer-extra-plugin-stealth"
-
+import { chromium } from 'playwright-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
 async function checkUrlExists(url: string): Promise<boolean> {
   return new Promise((resolve) => {
@@ -140,7 +139,7 @@ async function downloadFile(url: string, dest: string): Promise<void> {
 
 export async function startBrowser(credentials: LoginCredentials) {
   try {
-    const userDataDirPath = join(app.getPath('userData'), 'accountData', credentials.username);
+    const userDataDirPath = join(app.getPath('userData'), 'accountData', credentials.username)
     const context = await chromium.use(StealthPlugin()).launchPersistentContext(userDataDirPath, {
       headless: false,
       channel: 'chrome',
@@ -151,16 +150,13 @@ export async function startBrowser(credentials: LoginCredentials) {
         '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--window-size=1920,1080'
-      ],
-    });
+      ]
+    })
     return context
   } catch (error) {
-    log.error('브라우저 시작 실패:', error);
-    throw new Error(
-      `브라우저 시작 실패: ${error instanceof Error ? error.message : String(error)}`
-    );
+    log.error('브라우저 시작 실패:', error)
+    throw new Error(`브라우저 시작 실패: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
 export { ensureChromium }
-

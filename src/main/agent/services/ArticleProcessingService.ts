@@ -2,7 +2,7 @@ import { chromium, Page, ElementHandle, Locator } from 'playwright'
 import { smoothScrollToElement } from '../common/browserUtils'
 import { chooseRandomSleep, majorActionDelays, postInteractionDelays } from '../common/timeUtils'
 
-type ArticleProcessor = (article: Locator) => Promise<void>
+type ArticleProcessor = (article: Locator, articleId: string) => Promise<void>
 
 interface ScrollOptions {
   maxArticles: number
@@ -70,7 +70,7 @@ export class ArticleProcessingService {
         await this.page.waitForTimeout(delay)
 
         try {
-          await this.articleProcessor(articleLoc)
+          await this.articleProcessor(articleLoc, articleId)
         } catch (error) {
           console.error(
             `articleProcessor 실행 실패: ${error instanceof Error ? error.message : String(error)}`

@@ -88,30 +88,55 @@ export class HashtagService {
   }
 
   async searchHashtag(tag: string): Promise<void> {
-    // 검색 메뉴 클릭
-    const searchMenu = this.page.locator('a', {
-      has: this.page.locator('span', {
+    try {
+      console.log('검색 메뉴 찾는 중...')
+      // 검색 메뉴가 나타날 때까지 대기
+      await this.page.waitForSelector('a:has(span:text-matches("검색|search", "i"))', {
+        timeout: 5000
+      })
+
+      const searchMenu = this.page.locator('a', {
+        has: this.page.locator('span', {
+          hasText: /검색|search/i
+        }),
         hasText: /검색|search/i
-      }),
-      hasText: /검색|search/i
-    })
+      })
 
-    if (!searchMenu) throw Error("I can't find the search menu.")
-    await searchMenu.click()
-    await waitRandom(500, 0.2)
+      console.log('검색 메뉴 클릭 시도...')
+      await searchMenu.click()
+      await this.page.waitForTimeout(2000)
 
-    // 검색어 입력
-    const searchInput = this.page.getByPlaceholder(/검색|search/i)
-    if (!searchInput) throw Error("I can't find the search input.")
-    await searchInput.type(`#${tag}`, { delay: 50 })
-    await waitRandom(3000, 0.2)
+      console.log('검색 입력창 찾는 중...')
+      await this.page.waitForSelector(
+        'input[placeholder*="검색" i], input[placeholder*="search" i]',
+        {
+          timeout: 5000
+        }
+      )
+      const searchInput = this.page.getByPlaceholder(/검색|search/i)
 
-    // 검색 결과 클릭
-    const hashtagElement = this.page.getByText(`#${tag}`, { exact: true })
-    if (!hashtagElement) throw Error('Hashtag element not found')
-    await hashtagElement.click()
+      console.log(`검색어 입력 중: #${tag}`)
+      await searchInput.fill(`#${tag}`)
+      await this.page.waitForTimeout(2000)
 
-    await chooseRandomSleep(majorActionDelays)
+      console.log('검색 결과 대기 중...')
+      await this.page.waitForSelector(`text="#${tag}"`, {
+        timeout: 5000
+      })
+      const hashtagElement = this.page.getByText(`#${tag}`, { exact: true })
+
+      console.log('검색 결과 클릭...')
+      await hashtagElement.click()
+      await this.page.waitForTimeout(3000)
+
+      console.log('해시태그 검색 완료')
+    } catch (error) {
+      console.error(
+        '해시태그 검색 중 오류 발생:',
+        error instanceof Error ? error.message : String(error)
+      )
+      throw error
+    }
   }
 
   private async ensurePostId(

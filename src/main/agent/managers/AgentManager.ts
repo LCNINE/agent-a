@@ -1,9 +1,9 @@
 import { BrowserContext, Locator } from 'playwright-core'
 import { AgentConfig, Work } from '../../..'
 import { startBrowser } from '../common/browser'
-import { isLoggedIn } from '../common/browserUtils'
+import { loginWithCredentials } from '../common/browserUtils'
 import { callGenerateComments } from '../common/fetchers'
-import { chooseRandomSleep, postInteractionDelays, waitRandom } from '../common/timeUtils'
+import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 
@@ -23,47 +23,115 @@ export class AgentManager {
     currentWork: null,
     waiting: null
   }
+  private currentWorkIndex = 0
 
   constructor(
     private works: Work[],
     private config: AgentConfig
   ) {}
 
-  async start() {
-    this.browser = await startBrowser(this.config.credentials)
-    this._status.isRunning = true
+  async start(config: AgentConfig, workList: Work[]): Promise<void> {
+    try {
+      if (this._status.isRunning) {
+        console.log('이미 실행 중입니다.')
+        return
+      }
+
+      this._status = {
+        isRunning: true,
+        currentWork: null,
+        waiting: null
+      }
+
+      this.config = config
+      this.works = workList
+      this.currentWorkIndex = 0
+      this.browser = await startBrowser(this.config.credentials)
+
+      await this.startWorkLoop()
+    } catch (error) {
+      this.stop()
+      throw error
+    }
+  }
+
+  private async startWorkLoop() {
+    if (!this.browser || !this.config || this.works.length === 0) return
+
+    while (this._status.isRunning) {
+      try {
+        const currentWork = this.works[this.currentWorkIndex]
+        this._status.currentWork = currentWork
+
+        if (this.works[this.currentWorkIndex] !== undefined) {
+          const currentWork = this.works[this.currentWorkIndex]
+          await this.runWork(currentWork)
+        }
+
+        // Move to next work and wait
+        this.currentWorkIndex = (this.currentWorkIndex + 1) % this.works.length
+
+        if (this.currentWorkIndex === 0) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
+          )
+        } else {
+          await new Promise((resolve) =>
+            setTimeout(resolve, (this.config?.workIntervalSeconds ?? 21600) * 1000)
+          )
+        }
+      } catch (error) {
+        console.error('Error in work loop:', error)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        this.currentWorkIndex = (this.currentWorkIndex + 1) % this.works.length
+        continue
+      }
+    }
   }
 
   async runWork(work: Work) {
-    if (this.browser == null) {
-      await this.start()
-    }
-
     const page = await this.browser!.newPage()
+
     switch (work.type) {
       case 'feed': {
-        const loggedIn = await isLoggedIn(this.browser!, this.config.credentials)
+        let postIndex = 0
+        const maxPosts = 10
+        // const loggedIn = await isLoggedIn(this.browser!, this.config.credentials)
+        const loggedIn = await loginWithCredentials(page!, this.config.credentials)
         if (!loggedIn) throw Error('로그인 실패')
-        new ArticleProcessingService(
+
+        const articleService = new ArticleProcessingService(
           page,
-          async (articleLocator: Locator) => {
+          async (articleLocator: Locator, articleId: string) => {
             const adIndicatorLocs = await articleLocator.getByText(/광고|Sponsor/).all()
             if (adIndicatorLocs.length !== 0) {
               console.log('[runWork] 광고 스킵')
               return
             }
 
-            const likeButtonLoc = articleLocator.locator(
-              `svg[aria-label]:is([aria-label="Like"], [aria-label="좋아요"])`
-            )
+            const likeButtonLoc = page
+              .locator(`article[data-article-id="${articleId}"]`)
+              .getByRole('button')
+              .filter({
+                hasText: /^(좋아요|Like)$/
+              })
+              .first()
+
             if (await likeButtonLoc.isVisible()) {
-              await likeButtonLoc.click()
+              await likeButtonLoc.evaluate((button) => {
+                ;(button as HTMLButtonElement).click()
+              })
               await chooseRandomSleep(postInteractionDelays)
             }
 
-            const moreButtonLoc = articleLocator
-              .filter({ has: articleLocator.getByRole('button') })
-              .filter({ hasText: /더 보기|More/ })
+            const moreButtonLoc = page
+              .locator(`article[data-article-id="${articleId}"]`)
+              .getByRole('button')
+              .filter({
+                hasText: new RegExp('^(더\\s*보기|More)$', 'i')
+              })
+              .first()
+
             if (await moreButtonLoc.isVisible()) {
               await moreButtonLoc.click()
               await chooseRandomSleep(postInteractionDelays)
@@ -72,8 +140,11 @@ export class AgentManager {
             const articleScreenshot = await articleLocator.screenshot({ type: 'jpeg' })
             const base64Image = articleScreenshot.toString('base64')
 
-            const contentLoc = articleLocator.locator('._ap3a._aaco._aacu._aacx._aad7._aade')
+            const contentLoc = articleLocator
+              .locator('._ap3a._aaco._aacu._aacx._aad7._aade')
+              .first()
             const content = await contentLoc.textContent()
+
             if (content == null) {
               console.log('[runWork] 내용이 없는 게시글 스킵')
               return
@@ -86,6 +157,8 @@ export class AgentManager {
               maxLength: this.config.commentLength.max,
               prompt: this.config.prompt
             })
+
+            console.log('commentRes:::', commentRes)
 
             if (!commentRes.isAllowed) {
               console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
@@ -105,12 +178,15 @@ export class AgentManager {
           },
           {}
         )
-      }
-      case 'hashtag': {
-        if (work.type !== 'hashtag') break
 
-        const loggedIn = await isLoggedIn(this.browser!, this.config.credentials)
-        if (!loggedIn) throw Error('login failed')
+        await articleService.processArticles()
+
+        break
+      }
+
+      case 'hashtag': {
+        const loggedIn = await loginWithCredentials(page!, this.config.credentials)
+        if (!loggedIn) throw Error('로그인 실패')
 
         const hashtagService = new HashtagService(
           page,
@@ -206,9 +282,12 @@ export class AgentManager {
         )
 
         await hashtagService.processHashtag(work.tag)
+
+        break
       }
+
       default:
-        throw Error(`지원하지 않는 작업 타입: ${work.type}`)
+        throw Error(`지원하지 않는 작업 타입: ${work}`)
     }
   }
 
@@ -229,115 +308,3 @@ export class AgentManager {
     return this._status
   }
 }
-
-// export class AgentManager {
-//   private agent: InstagramAgent | null = null
-//   private status: BotStatus = {
-//     isRunning: false,
-//     currentWork: null,
-//     waiting: null
-//   }
-//   private config: AgentConfig | null = null
-//   private workList: Work[] = []
-//   private currentWorkIndex = 0
-//   // private openai: OpenAI;
-
-//   constructor() {
-//     // this.openai = new OpenAI();
-//   }
-
-//   async start(config: AgentConfig, workList: Work[]): Promise<void> {
-//     try {
-//       if (this.status.isRunning) {
-//         throw new Error('Agent is already running')
-//       }
-
-//       this.status = {
-//         isRunning: true,
-//         currentWork: null,
-//         waiting: null
-//       }
-
-//       this.config = config
-//       this.workList = workList
-//       this.currentWorkIndex = 0
-
-//       // Initialize and login
-//       this.agent = new InstagramAgent(config)
-//       await this.agent.initialize()
-//       await this.agent.login(config.credentials.username, config.credentials.password)
-
-//       await this.startWorkLoop()
-//     } catch (error) {
-//       this.stop()
-//       throw error
-//     }
-//   }
-
-//   private async startWorkLoop() {
-//     if (!this.agent || !this.config || this.workList.length === 0) return
-
-//     while (this.status.isRunning) {
-//       try {
-//         const currentWork = this.workList[this.currentWorkIndex]
-//         this.status.currentWork = currentWork
-//         this.status.waiting = null
-
-//         // Process work based on type
-//         if (currentWork.type === 'feed') {
-//           await this.agent.scanFeed()
-//         } else if (currentWork.type === 'hashtag') {
-//           await this.agent.scanHashtag(currentWork.tag)
-//         }
-
-//         // Set waiting status for work interval
-//         // const nextTime = new Date();
-//         // nextTime.setSeconds(nextTime.getSeconds() + this.config.workIntervalSeconds);
-
-//         // this.status.waiting = {
-//         //   for: 'Next work cycle',
-//         //   until: nextTime.toISOString()
-//         // };
-
-//         // Move to next work and wait
-//         this.currentWorkIndex = (this.currentWorkIndex + 1) % this.workList.length
-//         // await new Promise(resolve =>
-//         //   setTimeout(resolve, this.config!.workIntervalSeconds * 1000)
-//         // );
-//         if (this.currentWorkIndex === 0) {
-//           await new Promise((resolve) =>
-//             setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
-//           )
-//           // await waitRandomTime(this.config.loopIntervalSeconds * 1000, 0.2)
-//         } else {
-//           await new Promise((resolve) =>
-//             setTimeout(resolve, (this.config?.workIntervalSeconds ?? 21600) * 1000)
-//           )
-//           // await waitRandomTime(this.config.workIntervalSeconds * 1000, 0.2)
-//         }
-//       } catch (error) {
-//         console.error('Error in work loop:', error)
-//         await new Promise((resolve) => setTimeout(resolve, 1000))
-//         this.currentWorkIndex = (this.currentWorkIndex + 1) % this.workList.length
-//         continue
-//       }
-//     }
-//   }
-
-// async stop(): Promise<void> {
-//   if (this.agent) {
-//     await this.agent.close()
-//     this.agent = null
-//   }
-
-//   this.status = {
-//     isRunning: false,
-//     currentWork: null,
-//     waiting: null
-//   }
-// }
-
-// getStatus(): BotStatus {
-//   return this.status
-// }
-// }

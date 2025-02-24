@@ -1,11 +1,11 @@
-import { app, shell, BrowserWindow, dialog } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
-import { registerIpcHandlers } from './ipcHandlers'
-import { autoUpdater } from 'electron-updater'
-import { setMainWindow } from './autoUpdater'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import ProgressBar from 'electron-progressbar'
+import { autoUpdater } from 'electron-updater'
+import { join } from 'path'
+import icon from '../../resources/icon.png?asset'
+import { setMainWindow } from './autoUpdater'
+import { registerIpcHandlers } from './ipcHandlers'
 
 let progressBar: any = null
 
