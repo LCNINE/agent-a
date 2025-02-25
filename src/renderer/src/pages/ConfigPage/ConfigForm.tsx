@@ -35,7 +35,7 @@ export function ConfigForm() {
   useEffect(() => {
     setIsDirty(form.formState.isDirty)
   }, [form.formState.isDirty])
-  console.log(form.formState.errors.commentLength)
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
