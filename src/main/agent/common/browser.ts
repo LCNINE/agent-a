@@ -152,6 +152,11 @@ export async function startBrowser(credentials: LoginCredentials) {
         '--window-size=1920,1080'
       ]
     })
+
+    context.on('close', () => {
+      log.info('브라우저 컨텍스트가 닫혔습니다.')
+    })
+
     return context
   } catch (error) {
     log.error('브라우저 시작 실패:', error)
