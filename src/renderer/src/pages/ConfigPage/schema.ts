@@ -2,7 +2,9 @@ import { z } from 'zod'
 
 export const configSchema = z.object({
   prompt: z.union([
-    z.object({ preset: z.enum(['formal', 'casual', 'hyper']) }),
+    z.object({
+      preset: z.enum(['formal', 'casual', 'hyper'])
+    }),
     z.object({ preset: z.literal('custom'), custom: z.string().min(1) })
   ]),
   commentLength: z

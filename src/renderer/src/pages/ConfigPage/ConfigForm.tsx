@@ -35,7 +35,7 @@ export function ConfigForm() {
   useEffect(() => {
     setIsDirty(form.formState.isDirty)
   }, [form.formState.isDirty])
-
+  console.log('form.formState.errors.prompt?.preset:', form.formState.errors.prompt?.preset)
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -45,13 +45,28 @@ export function ConfigForm() {
           render={({ field }) => (
             <FormItem>
               <ToggleGroup type="single" onValueChange={field.onChange} value={field.value}>
-                <ToggleGroupItem value="formal">
+                <ToggleGroupItem
+                  value="formal"
+                  className={
+                    form.formState.errors.prompt?.preset ? 'border-red-500 border text-red-500' : ''
+                  }
+                >
                   {t('configForm.field.prompt.formal')}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="casual">
+                <ToggleGroupItem
+                  value="casual"
+                  className={
+                    form.formState.errors.prompt?.preset ? 'border-red-500 border text-red-500' : ''
+                  }
+                >
                   {t('configForm.field.prompt.casual')}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="hyper">
+                <ToggleGroupItem
+                  value="hyper"
+                  className={
+                    form.formState.errors.prompt?.preset ? 'border-red-500 border text-red-500' : ''
+                  }
+                >
                   {t('configForm.field.prompt.hyper')}
                 </ToggleGroupItem>
                 <ToggleGroupItem
@@ -63,6 +78,11 @@ export function ConfigForm() {
                   {t('configForm.field.prompt.custom')}
                 </ToggleGroupItem>
               </ToggleGroup>
+              {form.formState.errors.prompt?.preset && (
+                <p className="text-[0.8rem] font-medium text-destructive text-center mt-1">
+                  {t('configForm.validation.preset')}
+                </p>
+              )}
             </FormItem>
           )}
         />
