@@ -54,7 +54,12 @@ export function ConfigForm() {
                 <ToggleGroupItem value="hyper">
                   {t('configForm.field.prompt.hyper')}
                 </ToggleGroupItem>
-                <ToggleGroupItem value="custom">
+                <ToggleGroupItem
+                  value=""
+                  onClick={() => {
+                    toast.info('개발중인 기능입니다.')
+                  }}
+                >
                   {t('configForm.field.prompt.custom')}
                 </ToggleGroupItem>
               </ToggleGroup>
