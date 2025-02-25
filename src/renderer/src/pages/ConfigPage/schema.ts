@@ -9,8 +9,8 @@ export const configSchema = z.object({
   ]),
   commentLength: z
     .object({
-      min: z.coerce.number().min(20, { message: '댓글은 최소 20자 이상이어야 합니다' }),
-      max: z.coerce.number().max(40, { message: '댓글은 최대 40자 이하여야 합니다' })
+      min: z.coerce.number().min(20),
+      max: z.coerce.number().max(40)
     })
     .refine((data) => data.max >= data.min, {
       message: '최대 길이는 최소 길이보다 크거나 같아야 합니다',

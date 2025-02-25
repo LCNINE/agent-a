@@ -35,7 +35,7 @@ export function ConfigForm() {
   useEffect(() => {
     setIsDirty(form.formState.isDirty)
   }, [form.formState.isDirty])
-  console.log('form.formState.errors.prompt?.preset:', form.formState.errors.prompt?.preset)
+  console.log(form.formState.errors.commentLength)
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -96,7 +96,11 @@ export function ConfigForm() {
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
-              <FormMessage />
+              {form.formState.errors.commentLength?.min && (
+                <p className="text-[0.8rem] font-medium text-destructive mt-1">
+                  {t('configForm.validation.commentLength.min')}
+                </p>
+              )}
             </FormItem>
           )}
         />
@@ -110,7 +114,12 @@ export function ConfigForm() {
               <FormControl>
                 <Input type="number" {...field} />
               </FormControl>
-              <FormMessage />
+
+              {form.formState.errors.commentLength?.max && (
+                <p className="text-[0.8rem] font-medium text-destructive mt-1">
+                  {t('configForm.validation.commentLength.max')}
+                </p>
+              )}
             </FormItem>
           )}
         />

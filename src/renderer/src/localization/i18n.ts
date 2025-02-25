@@ -77,7 +77,11 @@ i18n.use(initReactI18next).init({
             submitSuccess: 'Configuration saved successfully!'
           },
           validation: {
-            preset: 'Choose one of the conversational styles'
+            preset: 'Choose one of the conversational styles',
+            commentLength: {
+              max: 'Comments must be a maximum of 40 characters',
+              min: 'Comments must be at least 20 characters long'
+            }
           },
           label: {
             prompt: 'Prompt Preset',
@@ -212,7 +216,11 @@ i18n.use(initReactI18next).init({
           },
 
           validation: {
-            preset: '대화체 하나를 선택해주세요'
+            preset: '대화체 하나를 선택해주세요',
+            commentLength: {
+              max: '댓글은 최대 40자 이하여야 합니다',
+              min: '댓글은 최소 20자 이상이어야 합니다'
+            }
           },
           label: {
             prompt: '프롬프트 프리셋',
