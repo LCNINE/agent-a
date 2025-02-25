@@ -3,7 +3,7 @@ import { chooseRandomSleep, majorActionDelays, scrollDelays, waitRandom } from '
 import { expect } from '@playwright/test'
 import { smoothScrollToElement } from '../common/browserUtils'
 
-type HashtagProcessor = (hashtag: Locator) => Promise<void>
+type HashtagProcessor = (hashtag: Locator, articleId: string) => Promise<void>
 
 interface ScrollOptions {
   maxPosts: number
@@ -54,17 +54,20 @@ export class HashtagService {
 
       for (const postLoc of postLocators) {
         const postElementHandle = await postLoc.elementHandle()
-        if (!postElementHandle) {
-          console.log('[processArticles] articleElementHandle is null')
+        if (postElementHandle == null) {
+          console.log('[processHashtag] postElementHandle is null')
           continue
         }
 
-        const postId = await this.ensurePostId(postLoc, 'data-post-id', this.processedPosts.size)
-
-        if (this.processedPosts.has(postId)) continue
+        const articleId = await this.ensureArticleId(
+          postLoc,
+          'data-articleId',
+          this.processedPosts.size
+        )
+        if (this.processedPosts.has(articleId)) continue
 
         await smoothScrollToElement(this.page, postElementHandle)
-        // await chooseRandomSleep(scrollDelays) // 테스트로 일단 아래 delay코드 해보고 주석 풀어보기
+        await chooseRandomSleep(scrollDelays)
 
         const delay =
           Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
@@ -72,14 +75,14 @@ export class HashtagService {
         await this.page.waitForTimeout(delay)
 
         try {
-          await this.hashtagProcessor(postLoc)
+          await this.hashtagProcessor(postLoc, articleId)
         } catch (error) {
           console.error(
             `Hashtag processing failed: ${error instanceof Error ? error.message : String(error)}`
           )
           continue
         } finally {
-          this.processedPosts.add(postId)
+          this.processedPosts.add(articleId)
           await chooseRandomSleep(majorActionDelays)
         }
       }
@@ -90,7 +93,7 @@ export class HashtagService {
   async searchHashtag(tag: string): Promise<void> {
     try {
       console.log('검색 메뉴 찾는 중...')
-      // 검색 메뉴가 나타날 때까지 대기
+
       await this.page.waitForSelector('a:has(span:text-matches("검색|search", "i"))', {
         timeout: 5000
       })
@@ -102,11 +105,9 @@ export class HashtagService {
         hasText: /검색|search/i
       })
 
-      console.log('검색 메뉴 클릭 시도...')
       await searchMenu.click()
       await this.page.waitForTimeout(2000)
 
-      console.log('검색 입력창 찾는 중...')
       await this.page.waitForSelector(
         'input[placeholder*="검색" i], input[placeholder*="search" i]',
         {
@@ -115,21 +116,16 @@ export class HashtagService {
       )
       const searchInput = this.page.getByPlaceholder(/검색|search/i)
 
-      console.log(`검색어 입력 중: #${tag}`)
       await searchInput.fill(`#${tag}`)
       await this.page.waitForTimeout(2000)
 
-      console.log('검색 결과 대기 중...')
       await this.page.waitForSelector(`text="#${tag}"`, {
         timeout: 5000
       })
       const hashtagElement = this.page.getByText(`#${tag}`, { exact: true })
 
-      console.log('검색 결과 클릭...')
       await hashtagElement.click()
       await this.page.waitForTimeout(3000)
-
-      console.log('해시태그 검색 완료')
     } catch (error) {
       console.error(
         '해시태그 검색 중 오류 발생:',
@@ -139,22 +135,23 @@ export class HashtagService {
     }
   }
 
-  private async ensurePostId(
-    postLoc: Locator,
+  private async ensureArticleId(
+    articleLoc: Locator,
     idAttribute: string,
     currentCount: number
   ): Promise<string> {
-    const existingId = await postLoc.getAttribute(idAttribute)
+    const existingId = await articleLoc.getAttribute(idAttribute)
     if (existingId) return existingId
 
-    const newId = `post-${currentCount}`
-    await postLoc.evaluate(
-      (element, { idAttribute, newId }) => {
+    const newId = `article-${currentCount}`
+
+    await articleLoc.evaluate(
+      async (element, { idAttribute, newId }) => {
         element.setAttribute(idAttribute, newId)
       },
       { idAttribute, newId }
     )
-    console.log(`${newId} ok`)
+    console.log(`${newId}번 할당함`)
     return newId
   }
 }

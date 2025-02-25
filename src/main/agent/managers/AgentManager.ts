@@ -96,7 +96,6 @@ export class AgentManager {
       case 'feed': {
         let postIndex = 0
         const maxPosts = 10
-        // const loggedIn = await isLoggedIn(this.browser!, this.config.credentials)
         const loggedIn = await loginWithCredentials(page!, this.config.credentials)
         if (!loggedIn) throw Error('로그인 실패')
 
@@ -158,8 +157,6 @@ export class AgentManager {
               prompt: this.config.prompt
             })
 
-            console.log('commentRes:::', commentRes)
-
             if (!commentRes.isAllowed) {
               console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
               return
@@ -190,7 +187,7 @@ export class AgentManager {
 
         const hashtagService = new HashtagService(
           page,
-          async (postLoc: Locator) => {
+          async (postLoc: Locator, articleId: string) => {
             try {
               await postLoc.click()
               await chooseRandomSleep(postInteractionDelays)
@@ -213,19 +210,20 @@ export class AgentManager {
                 return
               }
 
-              const likeButton = page.locator(
-                'svg[aria-label]:is([aria-label="Like"], [aria-label="좋아요"])'
-              )
-              if (await likeButton.isVisible()) {
-                await likeButton.click()
-                await chooseRandomSleep(postInteractionDelays)
-              }
+              const likeButtonLoc = page
+                .locator('[aria-label="좋아요"], [aria-label="Like"]')
+                .first()
 
-              const moreButtonLoc = postLoc
-                .filter({ has: postLoc.getByRole('button') })
-                .filter({ hasText: /더 보기|More/ })
-              if (await moreButtonLoc.isVisible()) {
-                await moreButtonLoc.click()
+              if (await likeButtonLoc.isVisible()) {
+                await likeButtonLoc.evaluate((element) => {
+                  element.dispatchEvent(
+                    new MouseEvent('click', {
+                      bubbles: true,
+                      cancelable: true,
+                      view: window
+                    })
+                  )
+                })
                 await chooseRandomSleep(postInteractionDelays)
               }
 
