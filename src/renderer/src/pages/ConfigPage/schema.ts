@@ -7,6 +7,7 @@ export const configSchema = z.object({
     }),
     z.object({ preset: z.literal('custom'), custom: z.string().min(1) })
   ]),
+  workCount: z.coerce.number().min(1),
   commentLength: z
     .object({
       min: z.coerce.number().min(20),

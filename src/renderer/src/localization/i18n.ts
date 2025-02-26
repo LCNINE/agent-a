@@ -72,19 +72,40 @@ i18n.use(initReactI18next).init({
         configPage: {
           title: 'Config'
         },
+
         configForm: {
+          tooltip: {
+            commentLength: {
+              min: "Sets the user's minimum length",
+              max: "Sets the user's maximum length"
+            },
+            commentCount:
+              'The maximum number to automatically work with. Example: If set to 10, comments and likes will only work for up to 10 items.',
+            prompt: {
+              formalDesc:
+                'Creates comments using a respectful and formal tone. Employs polite expressions and honorific speech to convey a professional impression.',
+              casualDesc:
+                'Creates comments using a relaxed and friendly tone. Utilizes natural conversational language and expressions that establish a sense of familiarity.',
+              hyperDesc:
+                'Creates comments using expressive and energetic language. Features an enthusiastic style that actively incorporates emoticons and emphatic expressions.',
+              customDesc:
+                'Creates comments using user-defined tone and style preferences. Provides a personalized comment creation environment. Note that creation may be suspended for content containing slander or profanity.'
+            }
+          },
           toast: {
             submitSuccess: 'Configuration saved successfully!'
           },
           validation: {
             preset: 'Choose one of the conversational styles',
+            workCount: 'The number of works must be at least 1',
             commentLength: {
               max: 'Comments must be a maximum of 40 characters',
               min: 'Comments must be at least 20 characters long'
             }
           },
           label: {
-            prompt: 'Prompt Preset',
+            workCount: 'Work Count',
+            prompt: 'Conversational Style Setting',
             commentLength: {
               min: 'Minimum Comment Length',
               max: 'Maximum Comment Length'
@@ -211,11 +232,31 @@ i18n.use(initReactI18next).init({
           title: '설정'
         },
         configForm: {
+          tooltip: {
+            commentLength: {
+              min: '작성할 댓글의 최소 길이를 설정합니다',
+              max: '작성할 댓글의 최대 길이를 설정합니다'
+            },
+            commentCount:
+              '자동으로 작업할 최대 개수입니다. 예시: 10개로 설정하면 최대 10개까지만 댓글과 좋아요 동작을 합니다.',
+            prompt: {
+              formalDesc:
+                '존중하고 격식 있는 어조로 댓글을 작성합니다. 정중한 표현과 높임말을 사용하여 전문적인 인상을 전달합니다.',
+              casualDesc:
+                '편안하고 친근한 어조로 댓글을 작성합니다. 자연스러운 대화체 언어와 표현을 활용하여 친밀감을 형성합니다.',
+              hyperDesc:
+                '표현력 있고 활기찬 언어로 댓글을 작성합니다. 이모티콘과 강조 표현을 적극적으로 활용하는 열정적인 스타일이 특징입니다.',
+              customDesc:
+                '사용자 정의 어조와 스타일 선호도를 사용하여 댓글을 작성합니다. 개인화된 댓글 작성 환경을 제공합니다. 비방이나 욕설이 포함된 내용에 대해서는 작성이 중단될 수 있습니다.'
+            }
+          },
+
           toast: {
             submitSuccess: '설정이 저장되었습니다!'
           },
 
           validation: {
+            workCount: '작업 갯수는 최소 1개 이상이어야 합니다',
             preset: '대화체 하나를 선택해주세요',
             commentLength: {
               max: '댓글은 최대 40자 이하여야 합니다',
@@ -223,7 +264,8 @@ i18n.use(initReactI18next).init({
             }
           },
           label: {
-            prompt: '프롬프트 프리셋',
+            prompt: '대화 스타일 설정 ',
+            workCount: '작업 개수',
             commentLength: {
               min: '최소 댓글 길이',
               max: '최대 댓글 길이'

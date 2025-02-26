@@ -68,6 +68,7 @@ export type AgentConfig = {
         preset: 'custom'
         custom: string
       }
+  workCount: number
   commentLength: {
     min: number
     max: number
