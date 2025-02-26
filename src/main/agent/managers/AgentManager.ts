@@ -193,7 +193,8 @@ export class AgentManager {
               await postButton.click()
               await chooseRandomSleep(postInteractionDelays)
             },
-            {}
+            {},
+            this.config
           )
 
           await articleService.processArticles()
@@ -281,8 +282,14 @@ export class AgentManager {
                   await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
                   await chooseRandomSleep(postInteractionDelays)
 
-                  const postButton = page.getByRole('button', { name: /게시|Post/i })
+                  await page.waitForSelector(
+                    'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
+                    { state: 'visible', timeout: 60000 }
+                  )
+
+                  const postButton = page.getByRole('button', { name: '게시', exact: true })
                   await postButton.click()
+
                   await chooseRandomSleep(postInteractionDelays)
                 }
 
@@ -296,7 +303,8 @@ export class AgentManager {
 
             {
               maxPosts: 10
-            }
+            },
+            this.config
           )
 
           await hashtagService.processHashtag(work.tag)

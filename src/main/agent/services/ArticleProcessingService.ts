@@ -1,6 +1,7 @@
-import { chromium, Page, ElementHandle, Locator } from 'playwright'
+import { Locator, Page } from 'playwright'
+import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
-import { chooseRandomSleep, majorActionDelays, postInteractionDelays } from '../common/timeUtils'
+import { wait } from '../common/timeUtils'
 
 type ArticleProcessor = (article: Locator, articleId: string) => Promise<void>
 
@@ -28,15 +29,22 @@ export class ArticleProcessingService {
   private page: Page
   private articleProcessor: ArticleProcessor
   private options: ScrollOptions
+  private config: AgentConfig
   private processedArticles: Set<string> = new Set()
 
-  constructor(page: Page, articleProcessor: ArticleProcessor, options: Partial<ScrollOptions>) {
+  constructor(
+    page: Page,
+    articleProcessor: ArticleProcessor,
+    options: Partial<ScrollOptions>,
+    config: AgentConfig
+  ) {
     this.page = page
     this.articleProcessor = articleProcessor
     this.options = {
       ...DEFAULT_OPTIONS,
       ...options
     }
+    this.config = config
   }
 
   async processArticles() {
@@ -78,7 +86,7 @@ export class ArticleProcessingService {
           continue
         } finally {
           this.processedArticles.add(articleId)
-          chooseRandomSleep(majorActionDelays)
+          await wait(this.config.postIntervalSeconds * 1000)
         }
       }
 

@@ -1,7 +1,7 @@
 import { Locator, Page } from 'playwright'
-import { chooseRandomSleep, majorActionDelays, scrollDelays, waitRandom } from '../common/timeUtils'
-import { expect } from '@playwright/test'
+import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
+import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
 
 type HashtagProcessor = (hashtag: Locator, articleId: string) => Promise<void>
 
@@ -29,15 +29,22 @@ export class HashtagService {
   private page: Page
   private hashtagProcessor: HashtagProcessor
   private options: ScrollOptions
+  private config: AgentConfig
   private processedPosts: Set<string> = new Set()
 
-  constructor(page: Page, hashtagProcessor: HashtagProcessor, options: Partial<ScrollOptions>) {
+  constructor(
+    page: Page,
+    hashtagProcessor: HashtagProcessor,
+    options: Partial<ScrollOptions>,
+    config: AgentConfig
+  ) {
     this.page = page
     this.hashtagProcessor = hashtagProcessor
     this.options = {
       ...DEFAULT_OPTIONS,
       ...options
     }
+    this.config = config
   }
 
   async processHashtag(tag: string): Promise<void> {
@@ -83,7 +90,7 @@ export class HashtagService {
           continue
         } finally {
           this.processedPosts.add(articleId)
-          await chooseRandomSleep(majorActionDelays)
+          await wait(this.config.postIntervalSeconds * 1000)
         }
       }
       await this.page.waitForTimeout(1000)
