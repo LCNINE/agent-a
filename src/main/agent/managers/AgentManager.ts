@@ -3,7 +3,7 @@ import { AgentConfig, Work } from '../../..'
 import { startBrowser } from '../common/browser'
 import { loginWithCredentials } from '../common/browserUtils'
 import { callGenerateComments } from '../common/fetchers'
-import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
+import { chooseRandomSleep, majorActionDelays, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 
@@ -114,18 +114,18 @@ export class AgentManager {
 
       switch (work.type) {
         case 'feed': {
-          let postIndex = 0
-          const maxPosts = 10
           const loggedIn = await loginWithCredentials(page!, this.config.credentials)
           if (!loggedIn) throw Error('로그인 실패')
 
           const articleService = new ArticleProcessingService(
             page,
             async (articleLocator: Locator, articleId: string) => {
+              let isProcessed = false
+
               const adIndicatorLocs = await articleLocator.getByText(/광고|Sponsor/).all()
               if (adIndicatorLocs.length !== 0) {
                 console.log('[runWork] 광고 스킵')
-                return
+                return false
               }
 
               const likeButtonLoc = page
@@ -166,7 +166,7 @@ export class AgentManager {
 
               if (content == null) {
                 console.log('[runWork] 내용이 없는 게시글 스킵')
-                return
+                return false
               }
 
               const commentRes = await callGenerateComments({
@@ -179,36 +179,42 @@ export class AgentManager {
 
               if (!commentRes.isAllowed) {
                 console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
-                return
+                return false
               }
 
               const commentTextarea = articleLocator.getByRole('textbox')
               if (!(await commentTextarea.isVisible())) {
                 console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
-                return
+                return false
               }
               await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
 
               const postButton = articleLocator.getByText(/게시|Post/)
               await postButton.click()
+
+              isProcessed = true
               await chooseRandomSleep(postInteractionDelays)
+
+              return isProcessed
             },
             {},
             this.config
           )
 
           await articleService.processArticles()
-
           break
         }
 
         case 'hashtag': {
           const loggedIn = await loginWithCredentials(page!, this.config.credentials)
           if (!loggedIn) throw Error('로그인 실패')
+          await chooseRandomSleep(postInteractionDelays)
 
           const hashtagService = new HashtagService(
             page,
             async (postLoc: Locator, articleId: string) => {
+              let isProcessed = false
+
               try {
                 await postLoc.click()
                 await chooseRandomSleep(postInteractionDelays)
@@ -219,16 +225,21 @@ export class AgentManager {
                 const commentAuthors = await comments.locator('a').allTextContents()
 
                 if (commentAuthors.includes(myUsername)) {
+                  await chooseRandomSleep(postInteractionDelays)
+
                   console.log('이미 댓글을 작성한 게시물 스킵')
+
                   await page.getByLabel(/닫기|Close/).click()
-                  return
+                  return false
                 }
 
                 const adIndicator = page.getByText(/광고|Sponsored/)
                 if (await adIndicator.isVisible()) {
+                  await chooseRandomSleep(postInteractionDelays)
                   console.log('광고 게시물 스킵')
+
                   await page.getByLabel(/닫기|Close/).click()
-                  return
+                  return false
                 }
 
                 const likeButtonLoc = page
@@ -245,6 +256,7 @@ export class AgentManager {
                       })
                     )
                   })
+
                   await chooseRandomSleep(postInteractionDelays)
                 }
 
@@ -254,7 +266,7 @@ export class AgentManager {
                 const content = await contentLoc.textContent()
                 if (content == null) {
                   console.log('[runWork] 내용이 없는 게시글 스킵')
-                  return
+                  return false
                 }
 
                 const mediaLoc = page.locator('div._aatk._aatl')
@@ -271,8 +283,9 @@ export class AgentManager {
 
                 if (!commentRes.isAllowed) {
                   console.log('AI가 댓글 작성을 거부한 게시글 스킵')
+
                   await page.getByLabel(/닫기|Close/).click()
-                  return
+                  return false
                 }
 
                 const commentTextarea = page.locator(
@@ -289,26 +302,24 @@ export class AgentManager {
 
                   const postButton = page.getByRole('button', { name: '게시', exact: true })
                   await postButton.click()
-
-                  await chooseRandomSleep(postInteractionDelays)
+                  isProcessed = true
                 }
 
+                await chooseRandomSleep(postInteractionDelays)
                 await page.getByLabel(/닫기|Close/).click()
                 await chooseRandomSleep(postInteractionDelays)
               } catch (error) {
                 console.error('게시물 처리 중 오류:', error)
                 await page.getByLabel(/닫기|Close/).click()
               }
-            },
 
-            {
-              maxPosts: 10
+              return isProcessed
             },
+            {},
             this.config
           )
 
           await hashtagService.processHashtag(work.tag)
-
           break
         }
 

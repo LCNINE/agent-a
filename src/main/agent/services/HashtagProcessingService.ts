@@ -1,9 +1,9 @@
 import { Locator, Page } from 'playwright'
 import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
-import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
+import { chooseRandomSleep, majorActionDelays, scrollDelays, wait } from '../common/timeUtils'
 
-type HashtagProcessor = (hashtag: Locator, articleId: string) => Promise<void>
+type HashtagProcessor = (hashtag: Locator, articleId: string) => Promise<boolean>
 
 interface ScrollOptions {
   maxPosts: number
@@ -31,6 +31,8 @@ export class HashtagService {
   private options: ScrollOptions
   private config: AgentConfig
   private processedPosts: Set<string> = new Set()
+  private shouldStop: boolean = false
+  private processed: boolean = false
 
   constructor(
     page: Page,
@@ -45,21 +47,37 @@ export class HashtagService {
       ...options
     }
     this.config = config
+
+    if (config.workCount && config.workCount > 0) {
+      this.options.maxPosts = config.workCount
+      console.log(`HashtagService가 최대 ${config.workCount}개의 게시물을 처리합니다`)
+    }
   }
 
   async processHashtag(tag: string): Promise<void> {
     // 해시태그 검색 및 페이지 이동
     await this.searchHashtag(tag)
 
+    this.shouldStop = false
+    this.processed = false
+    this.processedPosts.clear()
+
     while (true) {
       const postLocators = await this.page.locator('a[role="link"][tabindex="0"]').all()
 
-      if (postLocators.length === 0 || this.processedPosts.size >= this.options.maxPosts) {
-        console.log(`Processed: ${this.processedPosts.size} posts`)
+      if (postLocators.length === 0) {
+        console.log('더 이상 처리할 게시물이 없습니다.')
         break
       }
 
       for (const postLoc of postLocators) {
+        // 최대 처리 수에 도달했는지 확인
+        if (this.processedPosts.size >= this.options.maxPosts) {
+          console.log(`최대 게시물 수(${this.options.maxPosts})에 도달했습니다. 작업을 종료합니다.`)
+          this.shouldStop = true
+          break
+        }
+
         const postElementHandle = await postLoc.elementHandle()
         if (postElementHandle == null) {
           console.log('[processHashtag] postElementHandle is null')
@@ -82,19 +100,30 @@ export class HashtagService {
         await this.page.waitForTimeout(delay)
 
         try {
-          await this.hashtagProcessor(postLoc, articleId)
+          this.processed = await this.hashtagProcessor(postLoc, articleId)
         } catch (error) {
           console.error(
             `Hashtag processing failed: ${error instanceof Error ? error.message : String(error)}`
           )
           continue
         } finally {
-          this.processedPosts.add(articleId)
+          // 실제로 댓글을 작성한 경우에만 카운트에 추가
+          if (this.processed) {
+            this.processedPosts.add(articleId)
+          }
           await wait(this.config.postIntervalSeconds * 1000)
         }
       }
+
+      if (this.shouldStop) {
+        break
+      }
+
       await this.page.waitForTimeout(1000)
     }
+
+    console.log('작업종료:', this.processedPosts.size, this.options.maxPosts)
+    console.log(`처리된 게시물: ${this.processedPosts.size}개`)
   }
 
   async searchHashtag(tag: string): Promise<void> {
@@ -130,8 +159,8 @@ export class HashtagService {
         timeout: 5000
       })
       const hashtagElement = this.page.getByText(`#${tag}`, { exact: true })
-
       await hashtagElement.click()
+
       await this.page.waitForTimeout(3000)
     } catch (error) {
       console.error(
