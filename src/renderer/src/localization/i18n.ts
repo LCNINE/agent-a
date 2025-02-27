@@ -272,7 +272,7 @@ i18n.use(initReactI18next).init({
             },
             postIntervalSeconds: '댓글 시간 간격 (초)',
             workIntervalSeconds: '작업 간 간격 (초)',
-            loopIntervalSeconds: '전체 작업 간간 간격 (초)'
+            loopIntervalSeconds: '전체 작업 간 간격 (초)'
           },
           description: {
             postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격',
