@@ -14,9 +14,20 @@ import { Button } from '@/components/ui/button'
 import { ChevronDownIcon, ChevronUpIcon, SquarePenIcon, TrashIcon } from 'lucide-react'
 import { WorkFormDialog } from './WorkFormDialog'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogFooter,
+  AlertDialogDescription,
+  AlertDialogTitle,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogTrigger
+} from '@renderer/components/ui/alert-dialog'
 
 export function WorkTable() {
-  const { workList, up, down, remove } = useWorkStore()
+  const { workList, up, down, remove, allRemove } = useWorkStore()
   const { t } = useTranslation()
 
   return (
@@ -29,6 +40,31 @@ export function WorkTable() {
               <TableHead>상세</TableHead>
 
               <TableHead className="w-[100px]"></TableHead>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    title="전체 삭제"
+                    variant="ghost"
+                    size="icon"
+                    className="w-6 h-6 absolute right-2 bottom-2  rounded-xl"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>모든 작업을 삭제하시겠습니까?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      한번 삭제하면 복구 할 수 없습니다.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>취소</AlertDialogCancel>
+                    <AlertDialogAction onClick={allRemove}>삭제</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </TableRow>
           </TableHeader>
           <TableBody>
