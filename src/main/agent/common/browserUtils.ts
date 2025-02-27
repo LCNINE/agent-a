@@ -60,26 +60,24 @@ export async function smoothScrollToElement(page: Page, element: ElementHandle):
   await page.waitForTimeout(100)
 }
 
-// export async function isLoggedIn(browser: BrowserContext, credentials: LoginCredentials) {
-//   const page = await browser.newPage()
-//   await page.goto('https://www.instagram.com/accounts/login/')
+export async function isLoggedIn(browser: BrowserContext, credentials: LoginCredentials) {
+  const page = await browser.newPage()
+  await page.goto('https://www.instagram.com/accounts/login/')
 
-//   try {
-//     await page.waitForURL('https://www.instagram.com/', { timeout: 3000 })
-//     return true
-//   } catch {
-//     try {
-//       loginWithCredentials(page, credentials)
-//       return true
-//     } catch {
-//       return false
-//     }
-//   }
-
-//   // finally {
-//   //   page.close()
-//   // }
-// }
+  try {
+    await page.waitForURL('https://www.instagram.com/', { timeout: 3000 })
+    return true
+  } catch {
+    try {
+      loginWithCredentials(page, credentials)
+      return true
+    } catch {
+      return false
+    }
+  } finally {
+    page.close()
+  }
+}
 
 export async function loginWithCredentials(page: Page, credentials: LoginCredentials) {
   const { username, password } = credentials
@@ -117,9 +115,7 @@ export async function loginWithCredentials(page: Page, credentials: LoginCredent
       .first()
       .click()
 
-    // 로그인 완료 대기
-    await page.waitForURL('https://www.instagram.com/', { timeout: 10000 })
-
+    await page.waitForTimeout(3000)
     return true
   } catch (error) {
     throw new Error(`로그인 실패: ${(error as Error).message}`)

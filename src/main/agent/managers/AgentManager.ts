@@ -115,7 +115,11 @@ export class AgentManager {
       switch (work.type) {
         case 'feed': {
           const loggedIn = await loginWithCredentials(page!, this.config.credentials)
+
           if (!loggedIn) throw Error('로그인 실패')
+
+          await page.waitForTimeout(2000)
+          await page.goto('https://www.instagram.com/')
 
           const articleService = new ArticleProcessingService(
             page,
@@ -208,7 +212,9 @@ export class AgentManager {
         case 'hashtag': {
           const loggedIn = await loginWithCredentials(page!, this.config.credentials)
           if (!loggedIn) throw Error('로그인 실패')
-          await chooseRandomSleep(postInteractionDelays)
+
+          await page.waitForTimeout(2000)
+          await page.goto('https://www.instagram.com/')
 
           const hashtagService = new HashtagService(
             page,
