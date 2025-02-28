@@ -37,7 +37,17 @@ i18n.use(initReactI18next).init({
           }
         },
         workPage: {
-          title: 'Work Management'
+          title: 'Work Management',
+          workList: {
+            item1: {
+              title: 'Hashtag and Feed Work',
+              description: 'Add hashtag and feed work.'
+            },
+            item2: {
+              title: 'My Feed Work',
+              description: 'Like the comments on my feed and like the posts on the account.'
+            }
+          }
         },
         work: {
           type: {
@@ -196,7 +206,18 @@ i18n.use(initReactI18next).init({
           }
         },
         workPage: {
-          title: '작업 관리'
+          title: '작업 관리',
+          workList: {
+            item1: {
+              title: '해시태그 및 피드 작업',
+              description: '해시태그 및 피드 작업을 추가합니다.'
+            },
+            item2: {
+              title: '내 피드 작업',
+              description:
+                '내 피드에 달린 댓글을 좋아요 누르고, 해당 계정으로 가서 게시글 좋아요를 눌러줍니다.'
+            }
+          }
         },
         work: {
           type: {
