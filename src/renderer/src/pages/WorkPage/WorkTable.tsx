@@ -31,7 +31,7 @@ export function WorkTable() {
   const { t } = useTranslation()
 
   return (
-    <div className="w-full ">
+    <div className="w-full">
       <ScrollArea className=" h-[calc(100vh-150px)] ">
         <Table>
           <TableHeader className="relative">

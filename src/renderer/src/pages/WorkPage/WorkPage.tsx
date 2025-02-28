@@ -16,8 +16,8 @@ export default function WorkPage() {
           <WorkFormDialog work={null} />
         </div>
         <WorkTable />
+        <Footer />
       </div>
-      <Footer />
     </div>
   )
 }
