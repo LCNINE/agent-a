@@ -14,7 +14,6 @@ const useWorkTypeStore = create<IWorkTypeState>()(
       workType: undefined,
 
       changeWorkType: (workType: WorkType) => {
-        console.log('changeWorkType', workType)
         set({ workType })
       }
     }),

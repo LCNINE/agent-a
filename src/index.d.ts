@@ -38,6 +38,8 @@ export type WorkerStatus =
       state: 'idle'
     }
 
+export type WorkType = 'hashtag_and_feed' | 'my_feed'
+
 export type Work = (
   | {
       type: 'feed'
@@ -48,6 +50,12 @@ export type Work = (
     }
 ) & {
   id: string
+}
+
+export type FeedWork = {
+  feedWorkModeType: 'basic' | 'advanced'
+  likeCommentsEnabled: boolean
+  replyCommentsEnabled: boolean
 }
 
 export interface BotStatus {
@@ -81,7 +89,8 @@ export type AgentConfig = {
 
 export interface StartAgentParams {
   config: AgentConfig
-  workList: Work[]
+  workType: WorkType
+  workList: Work[] | FeedWork[]
 }
 
 interface AgentContext {

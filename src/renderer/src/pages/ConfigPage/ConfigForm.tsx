@@ -38,6 +38,8 @@ export function ConfigForm() {
     defaultValues: config
   })
 
+  console.log('config:', config.loopIntervalSeconds)
+
   async function onSubmit(values: ConfigSchema) {
     setConfig(values)
     form.reset(values)
@@ -348,26 +350,24 @@ export function ConfigForm() {
                             </div>
                             <FormControl>
                               <Select
-                                value={field.value.toString()}
+                                value={field.value?.toString()}
                                 onValueChange={(value) => field.onChange(Number(value))}
                               >
                                 <SelectTrigger>
-                                  <SelectValue
-                                    placeholder={t('configForm.select.intervalPlaceholder')}
-                                  />
+                                  <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="30">
-                                    30 {t('configForm.select.minute')}
+                                  <SelectItem value="1800">
+                                    30{t('configForm.select.minute')}
                                   </SelectItem>
-                                  <SelectItem value="60">
-                                    1 {t('configForm.select.hour')}
+                                  <SelectItem value="3600">
+                                    1{t('configForm.select.hour')}
                                   </SelectItem>
-                                  <SelectItem value="300">
-                                    3 {t('configForm.select.hour')}
+                                  <SelectItem value="10800">
+                                    3{t('configForm.select.hour')}
                                   </SelectItem>
-                                  <SelectItem value="600">
-                                    6 {t('configForm.select.hour')}
+                                  <SelectItem value="21600">
+                                    6{t('configForm.select.hour')}
                                   </SelectItem>
                                 </SelectContent>
                               </Select>

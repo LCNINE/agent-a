@@ -3,10 +3,14 @@ import { useConfigStore } from '../store/configStore'
 import { useWorkStore } from '../store/workStore'
 import { toast } from 'sonner'
 import { BotStatus, LoginCredentials } from 'src'
+import useMyFeedWorkStore from '@renderer/store/myFeedWorkStore'
+import useWorkTypeStore from '@renderer/store/workTypeStore'
 
 export function useAgent() {
   const config = useConfigStore((state) => state.config)
   const workList = useWorkStore((state) => state.workList)
+  const workType = useWorkTypeStore((state) => state.workType)
+  const { feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled } = useMyFeedWorkStore()
   const [status, setStatus] = useState<BotStatus>({
     isRunning: false,
     currentWork: null,
@@ -46,13 +50,29 @@ export function useAgent() {
       console.log('Starting agent with config:', {
         username: credentials.username,
         hasPassword: !!credentials.password,
-        workListLength: workList.length
+        workListLength: workList.length,
+        workType: workType
       })
 
-      await window.agent.start({
-        config: agentConfig,
-        workList
-      })
+      if (workType === 'hashtag_and_feed') {
+        await window.agent.start({
+          config: agentConfig,
+          workType: 'hashtag_and_feed',
+          workList
+        })
+
+        return
+      }
+
+      if (workType === 'my_feed') {
+        await window.agent.start({
+          config: agentConfig,
+          workType: 'my_feed',
+          workList: [{ feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled }]
+        })
+
+        return
+      }
     } catch (error) {
       console.error('Agent start error:', error)
       toast.error('에이전트를 시작하지 못했습니다.', {
