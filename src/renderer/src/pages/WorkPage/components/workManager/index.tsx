@@ -3,12 +3,13 @@ import MyFeedWork from './myFeedWork'
 import { WorkType } from '@renderer/store/workTypeStore'
 
 const WorkManger = ({ type }: { type: WorkType }) => {
-  return (
-    <>
-      {type === 'hashtag_and_feed' && <HashTagAndFeedWork />}
-      {type === 'my_feed' && <MyFeedWork />}
-    </>
-  )
+  if (type === 'hashtag_and_feed') {
+    return <HashTagAndFeedWork />
+  }
+  if (type === 'my_feed') {
+    return <MyFeedWork />
+  }
+  return null
 }
 
 export default WorkManger

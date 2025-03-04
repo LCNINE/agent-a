@@ -22,6 +22,13 @@ import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { configSchema, type ConfigSchema } from './schema'
+import {
+  Select,
+  SelectItem,
+  SelectValue,
+  SelectTrigger,
+  SelectContent
+} from '@renderer/components/ui/select'
 
 export function ConfigForm() {
   const { t } = useTranslation()
@@ -43,19 +50,20 @@ export function ConfigForm() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 max-w-3xl">
-        <Card className="shadow-lg flex flex-col h-[calc(100vh-150px)]">
-          <CardHeader className="bg-muted/50 p-2 flex-shrink-0 ">
-            <div className="flex justify-between items-center px-5">
+      <div className="container mx-auto max-w-3xl p-4">
+        <Card className="flex h-[calc(100vh-150px)] flex-col shadow-lg">
+          <CardHeader className="flex-shrink-0 bg-muted/50 p-2">
+            <div className="flex items-center justify-between px-5">
               <CardTitle className="text-xl font-bold">{t('configPage.title')}</CardTitle>
 
+              {/* 저장 버튼 */}
               <Button
                 type="submit"
                 form="config-form"
-                className="py-2 px-4 flex items-center justify-center gap-1 text-sm"
+                className="flex transform items-center justify-center gap-1 bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all duration-200 hover:bg-green-500"
               >
                 <Save className="h-4 w-4" />
-                {t('configForm.submit') || '저장'}
+                {t('configForm.submit')}
               </Button>
             </div>
           </CardHeader>
@@ -69,9 +77,9 @@ export function ConfigForm() {
                     control={form.control}
                     name="prompt.preset"
                     render={({ field }) => (
-                      <FormItem className="bg-card p-4 rounded-lg border">
-                        <div className="flex items-center mb-4">
-                          <FormLabel className="text-base font-medium m-0">
+                      <FormItem className="rounded-lg border bg-card p-4">
+                        <div className="mb-4 flex items-center">
+                          <FormLabel className="m-0 text-base font-medium">
                             {t('configForm.label.prompt')}
                           </FormLabel>
                         </div>
@@ -89,7 +97,7 @@ export function ConfigForm() {
                                 value="formal"
                                 className={`flex-1 py-3 ${field.value === 'formal' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''} ${
                                   form.formState.errors.prompt?.preset
-                                    ? 'border-red-500 border text-red-500'
+                                    ? 'border border-red-500 text-red-500'
                                     : 'border shadow-sm'
                                 }`}
                               >
@@ -108,7 +116,7 @@ export function ConfigForm() {
                                 value="casual"
                                 className={`flex-1 py-3 ${field.value === 'casual' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''} ${
                                   form.formState.errors.prompt?.preset
-                                    ? 'border-red-500 border text-red-500'
+                                    ? 'border border-red-500 text-red-500'
                                     : 'border shadow-sm'
                                 }`}
                               >
@@ -125,9 +133,9 @@ export function ConfigForm() {
                             <TooltipTrigger asChild>
                               <ToggleGroupItem
                                 value="hyper"
-                                className={`flex-1 py-3 ${field.value === 'hyper' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground ' : ''} ${
+                                className={`flex-1 py-3 ${field.value === 'hyper' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''} ${
                                   form.formState.errors.prompt?.preset
-                                    ? 'border-red-500 border text-red-500'
+                                    ? 'border border-red-500 text-red-500'
                                     : 'border shadow-sm'
                                 }`}
                               >
@@ -158,7 +166,7 @@ export function ConfigForm() {
                           </Tooltip>
                         </ToggleGroup>
                         {form.formState.errors.prompt?.preset && (
-                          <p className="text-[0.8rem] font-medium text-destructive text-center mt-1">
+                          <p className="mt-1 text-center text-[0.8rem] font-medium text-destructive">
                             {t('configForm.validation.preset')}
                           </p>
                         )}
@@ -171,14 +179,14 @@ export function ConfigForm() {
                     control={form.control}
                     name="workCount"
                     render={({ field }) => (
-                      <FormItem className="bg-card p-4 rounded-lg border">
-                        <div className="flex items-center mb-2">
-                          <FormLabel className="text-base m-0">
+                      <FormItem className="rounded-lg border bg-card p-4">
+                        <div className="mb-2 flex items-center">
+                          <FormLabel className="m-0 text-base">
                             {t('configForm.label.workCount')}
                           </FormLabel>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
+                              <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{t('configForm.tooltip.commentCount')}</p>
@@ -189,7 +197,7 @@ export function ConfigForm() {
                           <Input type="number" {...field} className="mt-2" />
                         </FormControl>
                         {form.formState.errors.workCount && (
-                          <p className="text-[0.8rem] font-medium text-destructive mt-1">
+                          <p className="mt-1 text-[0.8rem] font-medium text-destructive">
                             {t('configForm.validation.workCount')}
                           </p>
                         )}
@@ -198,20 +206,20 @@ export function ConfigForm() {
                   />
 
                   {/* 댓글 길이 설정 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* 댓글 최소 길이 */}
                     <FormField
                       control={form.control}
                       name="commentLength.min"
                       render={({ field }) => (
-                        <FormItem className="bg-card p-4 rounded-lg border">
-                          <div className="flex items-center mb-2">
-                            <FormLabel className="text-base m-0">
+                        <FormItem className="rounded-lg border bg-card p-4">
+                          <div className="mb-2 flex items-center">
+                            <FormLabel className="m-0 text-base">
                               {t('configForm.label.commentLength.min')}
                             </FormLabel>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
+                                <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{t('configForm.tooltip.commentLength.min')}</p>
@@ -222,7 +230,7 @@ export function ConfigForm() {
                             <Input type="number" {...field} className="mt-2" />
                           </FormControl>
                           {form.formState.errors.commentLength?.min && (
-                            <p className="text-[0.8rem] font-medium text-destructive mt-1">
+                            <p className="mt-1 text-[0.8rem] font-medium text-destructive">
                               {t('configForm.validation.commentLength.min')}
                             </p>
                           )}
@@ -235,14 +243,14 @@ export function ConfigForm() {
                       control={form.control}
                       name="commentLength.max"
                       render={({ field }) => (
-                        <FormItem className="bg-card p-4 rounded-lg border">
-                          <div className="flex items-center mb-2">
-                            <FormLabel className="text-base m-0">
+                        <FormItem className="rounded-lg border bg-card p-4">
+                          <div className="mb-2 flex items-center">
+                            <FormLabel className="m-0 text-base">
                               {t('configForm.label.commentLength.max')}
                             </FormLabel>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
+                                <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{t('configForm.tooltip.commentLength.max')}</p>
@@ -253,7 +261,7 @@ export function ConfigForm() {
                             <Input type="number" {...field} className="mt-2" />
                           </FormControl>
                           {form.formState.errors.commentLength?.max && (
-                            <p className="text-[0.8rem] font-medium text-destructive mt-1">
+                            <p className="mt-1 text-[0.8rem] font-medium text-destructive">
                               {t('configForm.validation.commentLength.max')}
                             </p>
                           )}
@@ -263,7 +271,7 @@ export function ConfigForm() {
                   </div>
 
                   {/* 시간 간격 설정 */}
-                  <div className="bg-card p-4 rounded-lg border">
+                  <div className="rounded-lg border bg-card p-4">
                     <div className="space-y-4">
                       {/* 댓글 시간 간격 */}
                       <FormField
@@ -271,13 +279,13 @@ export function ConfigForm() {
                         name="postIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
-                              <FormLabel className="text-sm m-0">
+                            <div className="mb-2 flex items-center">
+                              <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.postIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{t('configForm.description.postIntervalSeconds')}</p>
@@ -298,13 +306,13 @@ export function ConfigForm() {
                         name="workIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
-                              <FormLabel className="text-sm m-0">
+                            <div className="mb-2 flex items-center">
+                              <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.workIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{t('configForm.description.workIntervalSeconds')}</p>
@@ -325,13 +333,13 @@ export function ConfigForm() {
                         name="loopIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
-                              <FormLabel className="text-sm m-0">
+                            <div className="mb-2 flex items-center">
+                              <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.loopIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{t('configForm.description.loopIntervalSeconds')}</p>
@@ -339,7 +347,30 @@ export function ConfigForm() {
                               </Tooltip>
                             </div>
                             <FormControl>
-                              <Input type="number" {...field} />
+                              <Select
+                                value={field.value.toString()}
+                                onValueChange={(value) => field.onChange(Number(value))}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue
+                                    placeholder={t('configForm.select.intervalPlaceholder')}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="30">
+                                    30 {t('configForm.select.minute')}
+                                  </SelectItem>
+                                  <SelectItem value="60">
+                                    1 {t('configForm.select.hour')}
+                                  </SelectItem>
+                                  <SelectItem value="300">
+                                    3 {t('configForm.select.hour')}
+                                  </SelectItem>
+                                  <SelectItem value="600">
+                                    6 {t('configForm.select.hour')}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

@@ -2,9 +2,9 @@ import Footer from '@/components/template/Footer'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import WorkTypeDropdown from './WorkTypeDropdown'
-import WorkTypeSelector from './WorkTypeSelector'
-import WorkManger from './workManger'
+import WorkTypeDropdown from './components/WorkTypeDropdown'
+import WorkTypeSelector from './components/WorkTypeSelector'
+import WorkManger from './components/workManager'
 import useWorkTypeStore, { WorkType } from '@/store/workTypeStore'
 
 export default function WorkPage() {

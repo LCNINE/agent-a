@@ -138,6 +138,11 @@ i18n.use(initReactI18next).init({
               custom: 'Custom'
             }
           },
+
+          select: {
+            minute: 'minute',
+            hour: 'hour'
+          },
           submit: 'Save'
         },
         userMenu: {
@@ -308,6 +313,11 @@ i18n.use(initReactI18next).init({
               custom: '사용자 지정'
             }
           },
+          select: {
+            minute: '분',
+            hour: '시간'
+          },
+
           submit: '저장'
         },
         userMenu: {
