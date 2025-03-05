@@ -1,20 +1,32 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
+export interface Feed {
+  id: number
+  url: string
+  name: string | null
+  active: boolean
+}
+
 type FeedWorkModeType = 'basic' | 'advanced'
 
 type MyFeedWorkStore = {
+  feeds: Feed[]
   feedWorkModeType: FeedWorkModeType
   likeCommentsEnabled: boolean
   replyCommentsEnabled: boolean
   toggleLikeComments: (value?: boolean) => void
   toggleReplyComments: (value?: boolean) => void
   changeFeedWorkMode: (type: FeedWorkModeType) => void
+  addFeed: (feed: Feed) => void
+  removeFeed: (id: number) => void
+  toggleFeedActive: (id: number) => void
 }
 
 const useMyFeedWorkStore = create<MyFeedWorkStore>()(
   persist(
     (set, get) => ({
+      feeds: [],
       feedWorkModeType: 'basic',
       likeCommentsEnabled: true,
       replyCommentsEnabled: true,
@@ -37,6 +49,28 @@ const useMyFeedWorkStore = create<MyFeedWorkStore>()(
         set((state) => ({
           ...state,
           feedWorkModeType: type
+        }))
+      },
+
+      addFeed: (feed: Feed) => {
+        set((state) => ({
+          ...state,
+          feeds: [...state.feeds, feed]
+        }))
+      },
+
+      removeFeed: (id: number) => {
+        set((state) => ({
+          ...state,
+          feeds: state.feeds.filter((feed) => feed.id !== id)
+        }))
+      },
+      toggleFeedActive: (id: number) => {
+        set((state) => ({
+          ...state,
+          feeds: state.feeds.map((feed) =>
+            feed.id === id ? { ...feed, active: !feed.active } : feed
+          )
         }))
       }
     }),

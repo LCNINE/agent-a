@@ -38,8 +38,6 @@ export function ConfigForm() {
     defaultValues: config
   })
 
-  console.log('config:', config.loopIntervalSeconds)
-
   async function onSubmit(values: ConfigSchema) {
     setConfig(values)
     form.reset(values)
