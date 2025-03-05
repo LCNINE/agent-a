@@ -34,7 +34,7 @@ const AddFeedDialog = ({ isOpen, onClose }: AddFeedDialogProps) => {
 
     setTimeout(() => {
       addFeed({
-        id: feeds.length + 1,
+        id: feeds.length,
         url: newFeedUrl.trim(),
         name: newFeedName.trim() !== '' ? newFeedName : `피드 ${feeds.length + 1}`,
         active: true

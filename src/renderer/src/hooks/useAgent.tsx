@@ -11,6 +11,7 @@ export function useAgent() {
   const workList = useWorkStore((state) => state.workList)
   const workType = useWorkTypeStore((state) => state.workType)
   const { feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled } = useMyFeedWorkStore()
+  const { feeds } = useMyFeedWorkStore()
   const [status, setStatus] = useState<BotStatus>({
     isRunning: false,
     currentWork: null,
@@ -68,7 +69,7 @@ export function useAgent() {
         await window.agent.start({
           config: agentConfig,
           workType: 'my_feed',
-          workList: [{ feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled }]
+          workList: [{ feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled, feeds }]
         })
 
         return

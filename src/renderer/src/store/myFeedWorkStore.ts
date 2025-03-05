@@ -1,12 +1,6 @@
+import { Feed } from 'src'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-
-export interface Feed {
-  id: number
-  url: string
-  name: string | null
-  active: boolean
-}
 
 type FeedWorkModeType = 'basic' | 'advanced'
 

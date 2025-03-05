@@ -52,10 +52,18 @@ export type Work = (
   id: string
 }
 
+export interface Feed {
+  id: number
+  url: string
+  name: string | null
+  active: boolean
+}
+
 export type FeedWork = {
   feedWorkModeType: 'basic' | 'advanced'
   likeCommentsEnabled: boolean
   replyCommentsEnabled: boolean
+  feeds: Feed[]
 }
 
 export interface BotStatus {

@@ -354,6 +354,8 @@ export class AgentManager {
               await page.waitForTimeout(2000)
               await page.goto('https://www.instagram.com/')
 
+              const feeds = (work as FeedWork).feeds
+
               const feedWorkBasicModeService = new FeedWorkBasicModeService(
                 page,
                 async (feedLoc: Locator, feedId: string) => {
