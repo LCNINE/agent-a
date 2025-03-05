@@ -68,18 +68,19 @@ export class FeedWorkBasicModeService {
       // const feedLocators = await this.page.getByRole('main', { name: 'main' }).all()
       // class="x78zum5 xdt5ytf x1iyjqo2"
       const feedLocators = await this.page
-        .locator('div.x9f619.xjbqb8w.x78zum5.x168nmei')
-        .filter({ has: this.page.locator('span[dir="auto"][class*="aco"][class*="aad7"]') })
+        .locator('ul._a9ym')
         .all()
+
+        console.log('feedLocators::',feedLocators)
 
       if (feedLocators.length === 0) {
         console.log('더 이상 처리할 게시물이 없습니다.')
         break
       }
-
+      return
+      
       for (const feedLoc of feedLocators) {
-        console.log(await feedLoc.textContent())
-        return
+        
         // 최대 처리 수에 도달했는지 확인
         if (this.processedFeeds.size >= this.options.maxFeeds) {
           console.log(`최대 작업업 수(${this.options.maxFeeds})에 도달했습니다. 작업을 종료합니다.`)
