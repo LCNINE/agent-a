@@ -1,5 +1,5 @@
 import { Locator, Page } from 'playwright'
-import { AgentConfig } from '../../..'
+import { AgentConfig, Feed } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
 import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
 
@@ -30,7 +30,7 @@ export class FeedWorkBasicModeService {
   private basicModeProcessor: BasicModeProcessor
   private options: ScrollOptions
   private config: AgentConfig
-  private processedArticles: Set<string> = new Set()
+  private processedFeeds: Set<string> = new Set()
   private shouldStop: boolean = false
   private processed: boolean = false
 
@@ -54,15 +54,23 @@ export class FeedWorkBasicModeService {
     }
   }
 
-  async processFeeds(): Promise<void> {
-    await this.moveToMyFeed()
+  async processFeeds(feeds: Feed[]): Promise<void> {
+    if (feeds.length === 0) {
+      console.log('활성화된 피드가 없습니다.')
+      return
+    }
 
     this.shouldStop = false
     this.processed = false
-    this.processedArticles.clear()
+    this.processedFeeds.clear()
 
     while (true) {
-      const feedLocators = await this.page.locator('a[role="link"][tabindex="0"]`').all()
+      // const feedLocators = await this.page.getByRole('main', { name: 'main' }).all()
+      // class="x78zum5 xdt5ytf x1iyjqo2"
+      const feedLocators = await this.page
+        .locator('div.x9f619.xjbqb8w.x78zum5.x168nmei')
+        .filter({ has: this.page.locator('span[dir="auto"][class*="aco"][class*="aad7"]') })
+        .all()
 
       if (feedLocators.length === 0) {
         console.log('더 이상 처리할 게시물이 없습니다.')
@@ -70,8 +78,10 @@ export class FeedWorkBasicModeService {
       }
 
       for (const feedLoc of feedLocators) {
+        console.log(await feedLoc.textContent())
+        return
         // 최대 처리 수에 도달했는지 확인
-        if (this.processedArticles.size >= this.options.maxFeeds) {
+        if (this.processedFeeds.size >= this.options.maxFeeds) {
           console.log(`최대 작업업 수(${this.options.maxFeeds})에 도달했습니다. 작업을 종료합니다.`)
           this.shouldStop = true
           break
@@ -86,9 +96,9 @@ export class FeedWorkBasicModeService {
         const feedId = await this.ensureArticleId(
           feedLoc,
           'data-article-id',
-          this.processedArticles.size
+          this.processedFeeds.size
         )
-        if (this.processedArticles.has(feedId)) continue
+        if (this.processedFeeds.has(feedId)) continue
 
         await smoothScrollToElement(this.page, feedElementHandle)
         await chooseRandomSleep(scrollDelays)
@@ -108,7 +118,7 @@ export class FeedWorkBasicModeService {
         } finally {
           // 실제로 처리에 성공한 경우에만 카운트에 추가
           if (this.processed) {
-            this.processedArticles.add(feedId)
+            this.processedFeeds.add(feedId)
           }
           await wait(this.config.postIntervalSeconds * 1000)
         }
@@ -121,20 +131,8 @@ export class FeedWorkBasicModeService {
       await this.page.waitForTimeout(1000)
     }
 
-    console.log('작업종료:', this.processedArticles.size, this.options.maxFeeds)
-    console.log(`처리된 게시물: ${this.processedArticles.size}개`)
-  }
-
-  async moveToMyFeed() {
-    try {
-      await this.page.goto(`https://www.instagram.com/${this.config.credentials.username}`)
-      await this.page.waitForTimeout(3000)
-    } catch (error) {
-      console.error(
-        `프로필 페이지 이동 실패: ${error instanceof Error ? error.message : String(error)}`
-      )
-      throw new Error('인스타그램 프로필 페이지로 이동할 수 없습니다.')
-    }
+    console.log('작업종료:', this.processedFeeds.size, this.options.maxFeeds)
+    console.log(`처리된 게시물: ${this.processedFeeds.size}개`)
   }
 
   private async ensureArticleId(

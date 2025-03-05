@@ -352,22 +352,22 @@ export class AgentManager {
               if (!loggedIn) throw Error('로그인 실패')
 
               await page.waitForTimeout(2000)
-              await page.goto('https://www.instagram.com/')
 
               const feeds = (work as FeedWork).feeds
+              const activeFeeds = feeds.filter((feed) => feed.active)
+
+              await page.goto(activeFeeds[this.currentWorkIndex].url)
 
               const feedWorkBasicModeService = new FeedWorkBasicModeService(
                 page,
                 async (feedLoc: Locator, feedId: string) => {
-                  await feedLoc.click()
-
                   return true
                 },
                 {},
                 this.config
               )
 
-              await feedWorkBasicModeService.processFeeds()
+              await feedWorkBasicModeService.processFeeds(activeFeeds)
               break
 
             case 'advanced':
