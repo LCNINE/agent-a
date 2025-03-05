@@ -1,8 +1,7 @@
-import { BrowserWindow, ipcMain, nativeTheme, dialog } from 'electron'
-import { InstagramService } from './agent/InstagramService'
-import { StartAgentParams } from '..'
-import { AgentManager } from './agent/AgentManager'
+import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
+import { StartAgentParams, Work } from '..'
+import { AgentManager } from './agent/managers/AgentManager'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
 const WIN_MAXIMIZE_CHANNEL = 'window:maximize'
@@ -65,13 +64,15 @@ function addDialogEventListeners() {
   })
 }
 
-export function addAgentEventListeners() {
-  const manager = new AgentManager()
+let currentManager: AgentManager | null = null
 
+export function addAgentEventListeners() {
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
     log.info('Start agent button clicked with params:', params)
     try {
-      await manager.start(params.config, params.workList)
+      currentManager = new AgentManager(params.workType, params.workList, params.config)
+      await currentManager.start(params.config, params.workList)
+
       log.info('Agent started successfully')
     } catch (error) {
       log.error('Failed to start agent:', error)
@@ -80,11 +81,17 @@ export function addAgentEventListeners() {
   })
 
   ipcMain.handle(AGENT_STOP_CHANNEL, async () => {
-    manager.stop()
+    if (currentManager) {
+      currentManager.stop()
+      currentManager = null
+    }
   })
 
   ipcMain.handle(AGENT_STATUS_CHANNEL, () => {
-    return manager.getStatus()
+    if (!currentManager) {
+      return { status: 'stopped' }
+    }
+    return currentManager.getStatus()
   })
 }
 

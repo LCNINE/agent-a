@@ -1,9 +1,9 @@
-import { createRoute } from "@tanstack/react-router";
-import { RootRoute } from "./__root";
-import HomePage from "@/pages/HomePage/HomePage";
-import ConfigPage from "@/pages/ConfigPage/ConfigPage";
-import WorkPage from "@/pages/WorkPage/WorkPage";
-import AccountPage from "@/pages/AccountPage/AccountPage";
+import { createRoute } from '@tanstack/react-router'
+import { RootRoute } from './__root'
+import HomePage from '@/pages/HomePage/HomePage'
+import ConfigPage from '@/pages/ConfigPage/ConfigPage'
+import AccountPage from '@/pages/AccountPage/AccountPage'
+import WorkPage from '@renderer/pages/WorkPage'
 
 // TODO: Steps to add a new route:
 // 1. Create a new page component in the '../pages/' directory (e.g., NewPage.tsx)
@@ -26,26 +26,31 @@ import AccountPage from "@/pages/AccountPage/AccountPage";
 
 export const HomeRoute = createRoute({
   getParentRoute: () => RootRoute,
-  path: "/",
-  component: HomePage,
-});
+  path: '/',
+  component: HomePage
+})
 
 export const ConfigPageRoute = createRoute({
   getParentRoute: () => RootRoute,
-  path: "/config",
-  component: ConfigPage,
-});
+  path: '/config',
+  component: ConfigPage
+})
 
 export const WorkPageRoute = createRoute({
   getParentRoute: () => RootRoute,
-  path: "/work",
-  component: WorkPage,
-});
+  path: '/work',
+  component: WorkPage
+})
 
 export const AccountPageRoute = createRoute({
   getParentRoute: () => RootRoute,
-  path: "/account",
-  component: AccountPage,
-});
+  path: '/account',
+  component: AccountPage
+})
 
-export const rootTree = RootRoute.addChildren([HomeRoute, ConfigPageRoute, WorkPageRoute, AccountPageRoute]);
+export const rootTree = RootRoute.addChildren([
+  HomeRoute,
+  ConfigPageRoute,
+  WorkPageRoute,
+  AccountPageRoute
+])
