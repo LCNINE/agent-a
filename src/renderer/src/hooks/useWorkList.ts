@@ -8,11 +8,6 @@ export const useWorkList = () => {
       title: t('workPage.workList.item1.title'),
       description: t('workPage.workList.item1.description'),
       value: 'hashtag_and_feed'
-    },
-    {
-      title: t('workPage.workList.item2.title'),
-      description: t('workPage.workList.item2.description'),
-      value: 'my_feed'
     }
   ]
 

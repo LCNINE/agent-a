@@ -5,7 +5,8 @@ import { Switch } from '@renderer/components/ui/switch'
 import { Trash2, ExternalLink } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import useMyFeedWorkStore, { Feed } from '@renderer/store/myFeedWorkStore'
+import useMyFeedWorkStore from '@renderer/store/myFeedWorkStore'
+import { Feed } from 'src'
 
 const FeedItem = ({ feed }: { feed: Feed }) => {
   const { toggleFeedActive, removeFeed } = useMyFeedWorkStore()
