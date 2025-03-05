@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +16,12 @@ import { Button } from './ui/button'
 import { Link } from '@tanstack/react-router'
 import { useConfigStore } from '@renderer/store/configStore'
 import ProtectedLink from './ProtectedLink'
+
 export default function UserMenu() {
   const { t } = useTranslation()
   const { user } = useAuthContext()
   const { config } = useConfigStore()
+  const [open, setOpen] = useState(false)
 
   if (user == null) {
     return <div />
@@ -34,10 +36,11 @@ export default function UserMenu() {
       throw error
     }
     toast.success(t('userMenu.logout.success'))
+    setOpen(false)
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
           <UserRoundIcon />
@@ -47,7 +50,7 @@ export default function UserMenu() {
         <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {/* 계정 관리 메뉴 추가 */}
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem asChild onClick={() => setOpen(false)}>
           <ProtectedLink
             to="/account"
             isDirty={config.isDirty}

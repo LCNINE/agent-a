@@ -1,5 +1,3 @@
-// AgentController => useAgent => AgentManager => InstagramAgent
-
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
@@ -8,15 +6,13 @@ import { toast } from 'sonner'
 import { useAgent } from '@renderer/hooks/useAgent'
 
 interface AgentControllerProps {
-  isSubscriptionActive: boolean;
+  isSubscriptionActive: boolean
 }
 
 export function AgentController({ isSubscriptionActive }: AgentControllerProps) {
   const { t } = useTranslation()
   const selectedAccount = useAccountStore((state) => state.selectedAccount)
   const { status, startAgent, stopAgent } = useAgent()
-
-  console.log('AgentController:', selectedAccount)
 
   if (!status.isRunning)
     return (
