@@ -6,6 +6,7 @@ import { callGenerateComments } from '../common/fetchers'
 import { chooseRandomSleep, majorActionDelays, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
+import { FeedWorkBasicModeService } from '../services/FeedWorkBasicModeService'
 
 export interface BotStatus {
   isRunning: boolean
@@ -196,7 +197,10 @@ export class AgentManager {
                   }
                   await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
 
-                  const postButton = articleLocator.getByText(/게시|Post/)
+                  let postButton = articleLocator.getByRole('button', { name: '게시', exact: true })
+                  if (!(await postButton.isVisible())) {
+                    postButton = articleLocator.getByRole('button', { name: 'Post', exact: true })
+                  }
                   await postButton.click()
 
                   isProcessed = true
@@ -309,7 +313,11 @@ export class AgentManager {
                         { state: 'visible', timeout: 60000 }
                       )
 
-                      const postButton = page.getByRole('button', { name: '게시', exact: true })
+                      // 한국어 또는 영어 게시 버튼을 찾아 클릭
+                      let postButton = page.getByRole('button', { name: '게시', exact: true })
+                      if (!(await postButton.isVisible())) {
+                        postButton = page.getByRole('button', { name: 'Post', exact: true })
+                      }
                       await postButton.click()
                       isProcessed = true
                     }
@@ -346,11 +354,25 @@ export class AgentManager {
               await page.waitForTimeout(2000)
               await page.goto('https://www.instagram.com/')
 
-              console.log('컨피그:', this.config)
+              const feedWorkBasicModeService = new FeedWorkBasicModeService(
+                page,
+                async (feedLoc: Locator, feedId: string) => {
+                  await feedLoc.click()
 
+                  return true
+                },
+                {},
+                this.config
+              )
+
+              await feedWorkBasicModeService.processFeeds()
               break
+
             case 'advanced':
               break
+
+            default:
+              throw Error(`지원하지 않는 작업 타입: ${work}`)
           }
         }
       }
