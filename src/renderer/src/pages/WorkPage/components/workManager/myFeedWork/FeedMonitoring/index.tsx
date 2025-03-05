@@ -11,7 +11,7 @@ import { CheckCircle2, Plus, XCircle } from 'lucide-react'
 import FeedList from './FeedList'
 import AddFeedDialog from './AddFeedDialog'
 import { toast } from 'sonner'
-import { Feed } from '@renderer/store/myFeedWorkStore'
+import { Feed } from 'src'
 
 const FeedMonitoring = () => {
   const [feeds, setFeeds] = useState<Feed[]>([])
