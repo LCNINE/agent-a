@@ -79,49 +79,49 @@ export class FeedWorkBasicModeService {
 
       for (const feedLoc of feedLocators) {
         console.log(await feedLoc.textContent())
-        return
-        // 최대 처리 수에 도달했는지 확인
-        if (this.processedFeeds.size >= this.options.maxFeeds) {
-          console.log(`최대 작업업 수(${this.options.maxFeeds})에 도달했습니다. 작업을 종료합니다.`)
-          this.shouldStop = true
-          break
-        }
 
-        const feedElementHandle = await feedLoc.elementHandle()
-        if (feedElementHandle == null) {
-          console.log('[processArticles] articleElementHandle is null')
-          continue
-        }
+        // // 최대 처리 수에 도달했는지 확인
+        // if (this.processedFeeds.size >= this.options.maxFeeds) {
+        //   console.log(`최대 작업업 수(${this.options.maxFeeds})에 도달했습니다. 작업을 종료합니다.`)
+        //   this.shouldStop = true
+        //   break
+        // }
 
-        const feedId = await this.ensureArticleId(
-          feedLoc,
-          'data-article-id',
-          this.processedFeeds.size
-        )
-        if (this.processedFeeds.has(feedId)) continue
+        // const feedElementHandle = await feedLoc.elementHandle()
+        // if (feedElementHandle == null) {
+        //   console.log('[processArticles] articleElementHandle is null')
+        //   continue
+        // }
 
-        await smoothScrollToElement(this.page, feedElementHandle)
-        await chooseRandomSleep(scrollDelays)
+        // const feedId = await this.ensureArticleId(
+        //   feedLoc,
+        //   'data-article-id',
+        //   this.processedFeeds.size
+        // )
+        // if (this.processedFeeds.has(feedId)) continue
 
-        const delay =
-          Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
-          this.options.processingDelay.min
-        await this.page.waitForTimeout(delay)
+        // await smoothScrollToElement(this.page, feedElementHandle)
+        // await chooseRandomSleep(scrollDelays)
 
-        try {
-          this.processed = await this.basicModeProcessor(feedLoc, feedId)
-        } catch (error) {
-          console.error(
-            `Feed processing failed: ${error instanceof Error ? error.message : String(error)}`
-          )
-          continue
-        } finally {
-          // 실제로 처리에 성공한 경우에만 카운트에 추가
-          if (this.processed) {
-            this.processedFeeds.add(feedId)
-          }
-          await wait(this.config.postIntervalSeconds * 1000)
-        }
+        // const delay =
+        //   Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
+        //   this.options.processingDelay.min
+        // await this.page.waitForTimeout(delay)
+
+        // try {
+        //   this.processed = await this.basicModeProcessor(feedLoc, feedId)
+        // } catch (error) {
+        //   console.error(
+        //     `Feed processing failed: ${error instanceof Error ? error.message : String(error)}`
+        //   )
+        //   continue
+        // } finally {
+        //   // 실제로 처리에 성공한 경우에만 카운트에 추가
+        //   if (this.processed) {
+        //     this.processedFeeds.add(feedId)
+        //   }
+        //   await wait(this.config.postIntervalSeconds * 1000)
+        // }
       }
 
       if (this.shouldStop) {
