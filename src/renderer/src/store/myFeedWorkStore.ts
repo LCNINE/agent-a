@@ -1,11 +1,11 @@
 import { Feed } from 'src'
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 
 type FeedWorkModeType = 'basic' | 'advanced'
 
 type MyFeedWorkStore = {
-  feeds: Feed[]
+  feedList: Feed[]
   feedWorkModeType: FeedWorkModeType
   likeCommentsEnabled: boolean
   replyCommentsEnabled: boolean
@@ -20,7 +20,7 @@ type MyFeedWorkStore = {
 const useMyFeedWorkStore = create<MyFeedWorkStore>()(
   persist(
     (set, get) => ({
-      feeds: [],
+      feedList: [],
       feedWorkModeType: 'basic',
       likeCommentsEnabled: true,
       replyCommentsEnabled: true,
@@ -47,22 +47,23 @@ const useMyFeedWorkStore = create<MyFeedWorkStore>()(
       },
 
       addFeed: (feed: Feed) => {
+        console.log('feed:', feed)
         set((state) => ({
           ...state,
-          feeds: [...state.feeds, feed]
+          feedList: [...state.feedList, feed]
         }))
       },
 
       removeFeed: (id: number) => {
         set((state) => ({
           ...state,
-          feeds: state.feeds.filter((feed) => feed.id !== id)
+          feedList: state.feedList.filter((feed) => feed.id !== id)
         }))
       },
       toggleFeedActive: (id: number) => {
         set((state) => ({
           ...state,
-          feeds: state.feeds.map((feed) =>
+          feedList: state.feedList.map((feed) =>
             feed.id === id ? { ...feed, active: !feed.active } : feed
           )
         }))

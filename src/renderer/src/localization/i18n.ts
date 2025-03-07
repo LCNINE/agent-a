@@ -122,13 +122,15 @@ i18n.use(initReactI18next).init({
             },
             postIntervalSeconds: 'Post Interval (Seconds)',
             workIntervalSeconds: 'Work Interval (Seconds)',
-            loopIntervalSeconds: 'Loop Interval (Seconds)'
+            loopIntervalSeconds: 'Loop Interval (Seconds)',
+            excludeUsernames: 'Exclude Usernames'
           },
           description: {
             postIntervalSeconds: 'Time interval between posting comments on each post',
             workIntervalSeconds: 'Time interval between each task in the task list',
             loopIntervalSeconds:
-              'Time interval after all tasks in the task list are completed before restarting from the first task'
+              'Time interval after all tasks in the task list are completed before restarting from the first task',
+            excludeUsernames: 'Enter the usernames you want to exclude'
           },
           field: {
             prompt: {
@@ -298,12 +300,14 @@ i18n.use(initReactI18next).init({
             },
             postIntervalSeconds: '댓글 시간 간격 (초)',
             workIntervalSeconds: '작업 간 간격 (초)',
-            loopIntervalSeconds: '전체 작업 간 간격 (초)'
+            loopIntervalSeconds: '전체 작업 간 간격 (초)',
+            excludeUsernames: '제외할 유저 이름'
           },
           description: {
             postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격',
             workIntervalSeconds: '작업 목록의 각 작업 간 시간 간격',
-            loopIntervalSeconds: '작업 목록의 작업이 모두 끝나고 다시 첫 작업을 시작하는 시간 간격'
+            loopIntervalSeconds: '작업 목록의 작업이 모두 끝나고 다시 첫 작업을 시작하는 시간 간격',
+            excludeUsernames: '제외할 유저 이름을 입력해주세요'
           },
           field: {
             prompt: {

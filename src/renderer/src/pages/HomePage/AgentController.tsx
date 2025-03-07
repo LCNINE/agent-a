@@ -27,6 +27,7 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
               })
             } else {
               // 계정이 선택되지 않았을 때 토스트메세지
+              console.log('selectedAccount:', selectedAccount)
               toast.error(t('AgentController.error.noAccountSelected'))
             }
           }}

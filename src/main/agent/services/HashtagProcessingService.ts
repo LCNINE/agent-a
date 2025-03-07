@@ -151,8 +151,8 @@ export class HashtagService {
         }
       )
       const searchInput = this.page.getByPlaceholder(/검색|search/i)
+      await searchInput.pressSequentially(tag, { delay: 100 })
 
-      await searchInput.fill(`#${tag}`)
       await this.page.waitForTimeout(2000)
 
       await this.page.waitForSelector(`text="#${tag}"`, {
