@@ -1,54 +1,50 @@
-import React from "react"
+import React from 'react'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { useTranslation } from "react-i18next"
-import { useAccountStore } from "@/store/accountStore"
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
-import { useForm } from "react-hook-form"
-import { toast } from "sonner"
+  DialogTrigger
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useTranslation } from 'react-i18next'
+import { useAccountStore } from '@/store/accountStore'
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form'
+import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 
 interface AddAccountForm {
-  username: string;
-  password: string;
+  username: string
+  password: string
 }
 
-export function AddAccountDialog({ 
-  trigger 
-}: { 
-  trigger: React.ReactNode;
-}) {
-  const { t } = useTranslation();
-  const addAccount = useAccountStore(state => state.addAccount);
-  const form = useForm<AddAccountForm>();
-  const [open, setOpen] = React.useState(false);
+export function AddAccountDialog({ trigger }: { trigger: React.ReactNode }) {
+  const { t } = useTranslation()
+  const addAccount = useAccountStore((state) => state.addAccount)
+  const form = useForm<AddAccountForm>()
+  const [open, setOpen] = React.useState(false)
 
   async function onSubmit(values: AddAccountForm) {
-    console.log("add버튼 눌림")
+    console.log('add버튼 눌림')
     if (!values.username || !values.password) {
-      toast.error(t("accountTable.requiredFields"));
-      return;
+      toast.error(t('accountTable.requiredFields'))
+      return
     }
-    try{
-			addAccount(values);
-			toast.success(t("accountTable.accountAdded"));
-			form.reset();
-			setOpen(false);
-    }catch(error){
+    try {
+      addAccount(values)
+      toast.success(t('accountTable.accountAdded'))
+      form.reset()
+      setOpen(false)
+    } catch (error) {
       if (error instanceof Error) {
-        if (error.message === "Account with this username already exists") {
-          toast.error(t("accountTable.usernameExists"));
+        if (error.message === 'Account with this username already exists') {
+          toast.error(t('accountTable.usernameExists'))
         } else {
-          toast.error(error.message);
+          toast.error(error.message)
         }
       } else {
-        toast.error(t("accountTable.addError"));
+        toast.error(t('accountTable.addError'))
       }
     }
   }
@@ -58,7 +54,7 @@ export function AddAccountDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("accountTable.addAccount")}</DialogTitle>
+          <DialogTitle>{t('accountTable.addAccount')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -86,10 +82,10 @@ export function AddAccountDialog({
                 </FormItem>
               )}
             />
-            <Button type="submit">{t("accountTable.add")}</Button>
+            <Button type="submit">{t('accountTable.add')}</Button>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

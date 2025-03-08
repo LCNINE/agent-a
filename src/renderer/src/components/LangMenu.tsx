@@ -1,28 +1,28 @@
-import React from "react"
+import React from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useAuthContext } from "@/hooks/useAuth"
-import { LanguagesIcon, UserRoundIcon } from "lucide-react"
-import { useTranslation } from "react-i18next"
-import langs from "@/localization/langs";
-import { Button } from "./ui/button"
-import { setAppLanguage } from "@/helpers/language"
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { useAuthContext } from '@/hooks/useAuth'
+import { LanguagesIcon, UserRoundIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import langs from '@/localization/langs'
+import { Button } from './ui/button'
+import { setAppLanguage } from '@/helpers/language'
 
 export default function LangMenu() {
-  const { i18n } = useTranslation();
-  const currentLang = i18n.language;
+  const { i18n } = useTranslation()
+  const currentLang = i18n.language
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          <LanguagesIcon/>
+          <LanguagesIcon />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>

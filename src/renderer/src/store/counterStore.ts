@@ -1,9 +1,9 @@
-import { create } from "zustand"
-import { createJSONStorage, persist } from "zustand/middleware"
+import { create } from 'zustand'
+import { createJSONStorage, persist } from 'zustand/middleware'
 
 interface CounterState {
-  count: number,
-  increment: () => void,
+  count: number
+  increment: () => void
 }
 
 export const useCounterStore = create<CounterState>()(
@@ -13,7 +13,7 @@ export const useCounterStore = create<CounterState>()(
       increment: () => set((state) => ({ count: state.count + 1 }))
     }),
     {
-      name: "counter"
+      name: 'counter'
     }
   )
 )

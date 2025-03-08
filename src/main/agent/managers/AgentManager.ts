@@ -263,7 +263,7 @@ export class AgentManager {
                       return false
                     }
 
-                    if (this.config.excludeUsernames?.includes(author)) {
+                    if (this.excludeUsernames.has(author)) {
                       console.log('[runWork] 제외 유저 스킵')
 
                       await page.getByLabel(/닫기|Close/).click()
@@ -274,7 +274,7 @@ export class AgentManager {
                     const myUsername = this.config.credentials.username
                     const comments = page.locator('h3.x6s0dn4.x3nfvp2')
                     const commentAuthors = await comments.locator('a').allTextContents()
-                    todo: set으로
+
                     if (commentAuthors.includes(myUsername)) {
                       await chooseRandomSleep(postInteractionDelays)
 
@@ -400,9 +400,20 @@ export class AgentManager {
                   commentLocator: Locator,
                   commentId: string,
                   commentAuthor: string | null,
-                  comment: string | null
+                  commentContents: string | null
                 ) => {
                   let isProcessed = false
+
+                  console.log(
+                    '[work옵션 확인]:',
+                    '좋아요 기능 활성화 상태:',
+                    work.likeCommentsEnabled
+                  )
+                  console.log(
+                    '[work옵션 확인]:',
+                    '답글 기능 활성화 상태:',
+                    work.replyCommentsEnabled
+                  )
 
                   const authorLoc = await commentLocator
                     .locator('span._ap3a._aaco._aacw._aacx._aad7._aade')
@@ -414,64 +425,107 @@ export class AgentManager {
                     return false
                   }
 
-                  if (this.config.excludeUsernames?.includes(author)) {
+                  if (this.excludeUsernames.has(author)) {
                     console.log(`[runWork] ${author} 제외 유저 스킵`)
                     return false
                   }
 
-                  const likeButtonLoc = page
-                    .locator(`div[data-comment-id="${commentId}"]`)
-                    .getByRole('button')
-                    .filter({
-                      hasText: /^(좋아요|Like)$/
-                    })
-                    .first()
-
-                  if (await likeButtonLoc.isVisible()) {
-                    await likeButtonLoc.evaluate((button) => {
-                      ;(button as HTMLButtonElement).click()
-                    })
-                    await chooseRandomSleep(postInteractionDelays)
-                  }
-
-                  await commentLocator.getByText(/댓글 달기|Reply/).click()
-
-                  const articleScreenshot = await commentLocator.screenshot({ type: 'jpeg' })
-                  const base64Image = articleScreenshot.toString('base64')
-
-                  const commentRes = await callGenerateReply({
-                    image: base64Image,
-                    content: comment as string,
-                    minLength: this.config.commentLength.min,
-                    maxLength: this.config.commentLength.max,
-                    prompt: this.config.prompt
-                  })
-
-                  if (!commentRes.isAllowed) {
-                    console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
+                  if (this.config.credentials.username === commentAuthor) {
+                    console.log('[runWork] 자신의 댓글 스킵')
                     return false
                   }
 
-                  const commentTextarea = page.locator(
-                    'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
-                  )
+                  // 답글 모두 보기 버튼
+                  const siblingDivs = commentLocator.locator('xpath=../following-sibling::div[1]')
+                  const button = await siblingDivs.getByRole('button')
+                  if (await button.isVisible()) {
+                    await button.click()
+                  }
 
-                  if (!(await commentTextarea.isVisible())) {
-                    console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
+                  const commentReply = await siblingDivs
+                    .locator('ul')
+                    .textContent()
+                    .catch(() => {
+                      return null
+                    })
+
+                  if (commentReply === null) {
+                    console.log('[commentReply] 아직 답글을 달지 못한 게시글 확인')
+                  }
+
+                  if (
+                    (commentReply && commentReply.startsWith(this.config.credentials.username)) ||
+                    commentReply?.includes(this.config.credentials.username)
+                  ) {
+                    console.log('[runWork] 이미 답글을 작성한 댓글이므로 건너뜁니다.')
                     return false
                   }
 
-                  await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
+                  // 좋아요 옵션 활성화일때
+                  if (work.likeCommentsEnabled) {
+                    const likeButtonLoc = page
+                      .locator(`div[data-comment-id="${commentId}"]`)
+                      .getByRole('button')
+                      .filter({
+                        hasText: /^(좋아요|Like)$/
+                      })
+                      .first()
 
-                  let postButton = page.getByRole('button', { name: '게시', exact: true })
-                  if (!(await postButton.isVisible())) {
-                    postButton = page.getByRole('button', { name: 'Post', exact: true })
+                    if (await likeButtonLoc.isVisible()) {
+                      await likeButtonLoc.evaluate((button) => {
+                        ;(button as HTMLButtonElement).click()
+                      })
+                      await chooseRandomSleep(postInteractionDelays)
+                    }
                   }
-                  await postButton.click()
 
-                  isProcessed = true
+                  // 답글 옵션 활성화일때
+                  if (work.replyCommentsEnabled) {
+                    const replyButtonLoc = page.locator(`div[data-comment-id="${commentId}"]`)
+                    await replyButtonLoc
+                      .getByText('답글 달기', { exact: true })
+                      .click()
+                      .catch(() => {
+                        console.log('[replyButtonLoc] 답글 달기 버튼을 찾을 수 없습니다.')
+                      })
+
+                    const articleScreenshot = await commentLocator.screenshot({ type: 'jpeg' })
+                    const base64Image = articleScreenshot.toString('base64')
+
+                    const commentRes = await callGenerateReply({
+                      image: base64Image,
+                      content: commentContents as string,
+                      minLength: this.config.commentLength.min,
+                      maxLength: this.config.commentLength.max,
+                      prompt: this.config.prompt
+                    })
+
+                    if (!commentRes.isAllowed) {
+                      console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
+                      return false
+                    }
+
+                    const commentTextarea = page.locator(
+                      'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+                    )
+
+                    if (!(await commentTextarea.isVisible())) {
+                      console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
+                      return false
+                    }
+
+                    await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
+
+                    let postButton = page.getByRole('button', { name: '게시', exact: true })
+                    if (!(await postButton.isVisible())) {
+                      postButton = page.getByRole('button', { name: 'Post', exact: true })
+                    }
+                    await postButton.click()
+
+                    isProcessed = true
+                  }
+
                   await chooseRandomSleep(postInteractionDelays)
-
                   return isProcessed
                 },
                 {},

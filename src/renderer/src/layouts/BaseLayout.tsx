@@ -10,7 +10,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
     <>
       <DragWindowRegion title={t('appName')} />
       <NavigationMenu />
-      <main className="h-screen p-2 font-spoqa">{children}</main>
+      <main className="font-spoqa h-screen p-2">{children}</main>
     </>
   )
 }

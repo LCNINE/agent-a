@@ -100,11 +100,6 @@ export class FeedWorkBasicModeService {
 
       // Fucking Instagram
       for (const commentLoc of commentContainers) {
-        // commentLoc를 한단계 위로가서 빈div태그의 형제 div를 가져오려면?
-        const siblingDiv = commentLoc.locator('xpath=..').locator('div:empty + div').first()
-        console.log('siblingDiv:', await siblingDiv.textContent())
-        console.log('siblingDiv:', siblingDiv)
-
         // 최대 처리 수에 도달했는지 확인
         if (this.processedFeeds.size >= this.options.maxFeeds) {
           console.log(`최대 작업업 수(${this.options.maxFeeds})에 도달했습니다. 작업을 종료합니다.`)
@@ -120,24 +115,33 @@ export class FeedWorkBasicModeService {
 
         // 댓글 작성자 가져오기
         const commentAuthor = await commentLoc
-          .locator(
-            'div.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.x1uhb9sk.x1plvlek.xryxfnj.x1iyjqo2.x2lwn1j.xeuugli.x1q0g3np.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1 span.xjp7ctv span._ap3a._aaco._aacw._aacx._aad7._aade'
-          )
+          .locator('span._ap3a._aaco._aacw._aacx._aad7._aade')
           .first()
           .textContent()
           .catch(() => '')
 
-        // 댓글 내용 가져오기
-        const comment = await commentLoc
+        const commentContents = await commentLoc
           .locator(
-            'div.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.x1uhb9sk.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1cy8zhl.x1oa3qoh.x1nhvcw1 span.x1lliihq.x1plvlek.xryxfnj.x1n2onr6.x1ji0vk5.x18bv5gf.x193iq5w.xeuugli.x1fj9vlw.x13faqbe.x1vvkbs.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x1i0vuye.xvs91rp.xo1l8bm.x5n08af.x10wh9bi.x1wdrske.x8viiok.x18hxmgj'
+            'span.x1lliihq.x1plvlek.xryxfnj.x1n2onr6.x1ji0vk5.x18bv5gf.x193iq5w.xeuugli.x1fj9vlw.x13faqbe.x1vvkbs.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x1i0vuye.xvs91rp.xo1l8bm.x5n08af.x10wh9bi.x1wdrske.x8viiok.x18hxmgj'
           )
-          .first()
+          .nth(1)
           .textContent()
-          .catch(() => '')
+          .catch((error) => {
+            console.error('댓글 내용 가져오기 실패:', error)
+            return null
+          })
+
+        if (commentContents === null) {
+          console.log('[processMyFeed] 댓글 내용을 가져오지 못해 이 댓글을 건너뜁니다.')
+          continue
+        }
 
         // 댓글 작성자와 내용으로 고유 ID 생성
-        const commentId = await this.createCommentId(commentLoc, commentAuthor || '', comment || '')
+        const commentId = await this.createCommentId(
+          commentLoc,
+          commentAuthor || '',
+          commentContents || ''
+        )
 
         if (this.processedFeeds.has(commentId)) continue
 
@@ -153,7 +157,7 @@ export class FeedWorkBasicModeService {
             commentLoc,
             commentId,
             commentAuthor,
-            comment
+            commentContents
           )
         } catch (error) {
           console.error(
@@ -207,7 +211,7 @@ export class FeedWorkBasicModeService {
     const existingId = await commentLoc.getAttribute('data-comment-id')
     if (existingId) return existingId
 
-    const newId = `article-${this.processedFeeds.size}`
+    const newId = `comment-${this.processedFeeds.size}`
     await commentLoc.evaluate(
       async (element, { idAttribute, newId }) => {
         element.setAttribute(idAttribute, newId)

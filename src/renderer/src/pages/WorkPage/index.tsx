@@ -12,8 +12,8 @@ export default function WorkPage() {
   const { workType, changeWorkType } = useWorkTypeStore((state) => state)
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="relative flex flex-1 flex-col gap-2">
+    <div className="flex flex-col h-full">
+      <div className="relative flex flex-col flex-1 gap-2">
         {!workType ? (
           <WorkTypeSelector onSelect={(workType: WorkType) => changeWorkType(workType)} />
         ) : (

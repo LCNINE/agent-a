@@ -1,14 +1,14 @@
-import { Language } from "./language";
+import { Language } from './language'
 
 export default [
   {
-    key: "en",
-    nativeName: "English",
-    prefix: "🇺🇸",
+    key: 'en',
+    nativeName: 'English',
+    prefix: '🇺🇸'
   },
   {
-    key: "ko-KR",
-    nativeName: "한국어",
-    prefix: "🇰🇷",
-  },
-] satisfies Language[];
+    key: 'ko-KR',
+    nativeName: '한국어',
+    prefix: '🇰🇷'
+  }
+] satisfies Language[]

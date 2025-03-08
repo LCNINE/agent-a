@@ -20,13 +20,13 @@ export default function NavigationMenu() {
   const { config } = useConfigStore()
 
   return (
-    <div className="w-full px-2 flex flex-row justify-between items-center">
+    <div className="flex w-full flex-row items-center justify-between px-2">
       <NavigationMenuBase className="font-spoqa text-muted-foreground">
         <NavigationMenuList>
           <NavigationMenuItem>
             <ProtectedLink to="/" isDirty={config.isDirty}>
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                <HomeIcon className="w-5 h-5" />
+                <HomeIcon className="h-5 w-5" />
               </NavigationMenuLink>
             </ProtectedLink>
           </NavigationMenuItem>

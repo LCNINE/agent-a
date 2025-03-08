@@ -8,7 +8,7 @@ export default function ConfigPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex  min-h-0 flex-col justify-center ">
+      <div className="flex min-h-0 flex-col justify-center">
         <ConfigForm />
       </div>
       <Footer />
