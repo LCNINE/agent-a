@@ -504,7 +504,7 @@ export class AgentManager {
                   if (work.replyCommentsEnabled) {
                     const replyButtonLoc = page.locator(`div[data-comment-id="${commentId}"]`)
                     await replyButtonLoc
-                      .getByText('답글 달기', { exact: true })
+                      .getByText(/답글 달기|Reply/i, { exact: false })
                       .click()
                       .catch(() => {
                         console.log('[replyButtonLoc] 답글 달기 버튼을 찾을 수 없습니다.')
