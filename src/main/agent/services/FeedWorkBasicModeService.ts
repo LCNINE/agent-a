@@ -49,6 +49,7 @@ export class FeedWorkBasicModeService {
   private processed: boolean = false
   private currentWorkIndex: number
   private work: FeedWork
+  private idCounter: number = 0
 
   constructor(
     page: Page,
@@ -87,6 +88,7 @@ export class FeedWorkBasicModeService {
     this.shouldStop = false
     this.processed = false
     this.processedFeeds.clear()
+    this.idCounter = 0
 
     while (true) {
       await this.goToMyFeeds(feeds)
@@ -145,7 +147,11 @@ export class FeedWorkBasicModeService {
 
         if (this.processedFeeds.has(commentId)) continue
 
-        await smoothScrollToElement(this.page, feedElementHandle)
+        await smoothScrollToElement(
+          this.page.locator('div.x5yr21d.xw2csxc.x1odjw0f.x1n2onr6'),
+          feedElementHandle
+        )
+
         await chooseRandomSleep(scrollDelays)
         const delay =
           Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
@@ -211,7 +217,7 @@ export class FeedWorkBasicModeService {
     const existingId = await commentLoc.getAttribute('data-comment-id')
     if (existingId) return existingId
 
-    const newId = `comment-${this.processedFeeds.size}`
+    const newId = `comment-${this.idCounter++}`
     await commentLoc.evaluate(
       async (element, { idAttribute, newId }) => {
         element.setAttribute(idAttribute, newId)

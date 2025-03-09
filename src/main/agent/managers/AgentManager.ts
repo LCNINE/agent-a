@@ -215,11 +215,32 @@ export class AgentManager {
                   }
                   await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
 
-                  let postButton = articleLocator.getByRole('button', { name: '게시', exact: true })
-                  if (!(await postButton.isVisible())) {
-                    postButton = articleLocator.getByRole('button', { name: 'Post', exact: true })
+                  await page.waitForTimeout(500)
+
+                  // 게시 버튼 찾기
+                  let postButtonLoc = articleLocator
+                    .getByRole('button', { name: '게시', exact: true })
+                    .first()
+                  console.log('[runWork] 게시 버튼 찾기 시도 (한국어):', postButtonLoc)
+
+                  if (!(await postButtonLoc.isVisible())) {
+                    console.log('[runWork] 한국어 게시 버튼이 보이지 않음, 영어 버튼 시도')
+                    postButtonLoc = articleLocator
+                      .getByRole('button', {
+                        name: 'Post',
+                        exact: true
+                      })
+                      .first()
+                    console.log('[runWork] 게시 버튼 찾기 시도 (영어):', postButtonLoc)
                   }
-                  await postButton.click()
+
+                  if (await postButtonLoc.isVisible()) {
+                    console.log('[runWork] 게시 버튼 클릭')
+                    await postButtonLoc.click()
+                  } else {
+                    console.log('[runWork] 게시 버튼을 찾을 수 없음')
+                    return false
+                  }
 
                   isProcessed = true
                   await chooseRandomSleep(postInteractionDelays)
@@ -348,7 +369,7 @@ export class AgentManager {
 
                       await page.waitForSelector(
                         'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
-                        { state: 'visible', timeout: 60000 }
+                        { state: 'visible', timeout: 3000 }
                       )
 
                       // 한국어 또는 영어 게시 버튼을 찾아 클릭

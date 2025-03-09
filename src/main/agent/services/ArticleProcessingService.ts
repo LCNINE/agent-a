@@ -33,6 +33,7 @@ export class ArticleProcessingService {
   private processedArticles: Set<string> = new Set()
   private shouldStop: boolean = false
   private processed: boolean = false
+  private idCounter: number = 0
 
   constructor(
     page: Page,
@@ -58,6 +59,7 @@ export class ArticleProcessingService {
     this.shouldStop = false
     this.processed = false
     this.processedArticles.clear()
+    this.idCounter = 0
 
     while (true) {
       const articleLocators = await this.page.locator('article').all()
@@ -86,7 +88,7 @@ export class ArticleProcessingService {
         const articleId = await this.ensureArticleId(
           articleLoc,
           'data-article-id',
-          this.processedArticles.size
+          this.idCounter++
         )
         if (this.processedArticles.has(articleId)) continue
 
