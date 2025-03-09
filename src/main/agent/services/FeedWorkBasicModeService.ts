@@ -217,7 +217,7 @@ export class FeedWorkBasicModeService {
     const existingId = await commentLoc.getAttribute('data-comment-id')
     if (existingId) return existingId
 
-    const newId = `comment-${this.idCounter++}`
+    const newId = `comment-${this.idCounter}`
     await commentLoc.evaluate(
       async (element, { idAttribute, newId }) => {
         element.setAttribute(idAttribute, newId)
@@ -225,6 +225,7 @@ export class FeedWorkBasicModeService {
       { idAttribute: 'data-comment-id', newId }
     )
     console.log(`${newId}번 할당함`)
+    this.idCounter++
     return newId
   }
 }

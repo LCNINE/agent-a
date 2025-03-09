@@ -86,7 +86,7 @@ export class HashtagService {
           continue
         }
 
-        const articleId = await this.ensureArticleId(postLoc, 'data-articleId', this.idCounter++)
+        const articleId = await this.ensureArticleId(postLoc, 'data-articleId', this.idCounter)
         if (this.processedPosts.has(articleId)) continue
 
         await smoothScrollToElement(this.page, postElementHandle)
@@ -109,6 +109,8 @@ export class HashtagService {
           if (this.processed) {
             this.processedPosts.add(articleId)
           }
+          // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
+          this.idCounter++
           await wait(this.config.postIntervalSeconds * 1000)
         }
       }
