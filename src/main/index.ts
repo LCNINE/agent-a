@@ -52,6 +52,24 @@ function setupAutoUpdater() {
 
   let updateInProgress = false
 
+  const checkInternetConnection = async (): Promise<boolean> => {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+      const response = await fetch('https://api.github.com', {
+        method: 'HEAD',
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+      return response.ok
+    } catch (error) {
+      console.error('인터넷 연결 확인 중 오류:', error)
+      return false
+    }
+  }
+
   autoUpdater.on('checking-for-update', () => {
     console.log('업데이트 확인 중...')
   })
@@ -121,14 +139,43 @@ function setupAutoUpdater() {
     }
 
     console.error('업데이트 중 오류 발생:', err)
-    dialog.showErrorBox('업데이트 오류', '업데이트 중 오류가 발생했습니다.\n' + err.message)
+
+    // 인터넷 연결 관련 오류인지 확인
+    const errorMessage = err.message.toLowerCase()
+    const isNetworkError =
+      errorMessage.includes('network') ||
+      errorMessage.includes('internet') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('unable to find') ||
+      errorMessage.includes('disconnected') ||
+      errorMessage.includes('enotfound')
+
+    if (isNetworkError) {
+      dialog.showMessageBox({
+        type: 'info',
+        title: '업데이트 확인 실패',
+        message: '인터넷 연결을 확인해 주세요',
+        detail:
+          '인터넷 연결 문제로 업데이트를 확인할 수 없습니다. 네트워크 연결을 확인한 후 다시 시도해 주세요.',
+        buttons: ['확인']
+      })
+    } else {
+      // 다른 종류의 오류는 기존 방식대로 표시
+      dialog.showErrorBox('업데이트 오류', '업데이트 중 오류가 발생했습니다.\n' + err.message)
+    }
   })
 
-  // 초기 업데이트 확인은 앱 시작 3초 후에 실행
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.error('초기 업데이트 확인 중 오류 발생:', err)
-    })
+  // 초기 업데이트 확인은 앱 시작 3초 후에 실행하되, 인터넷 연결 확인 후 실행
+  setTimeout(async () => {
+    const isConnected = await checkInternetConnection()
+    if (isConnected) {
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.error('초기 업데이트 확인 중 오류 발생:', err)
+      })
+    } else {
+      console.log('인터넷 연결이 없어 업데이트 확인을 건너뜁니다.')
+    }
   }, 3000)
 }
 
