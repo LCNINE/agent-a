@@ -14,9 +14,11 @@ export function setMainWindow(window: BrowserWindow): void {
 
 // 자동 업데이트 이벤트 초기화 함수
 export function initAutoUpdater(): void {
+  // 개발 환경에서는 자동 업데이트 기능 비활성화
   if (process.env.NODE_ENV === 'development') {
-    // 개발 환경에서 업데이트 서버 URL 설정
     autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml')
+    log.info('개발 환경에서는 자동 업데이트가 비활성화됩니다.')
+    return
   }
 
   // 더 자세한 로깅 추가
@@ -93,6 +95,12 @@ export function initAutoUpdater(): void {
 
 // 업데이트 확인 함수
 export async function checkForUpdates(): Promise<void> {
+  // 개발 환경에서는 업데이트 확인 중단
+  if (process.env.NODE_ENV === 'development') {
+    log.info('개발 환경에서는 업데이트 확인이 비활성화됩니다.')
+    return
+  }
+
   try {
     log.info('업데이트 확인 시작')
     await autoUpdater.checkForUpdates()
@@ -101,20 +109,14 @@ export async function checkForUpdates(): Promise<void> {
   }
 }
 
-// 개발 환경에서 테스트를 위한 코드
-if (process.env.NODE_ENV === 'development') {
-  autoUpdater.forceDevUpdateConfig = true
-  autoUpdater.checkForUpdates().catch((err) => {
-    log.error('업데이트 확인 중 오류 발생:', err)
-  })
+// 주기적으로 업데이트 확인 (운영 환경에서만)
+if (process.env.NODE_ENV !== 'development') {
+  setInterval(
+    () => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        log.error('업데이트 확인 중 오류 발생:', err)
+      })
+    },
+    60 * 60 * 1000
+  )
 }
-
-// 주기적으로 업데이트 확인 (예: 1시간마다)
-setInterval(
-  () => {
-    autoUpdater.checkForUpdates().catch((err) => {
-      log.error('업데이트 확인 중 오류 발생:', err)
-    })
-  },
-  60 * 60 * 1000
-)
