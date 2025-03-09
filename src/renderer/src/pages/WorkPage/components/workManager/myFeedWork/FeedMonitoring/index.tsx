@@ -11,10 +11,10 @@ import { CheckCircle2, Plus, XCircle } from 'lucide-react'
 import FeedList from './FeedList'
 import AddFeedDialog from './AddFeedDialog'
 import { toast } from 'sonner'
-import { Feed } from 'src'
+import useMyFeedWorkStore from '@renderer/store/myFeedWorkStore'
 
 const FeedMonitoring = () => {
-  const [feeds, setFeeds] = useState<Feed[]>([])
+  const { feedList } = useMyFeedWorkStore()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
 
   const handleAddButtonClick = () => {
@@ -23,25 +23,6 @@ const FeedMonitoring = () => {
 
   const handleDialogClose = () => {
     setIsAddDialogOpen(false)
-  }
-
-  const toggleFeedActive = (index: number) => {
-    const updatedFeeds = [...feeds]
-    console.log(updatedFeeds)
-    updatedFeeds[index].active = !updatedFeeds[index].active
-    setFeeds(updatedFeeds)
-
-    toast.success(
-      updatedFeeds[index].active
-        ? `${updatedFeeds[index].name} 피드가 활성화되었습니다`
-        : `${updatedFeeds[index].name} 피드가 비활성화되었습니다`,
-      {
-        icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-        className:
-          'border-l-4 border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-600',
-        duration: 3000
-      }
-    )
   }
 
   return (
@@ -57,7 +38,7 @@ const FeedMonitoring = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        <FeedList onToggleFeedActive={toggleFeedActive} />
+        <FeedList />
       </CardContent>
 
       <AddFeedDialog isOpen={isAddDialogOpen} onClose={handleDialogClose} />

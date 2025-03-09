@@ -33,6 +33,7 @@ export class ArticleProcessingService {
   private processedArticles: Set<string> = new Set()
   private shouldStop: boolean = false
   private processed: boolean = false
+  private idCounter: number = 0
 
   constructor(
     page: Page,
@@ -58,6 +59,7 @@ export class ArticleProcessingService {
     this.shouldStop = false
     this.processed = false
     this.processedArticles.clear()
+    this.idCounter = 0
 
     while (true) {
       const articleLocators = await this.page.locator('article').all()
@@ -83,11 +85,7 @@ export class ArticleProcessingService {
           continue
         }
 
-        const articleId = await this.ensureArticleId(
-          articleLoc,
-          'data-article-id',
-          this.processedArticles.size
-        )
+        const articleId = await this.ensureArticleId(articleLoc, 'data-article-id', this.idCounter)
         if (this.processedArticles.has(articleId)) continue
 
         await smoothScrollToElement(this.page, articleElementHandle)
@@ -110,7 +108,8 @@ export class ArticleProcessingService {
           if (this.processed) {
             this.processedArticles.add(articleId)
           }
-          await wait(this.config.postIntervalSeconds * 1000)
+          // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
+          this.idCounter++
         }
       }
 

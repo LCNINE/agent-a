@@ -20,6 +20,7 @@ export type AgentConfig = {
   workIntervalSeconds: number
   loopIntervalSeconds: number
   credentials: LoginCredentials
+  excludeUsernames?: string[]
   isDirty: boolean
 }
 
@@ -28,6 +29,7 @@ export type ConfigState = {
   setConfig: (newConfig: Partial<AgentConfig>) => void
   resetConfig: () => void
   setIsDirty: (isDirty: boolean) => void
+  excludeUsernames?: string[]
 }
 
 const defaultConfig: AgentConfig = {
@@ -37,6 +39,7 @@ const defaultConfig: AgentConfig = {
   postIntervalSeconds: 600,
   workIntervalSeconds: 600,
   loopIntervalSeconds: 6 * 60 * 60,
+  excludeUsernames: [],
   credentials: {
     username: '',
     password: ''
@@ -49,6 +52,7 @@ export const useConfigStore = create<ConfigState>()(
     (set) => ({
       config: defaultConfig,
       isDirty: false,
+      excludeUsernames: undefined,
       setConfig: (newConfig) =>
         set((state) => ({
           config: { ...state.config, ...newConfig }

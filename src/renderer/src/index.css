@@ -62,94 +62,93 @@
   }
 }
 
-
 @layer base {
-    @font-face {
-        font-family: "Geist";
+  @font-face {
+    font-family: 'Geist';
 
-        src: url("./assets/fonts/geist/geist.ttf") format("truetype");
-    }
-    @font-face {
-        font-family: "Geist Mono";
-        font-display: swap;
+    src: url('./assets/fonts/geist/geist.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Geist Mono';
+    font-display: swap;
 
-        src: url("./assets/fonts/geist-mono/geist-mono.ttf") format("truetype");
-    }
+    src: url('./assets/fonts/geist-mono/geist-mono.ttf') format('truetype');
+  }
 
-    @font-face {
-        font-family: "Tomorrow";
-        font-weight: 400;
-        font-style: normal;
+  @font-face {
+    font-family: 'Tomorrow';
+    font-weight: 400;
+    font-style: normal;
 
-        src: url("./assets/fonts/tomorrow/tomorrow-regular.ttf") format("truetype");
-    }
-    @font-face {
-        font-family: "Tomorrow";
-        font-weight: 400;
-        font-style: italic;
+    src: url('./assets/fonts/tomorrow/tomorrow-regular.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Tomorrow';
+    font-weight: 400;
+    font-style: italic;
 
-        src: url("./assets/fonts/tomorrow/tomorrow-italic.ttf") format("truetype");
-    }
-    @font-face {
-        font-family: "Tomorrow";
-        font-weight: 700;
-        font-style: normal;
+    src: url('./assets/fonts/tomorrow/tomorrow-italic.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Tomorrow';
+    font-weight: 700;
+    font-style: normal;
 
-        src: url("./assets/fonts/tomorrow/tomorrow-bold.ttf") format("truetype");
-    }
-    @font-face {
-        font-family: "Tomorrow";
-        font-weight: 700;
-        font-style: italic;
+    src: url('./assets/fonts/tomorrow/tomorrow-bold.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Tomorrow';
+    font-weight: 700;
+    font-style: italic;
 
-        src: url("./assets/fonts/tomorrow/tomorrow-bold-italic.ttf") format("truetype");
-    }
+    src: url('./assets/fonts/tomorrow/tomorrow-bold-italic.ttf') format('truetype');
+  }
 
-    @font-face {
-        font-family: "Spoqa";
-        font-weight: 100;
-        src: url("./assets/fonts/spoqa/SpoqaHanSansNeo-Thin.woff2") format("woff2");
-    }
-    @font-face {
-        font-family: "Spoqa";
-        font-weight: 300;
-        src: url("./assets/fonts/spoqa/SpoqaHanSansNeo-Light.woff2") format("woff2");
-    }
-    @font-face {
-        font-family: "Spoqa";
-        font-weight: 400;
-        src: url("./assets/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2") format("woff2");
-    }
-    @font-face {
-        font-family: "Spoqa";
-        font-weight: 500;
-        src: url("./assets/fonts/spoqa/SpoqaHanSansNeo-Medium.woff2") format("woff2");
-    }
-    @font-face {
-        font-family: "Spoqa";
-        font-weight: 700;
-        src: url("./assets/fonts/spoqa/SpoqaHanSansNeo-Bold.woff2") format("woff2");
-    }
-    :root {
-        --sidebar-background: 0 0% 98%;
-        --sidebar-foreground: 240 5.3% 26.1%;
-        --sidebar-primary: 240 5.9% 10%;
-        --sidebar-primary-foreground: 0 0% 98%;
-        --sidebar-accent: 240 4.8% 95.9%;
-        --sidebar-accent-foreground: 240 5.9% 10%;
-        --sidebar-border: 220 13% 91%;
-        --sidebar-ring: 217.2 91.2% 59.8%;
-    }
-    .dark {
-        --sidebar-background: 240 5.9% 10%;
-        --sidebar-foreground: 240 4.8% 95.9%;
-        --sidebar-primary: 224.3 76.3% 48%;
-        --sidebar-primary-foreground: 0 0% 100%;
-        --sidebar-accent: 240 3.7% 15.9%;
-        --sidebar-accent-foreground: 240 4.8% 95.9%;
-        --sidebar-border: 240 3.7% 15.9%;
-        --sidebar-ring: 217.2 91.2% 59.8%;
-    }
+  @font-face {
+    font-family: 'Spoqa';
+    font-weight: 100;
+    src: url('./assets/fonts/spoqa/SpoqaHanSansNeo-Thin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Spoqa';
+    font-weight: 300;
+    src: url('./assets/fonts/spoqa/SpoqaHanSansNeo-Light.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Spoqa';
+    font-weight: 400;
+    src: url('./assets/fonts/spoqa/SpoqaHanSansNeo-Regular.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Spoqa';
+    font-weight: 500;
+    src: url('./assets/fonts/spoqa/SpoqaHanSansNeo-Medium.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Spoqa';
+    font-weight: 700;
+    src: url('./assets/fonts/spoqa/SpoqaHanSansNeo-Bold.woff2') format('woff2');
+  }
+  :root {
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 
 @layer base {

@@ -19,7 +19,8 @@ export const configSchema = z.object({
     }),
   postIntervalSeconds: z.coerce.number().min(1),
   workIntervalSeconds: z.coerce.number().min(1),
-  loopIntervalSeconds: z.coerce.number().min(1)
+  loopIntervalSeconds: z.coerce.number().min(1),
+  excludeUsernames: z.array(z.string().min(1)).optional()
 })
 
 export type ConfigSchema = z.infer<typeof configSchema>

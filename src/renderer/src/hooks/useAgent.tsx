@@ -10,8 +10,9 @@ export function useAgent() {
   const config = useConfigStore((state) => state.config)
   const workList = useWorkStore((state) => state.workList)
   const workType = useWorkTypeStore((state) => state.workType)
+  const feedList = useMyFeedWorkStore((state) => state.feedList)
+
   const { feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled } = useMyFeedWorkStore()
-  const { feeds } = useMyFeedWorkStore()
   const [status, setStatus] = useState<BotStatus>({
     isRunning: false,
     currentWork: null,
@@ -33,8 +34,13 @@ export function useAgent() {
       return
     }
 
-    if (workList.length === 0) {
+    if (workType && workType === 'hashtag_and_feed' && workList.length === 0) {
       toast.error('작업이 없습니다.')
+      return
+    }
+
+    if (workType && workType === 'my_feed' && feedList.length === 0) {
+      toast.error('피드 목록이 없습니다.')
       return
     }
 
@@ -69,7 +75,7 @@ export function useAgent() {
         await window.agent.start({
           config: agentConfig,
           workType: 'my_feed',
-          workList: [{ feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled, feeds }]
+          workList: [{ feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled, feedList }]
         })
 
         return

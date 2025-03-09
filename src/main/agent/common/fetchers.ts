@@ -36,3 +36,13 @@ export async function callGenerateComments(params: GenerateCommentReq) {
 
   return response.data
 }
+
+export async function callGenerateReply(params: GenerateCommentReq) {
+  const response = await axiosClient.post<
+    GenerateCommentRes,
+    AxiosResponse<GenerateCommentRes>,
+    GenerateCommentReq
+  >('https://xszdgbmgwnaxbyekqons.supabase.co/functions/v1/generate-reply', params)
+
+  return response.data
+}

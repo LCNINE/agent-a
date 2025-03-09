@@ -47,7 +47,7 @@ export function ConfigForm() {
   useEffect(() => {
     setIsDirty(form.formState.isDirty)
   }, [form.formState.isDirty, setIsDirty])
-
+  console.log(form.getValues())
   return (
     <TooltipProvider>
       <div className="container mx-auto max-w-3xl p-4">
@@ -369,6 +369,118 @@ export function ConfigForm() {
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 제외 유저 목록 */}
+                      <FormField
+                        control={form.control}
+                        name="excludeUsernames"
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="mb-2 flex items-center">
+                              <FormLabel className="m-0 text-sm">
+                                {t('configForm.label.excludeUsernames')}
+                              </FormLabel>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{t('configForm.description.excludeUsernames')}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <FormControl>
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {field.value?.map((username, index) => (
+                                    <div
+                                      key={index}
+                                      className="flex items-center rounded-md bg-secondary px-2 py-1"
+                                    >
+                                      <span className="text-sm">{username}</span>
+                                      <button
+                                        type="button"
+                                        title={`${username} 제거`}
+                                        className="ml-1.5 text-muted-foreground hover:text-destructive"
+                                        onClick={() => {
+                                          const newUsernames = [...(field.value || [])]
+                                          newUsernames.splice(index, 1)
+                                          field.onChange(newUsernames)
+                                        }}
+                                        aria-label={`${username} 제거`}
+                                      >
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M18 6 6 18"></path>
+                                          <path d="m6 6 12 12"></path>
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    placeholder={t('configForm.description.excludeUsernames')}
+                                    className="flex-1"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        const inputEl = e.target as HTMLInputElement
+                                        const value = inputEl.value.trim()
+
+                                        if (!value) return
+
+                                        if (!field.value) {
+                                          field.onChange([value])
+                                        } else if (!field.value.includes(value)) {
+                                          field.onChange([...field.value, value])
+                                        }
+
+                                        inputEl.value = ''
+                                      }
+                                    }}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-shrink-0"
+                                    onClick={() => {
+                                      const inputEl = document.querySelector(
+                                        'input[placeholder="' +
+                                          t('configForm.description.excludeUsernames') +
+                                          '"]'
+                                      ) as HTMLInputElement
+                                      const value = inputEl?.value.trim()
+
+                                      if (!value) return
+
+                                      if (!field.value) {
+                                        field.onChange([value])
+                                      } else if (!field.value.includes(value)) {
+                                        field.onChange([...field.value, value])
+                                      }
+
+                                      if (inputEl) inputEl.value = ''
+                                    }}
+                                  >
+                                    {t('accountTable.add')}
+                                  </Button>
+                                </div>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>

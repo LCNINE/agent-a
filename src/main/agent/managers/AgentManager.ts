@@ -2,7 +2,7 @@ import { BrowserContext, Locator } from 'playwright-core'
 import { AgentConfig, FeedWork, Work, WorkType } from '../../..'
 import { startBrowser } from '../common/browser'
 import { loginWithCredentials } from '../common/browserUtils'
-import { callGenerateComments } from '../common/fetchers'
+import { callGenerateComments, callGenerateReply } from '../common/fetchers'
 import { chooseRandomSleep, majorActionDelays, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
@@ -25,12 +25,15 @@ export class AgentManager {
     waiting: null
   }
   private currentWorkIndex = 0
+  private excludeUsernames = new Set<string>()
 
   constructor(
     private workType: WorkType,
     private works: Work[] | FeedWork[],
     private config: AgentConfig
-  ) {}
+  ) {
+    this.excludeUsernames = new Set(this.config.excludeUsernames)
+  }
 
   async start(config: AgentConfig, workList: Work[] | FeedWork[]): Promise<void> {
     try {
@@ -130,6 +133,21 @@ export class AgentManager {
                 async (articleLocator: Locator, articleId: string) => {
                   let isProcessed = false
 
+                  const authorLoc = await articleLocator
+                    .locator('span._ap3a._aaco._aacw._aacx._aad7._aade')
+                    .first()
+                  const author = await authorLoc.textContent()
+
+                  if (!author) {
+                    console.log('[authorLoc] 작성자 요소를 찾을 수 없습니다.')
+                    return false
+                  }
+
+                  if (this.excludeUsernames.has(author)) {
+                    console.log(`[runWork] ${author} 제외 유저 스킵`)
+                    return false
+                  }
+
                   const adIndicatorLocs = await articleLocator.getByText(/광고|Sponsor/).all()
                   if (adIndicatorLocs.length !== 0) {
                     console.log('[runWork] 광고 스킵')
@@ -197,11 +215,32 @@ export class AgentManager {
                   }
                   await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
 
-                  let postButton = articleLocator.getByRole('button', { name: '게시', exact: true })
-                  if (!(await postButton.isVisible())) {
-                    postButton = articleLocator.getByRole('button', { name: 'Post', exact: true })
+                  await page.waitForTimeout(500)
+
+                  // 게시 버튼 찾기
+                  let postButtonLoc = articleLocator
+                    .getByRole('button', { name: '게시', exact: true })
+                    .first()
+                  console.log('[runWork] 게시 버튼 찾기 시도 (한국어):', postButtonLoc)
+
+                  if (!(await postButtonLoc.isVisible())) {
+                    console.log('[runWork] 한국어 게시 버튼이 보이지 않음, 영어 버튼 시도')
+                    postButtonLoc = articleLocator
+                      .getByRole('button', {
+                        name: 'Post',
+                        exact: true
+                      })
+                      .first()
+                    console.log('[runWork] 게시 버튼 찾기 시도 (영어):', postButtonLoc)
                   }
-                  await postButton.click()
+
+                  if (await postButtonLoc.isVisible()) {
+                    console.log('[runWork] 게시 버튼 클릭')
+                    await postButtonLoc.click()
+                  } else {
+                    console.log('[runWork] 게시 버튼을 찾을 수 없음')
+                    return false
+                  }
 
                   isProcessed = true
                   await chooseRandomSleep(postInteractionDelays)
@@ -231,6 +270,26 @@ export class AgentManager {
                   try {
                     await postLoc.click()
                     await chooseRandomSleep(postInteractionDelays)
+
+                    const authorLoc = page
+                      .locator(
+                        'a.x1i10hfl.xjbqb8w.x1ejq31n.xd10rxx.x1sy0etr.x17r0tee.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xt0psk2.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1a2a7pz._acan._acao._acat._acaw._aj1-._ap30._a6hd'
+                      )
+                      .first()
+                    const author = await authorLoc.textContent()
+
+                    if (!author) {
+                      console.log('[authorLoc] 작성자 요소를 찾을 수 없습니다.')
+                      await page.getByLabel(/닫기|Close/).click()
+                      return false
+                    }
+
+                    if (this.excludeUsernames.has(author)) {
+                      console.log('[runWork] 제외 유저 스킵')
+
+                      await page.getByLabel(/닫기|Close/).click()
+                      return false
+                    }
 
                     // 내 댓글이 있는지 확인
                     const myUsername = this.config.credentials.username
@@ -310,7 +369,7 @@ export class AgentManager {
 
                       await page.waitForSelector(
                         'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
-                        { state: 'visible', timeout: 60000 }
+                        { state: 'visible', timeout: 3000 }
                       )
 
                       // 한국어 또는 영어 게시 버튼을 찾아 클릭
@@ -353,18 +412,147 @@ export class AgentManager {
 
               await page.waitForTimeout(2000)
 
-              const feeds = (work as FeedWork).feeds
-              const activeFeeds = feeds.filter((feed) => feed.active)
-
-              await page.goto(activeFeeds[this.currentWorkIndex].url)
+              const feedList = (work as FeedWork).feedList
+              const activeFeeds = feedList.filter((feed) => feed.active)
 
               const feedWorkBasicModeService = new FeedWorkBasicModeService(
                 page,
-                async (feedLoc: Locator, feedId: string) => {
-                  return true
+                async (
+                  commentLocator: Locator,
+                  commentId: string,
+                  commentAuthor: string | null,
+                  commentContents: string | null
+                ) => {
+                  let isProcessed = false
+
+                  console.log(
+                    '[work옵션 확인]:',
+                    '좋아요 기능 활성화 상태:',
+                    work.likeCommentsEnabled
+                  )
+                  console.log(
+                    '[work옵션 확인]:',
+                    '답글 기능 활성화 상태:',
+                    work.replyCommentsEnabled
+                  )
+
+                  const authorLoc = await commentLocator
+                    .locator('span._ap3a._aaco._aacw._aacx._aad7._aade')
+                    .first()
+                  const author = await authorLoc.textContent()
+
+                  if (!author) {
+                    console.log('[author] 작성자 요소를 찾을 수 없습니다.')
+                    return false
+                  }
+
+                  if (this.excludeUsernames.has(author)) {
+                    console.log(`[runWork] ${author} 제외 유저 스킵`)
+                    return false
+                  }
+
+                  if (this.config.credentials.username === commentAuthor) {
+                    console.log('[runWork] 자신의 댓글 스킵')
+                    return false
+                  }
+
+                  // 답글 모두 보기 버튼
+                  const siblingDivs = commentLocator.locator('xpath=../following-sibling::div[1]')
+                  const button = await siblingDivs.getByRole('button')
+                  if (await button.isVisible()) {
+                    await button.click()
+                  }
+
+                  const commentReply = await siblingDivs
+                    .locator('ul')
+                    .textContent()
+                    .catch(() => {
+                      return null
+                    })
+
+                  if (commentReply === null) {
+                    console.log('[commentReply] 아직 답글을 달지 못한 게시글 확인')
+                  }
+
+                  if (
+                    (commentReply && commentReply.startsWith(this.config.credentials.username)) ||
+                    commentReply?.includes(this.config.credentials.username)
+                  ) {
+                    console.log('[runWork] 이미 답글을 작성한 댓글이므로 건너뜁니다.')
+                    return false
+                  }
+
+                  // 좋아요 옵션 활성화일때
+                  if (work.likeCommentsEnabled) {
+                    const likeButtonLoc = page
+                      .locator(`div[data-comment-id="${commentId}"]`)
+                      .getByRole('button')
+                      .filter({
+                        hasText: /^(좋아요|Like)$/
+                      })
+                      .first()
+
+                    if (await likeButtonLoc.isVisible()) {
+                      await likeButtonLoc.evaluate((button) => {
+                        ;(button as HTMLButtonElement).click()
+                      })
+                      await chooseRandomSleep(postInteractionDelays)
+                    }
+                  }
+
+                  // 답글 옵션 활성화일때
+                  if (work.replyCommentsEnabled) {
+                    const replyButtonLoc = page.locator(`div[data-comment-id="${commentId}"]`)
+                    await replyButtonLoc
+                      .getByText(/답글 달기|Reply/i, { exact: false })
+                      .click()
+                      .catch(() => {
+                        console.log('[replyButtonLoc] 답글 달기 버튼을 찾을 수 없습니다.')
+                      })
+
+                    const articleScreenshot = await commentLocator.screenshot({ type: 'jpeg' })
+                    const base64Image = articleScreenshot.toString('base64')
+
+                    const commentRes = await callGenerateReply({
+                      image: base64Image,
+                      content: commentContents as string,
+                      minLength: this.config.commentLength.min,
+                      maxLength: this.config.commentLength.max,
+                      prompt: this.config.prompt
+                    })
+
+                    if (!commentRes.isAllowed) {
+                      console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
+                      return false
+                    }
+
+                    const commentTextarea = page.locator(
+                      'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+                    )
+
+                    if (!(await commentTextarea.isVisible())) {
+                      console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
+                      return false
+                    }
+
+                    await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
+
+                    let postButton = page.getByRole('button', { name: '게시', exact: true })
+                    if (!(await postButton.isVisible())) {
+                      postButton = page.getByRole('button', { name: 'Post', exact: true })
+                    }
+                    await postButton.click()
+
+                    isProcessed = true
+                  }
+
+                  await chooseRandomSleep(postInteractionDelays)
+                  return isProcessed
                 },
                 {},
-                this.config
+                this.config,
+                this.currentWorkIndex,
+                work
               )
 
               await feedWorkBasicModeService.processFeeds(activeFeeds)

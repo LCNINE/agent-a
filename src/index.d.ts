@@ -63,7 +63,7 @@ export type FeedWork = {
   feedWorkModeType: 'basic' | 'advanced'
   likeCommentsEnabled: boolean
   replyCommentsEnabled: boolean
-  feeds: Feed[]
+  feedList: Feed[]
 }
 
 export interface BotStatus {
@@ -93,6 +93,7 @@ export type AgentConfig = {
   workIntervalSeconds: number
   loopIntervalSeconds: number
   credentials: LoginCredentials
+  excludeUsernames?: string[]
 }
 
 export interface StartAgentParams {

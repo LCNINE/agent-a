@@ -20,7 +20,7 @@ interface AddFeedDialogProps {
 }
 
 const AddFeedDialog = ({ isOpen, onClose }: AddFeedDialogProps) => {
-  const { addFeed, feeds } = useMyFeedWorkStore()
+  const { addFeed, feedList } = useMyFeedWorkStore()
   const [newFeedUrl, setNewFeedUrl] = useState('')
   const [newFeedName, setNewFeedName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -34,9 +34,9 @@ const AddFeedDialog = ({ isOpen, onClose }: AddFeedDialogProps) => {
 
     setTimeout(() => {
       addFeed({
-        id: feeds.length,
+        id: Math.max(0, ...feedList.map((feed) => feed.id)) + 1,
         url: newFeedUrl.trim(),
-        name: newFeedName.trim() !== '' ? newFeedName : `피드 ${feeds.length + 1}`,
+        name: newFeedName.trim() !== '' ? newFeedName : `피드 ${feedList.length + 1}`,
         active: true
       })
 

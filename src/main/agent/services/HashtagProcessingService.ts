@@ -33,6 +33,7 @@ export class HashtagService {
   private processedPosts: Set<string> = new Set()
   private shouldStop: boolean = false
   private processed: boolean = false
+  private idCounter: number = 0
 
   constructor(
     page: Page,
@@ -61,6 +62,7 @@ export class HashtagService {
     this.shouldStop = false
     this.processed = false
     this.processedPosts.clear()
+    this.idCounter = 0
 
     while (true) {
       const postLocators = await this.page.locator('a[role="link"][tabindex="0"]').all()
@@ -84,11 +86,7 @@ export class HashtagService {
           continue
         }
 
-        const articleId = await this.ensureArticleId(
-          postLoc,
-          'data-articleId',
-          this.processedPosts.size
-        )
+        const articleId = await this.ensureArticleId(postLoc, 'data-articleId', this.idCounter)
         if (this.processedPosts.has(articleId)) continue
 
         await smoothScrollToElement(this.page, postElementHandle)
@@ -111,6 +109,8 @@ export class HashtagService {
           if (this.processed) {
             this.processedPosts.add(articleId)
           }
+          // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
+          this.idCounter++
           await wait(this.config.postIntervalSeconds * 1000)
         }
       }
@@ -151,8 +151,8 @@ export class HashtagService {
         }
       )
       const searchInput = this.page.getByPlaceholder(/검색|search/i)
+      await searchInput.pressSequentially(`#${tag}`, { delay: 100 })
 
-      await searchInput.fill(`#${tag}`)
       await this.page.waitForTimeout(2000)
 
       await this.page.waitForSelector(`text="#${tag}"`, {

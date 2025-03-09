@@ -1,22 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
-import SubscriptionService from "./subscriptionService";
-import { createClient } from "@/supabase/client";
+import { useQuery } from '@tanstack/react-query'
+import SubscriptionService from './subscriptionService'
+import { createClient } from '@/supabase/client'
 
 interface SubscriptionResponse {
-    subscriptionId: number;
-    endDate: Date;
-    isActive: boolean;
-    remainingDays: number;
-    remainingHours: number;
-    formattedEndDate: string;
+  subscriptionId: number
+  endDate: Date
+  isActive: boolean
+  remainingDays: number
+  remainingHours: number
+  formattedEndDate: string
 }
 
 export function useCurrentSubscriptionQuery(userId: string) {
-  const supabase = createClient();
+  const supabase = createClient()
   const { data, isLoading, error } = useQuery<SubscriptionResponse | null>({
     queryKey: ['currentSubscription', userId],
-    queryFn: () => new SubscriptionService(supabase).getCurrentSubscription(userId),
-  });
+    queryFn: () => new SubscriptionService(supabase).getCurrentSubscription(userId)
+  })
 
   return {
     data,
@@ -24,6 +24,6 @@ export function useCurrentSubscriptionQuery(userId: string) {
     error,
     remainingDays: data?.remainingDays,
     remainingHours: data?.remainingHours,
-    formattedEndDate: data?.formattedEndDate,
-  };
+    formattedEndDate: data?.formattedEndDate
+  }
 }

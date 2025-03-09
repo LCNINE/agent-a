@@ -11,14 +11,7 @@ import { Button } from '@/components/ui/button'
 import { EditAccountDialog } from './EditAccountDialog'
 import { useAccountStore } from '@/store/accountStore'
 import { useTranslation } from 'react-i18next'
-import { 
-  CheckCircle2, 
-  Circle, 
-  Edit2, 
-  Key, 
-  Lock,
-  Trash2
-} from 'lucide-react'
+import { CheckCircle2, Circle, Edit2, Key, Lock, Trash2 } from 'lucide-react'
 import { cn } from '@/utils/tailwind'
 import {
   AlertDialog,
@@ -29,8 +22,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 
 interface AccountTableProps {
@@ -50,7 +43,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
 
   const handleDeleteAccount = (username: string) => {
     deleteAccount(username)
-    toast.success(t("accountTable.accountDeleted"))
+    toast.success(t('accountTable.accountDeleted'))
   }
 
   return (
@@ -69,7 +62,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
             <TableRow
               key={account.username}
               className={cn(
-                'transition-colors hover:bg-muted/50 cursor-pointer group',
+                'group cursor-pointer transition-colors hover:bg-muted/50',
                 selectedAccount?.username === account.username && 'bg-muted/30'
               )}
               onClick={() => handleAccountSelect(account.username)}
@@ -77,21 +70,21 @@ export function AccountTable({ accounts }: AccountTableProps) {
               <TableCell className="px-2">
                 <div className="flex items-center justify-center">
                   {selectedAccount?.username === account.username ? (
-                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
                   ) : (
-                    <Circle className="w-5 h-5 text-muted-foreground" />
+                    <Circle className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
               </TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
-                  <Key className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Key className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                   <span className="truncate">{account.username}</span>
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                   <span className="font-mono">••••••••</span>
                 </div>
               </TableCell>
@@ -100,44 +93,32 @@ export function AccountTable({ accounts }: AccountTableProps) {
                   <EditAccountDialog
                     account={account}
                     trigger={
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                        <span className="hidden sm:inline ml-2">
-                          {t('accountTable.edit')}
-                        </span>
+                      <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                        <Edit2 className="h-4 w-4" />
+                        <span className="ml-2 hidden sm:inline">{t('accountTable.edit')}</span>
                       </Button>
                     }
                   />
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                        <span className="hidden sm:inline ml-2 text-destructive">
+                      <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <span className="ml-2 hidden text-destructive sm:inline">
                           {t('accountTable.delete')}
                         </span>
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {t('accountTable.deleteConfirmTitle')}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>{t('accountTable.deleteConfirmTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t('accountTable.deleteConfirmDescription', { username: account.username })}
+                          {t('accountTable.deleteConfirmDescription', {
+                            username: account.username
+                          })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>
-                          {t('accountTable.cancel')}
-                        </AlertDialogCancel>
+                        <AlertDialogCancel>{t('accountTable.cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => handleDeleteAccount(account.username)}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
