@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAuthContext } from '@/hooks/useAuth'
 import { UserRoundIcon } from 'lucide-react'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Button } from './ui/button'
@@ -28,7 +28,7 @@ export default function UserMenu() {
   }
 
   async function logout() {
-    const supabase = createClient()
+    const supabase = useCreateClient()
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('userMenu logout Error: ', error)

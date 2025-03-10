@@ -1,9 +1,7 @@
 import React from 'react'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 import { User } from '@supabase/supabase-js'
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react'
-
-const supabase = createClient()
 
 export type AuthContextType = {
   user: User | null
@@ -26,7 +24,7 @@ type AuthProviderProps = {
 
 export function AuthProvider({ unauthenticatedFallback, children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
-
+  const supabase = useCreateClient()
   useEffect(() => {
     // 초기 사용자 상태 설정
     const initUser = async () => {

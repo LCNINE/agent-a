@@ -1,7 +1,7 @@
 // src/renderer/src/service/free-trial/queries.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import FreeTrialService from './freeTrialService'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 import { toast } from 'sonner'
 
 interface Subscription {
@@ -11,7 +11,7 @@ interface Subscription {
 }
 
 export function useFreeTrialQuery(userId: string | undefined) {
-  const supabase = createClient()
+  const supabase = useCreateClient()
 
   return useQuery({
     queryKey: ['freeTrial', userId],
@@ -28,7 +28,7 @@ export function useFreeTrialQuery(userId: string | undefined) {
 
 export function useStartFreeTrialMutation() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = useCreateClient()
 
   return useMutation({
     mutationFn: async (userId: string) => {

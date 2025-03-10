@@ -9,7 +9,7 @@ import LangToggle from '@/components/LangToggle'
 import { useForm } from 'react-hook-form'
 import { loginSchema, LoginSchema } from './schema'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 import {
   Form,
   FormControl,
@@ -35,7 +35,7 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
   })
 
   async function onSubmit(values: LoginSchema) {
-    const supabase = createClient()
+    const supabase = useCreateClient()
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import SubscriptionService from './subscriptionService'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 
 interface SubscriptionResponse {
   subscriptionId: number
@@ -12,7 +12,7 @@ interface SubscriptionResponse {
 }
 
 export function useCurrentSubscriptionQuery(userId: string) {
-  const supabase = createClient()
+  const supabase = useCreateClient()
   const { data, isLoading, error } = useQuery<SubscriptionResponse | null>({
     queryKey: ['currentSubscription', userId],
     queryFn: () => new SubscriptionService(supabase).getCurrentSubscription(userId)
