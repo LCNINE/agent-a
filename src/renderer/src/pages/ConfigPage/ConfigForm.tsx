@@ -38,6 +38,10 @@ export function ConfigForm() {
     defaultValues: config
   })
 
+  useEffect(() => {
+    form.reset(config)
+  }, [])
+
   async function onSubmit(values: ConfigSchema) {
     setConfig(values)
     form.reset(values)
@@ -47,7 +51,7 @@ export function ConfigForm() {
   useEffect(() => {
     setIsDirty(form.formState.isDirty)
   }, [form.formState.isDirty, setIsDirty])
-  console.log(form.getValues())
+
   return (
     <TooltipProvider>
       <div className="container mx-auto max-w-3xl p-4">
@@ -194,7 +198,14 @@ export function ConfigForm() {
                           </Tooltip>
                         </div>
                         <FormControl>
-                          <Input type="number" {...field} className="mt-2" />
+                          <Input
+                            type="number"
+                            value={field.value || 10}
+                            onChange={(e) =>
+                              field.onChange(e.target.value === '' ? '' : Number(e.target.value))
+                            }
+                            className="mt-2"
+                          />
                         </FormControl>
                         {form.formState.errors.workCount && (
                           <p className="mt-1 text-[0.8rem] font-medium text-destructive">
