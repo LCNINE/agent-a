@@ -55,10 +55,10 @@ function addDialogEventListeners() {
   ipcMain.handle('dialog:show-confirmation', async () => {
     const result = await dialog.showMessageBox({
       type: 'warning',
-      buttons: ['이 페이지에 머무르기', '저장하지 않고 나가기'],
+      buttons: ['아니오', '예'],
       title: '저장되지 않은 변경사항',
-      message: '변경사항이 저장되지 않았습니다.',
-      detail: '저장하지 않고 나가시면 변경사항이 모두 사라집니다. 계속하시겠습니까?'
+      message: '저장되지 않은 변경사항이 있습니다.',
+      detail: '나가시면 모든 변경사항이 사라집니다. 저장 없이 나가시겠습니까?'
     })
     return result.response === 0
   })

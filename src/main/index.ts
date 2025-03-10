@@ -62,7 +62,7 @@ function setupAutoUpdater() {
         type: 'info',
         title: '업데이트 확인',
         message: '새로운 버전이 있습니다. 지금 다운로드 하시겠습니까?',
-        buttons: ['지금 설치', '나중에']
+        buttons: ['예', '아니오']
       })
       .then((result) => {
         if (result.response === 0) {
