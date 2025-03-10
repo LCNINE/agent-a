@@ -10,7 +10,7 @@ import { waitRandom } from './common/timeUtils'
 import { app } from 'electron'
 import path from 'path'
 import { startBrowser } from './common/browser'
-import { LoginService } from './-not-auto-services/loginService'
+import { LoginService } from './services/loginService'
 import { chromium } from 'playwright'
 // import { HashtagService } from './services/HashtagService'
 

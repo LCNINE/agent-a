@@ -4,9 +4,9 @@ import { startBrowser } from '../common/browser'
 import { loginWithCredentials } from '../common/browserUtils'
 import { callGenerateComments, callGenerateReply } from '../common/fetchers'
 import { chooseRandomSleep, majorActionDelays, postInteractionDelays } from '../common/timeUtils'
-import { ArticleProcessingService } from '../-not-auto-services/ArticleProcessingService'
-import { HashtagService } from '../-not-auto-services/HashtagProcessingService'
-import { FeedWorkBasicModeService } from '../-not-auto-services/FeedWorkBasicModeService'
+import { ArticleProcessingService } from '../services/ArticleProcessingService'
+import { HashtagService } from '../services/HashtagProcessingService'
+import { FeedWorkBasicModeService } from '../services/FeedWorkBasicModeService'
 
 export interface BotStatus {
   isRunning: boolean
@@ -17,7 +17,7 @@ export interface BotStatus {
   } | null
 }
 
-export class NotAutoManager {
+export class AgentManager {
   private browser: BrowserContext | null = null
   private _status: BotStatus = {
     isRunning: false,

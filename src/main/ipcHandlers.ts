@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
 import { StartAgentParams, Work } from '..'
-import { NotAutoManager } from './agent/managers/NotAutoManager'
+import { AgentManager } from './agent/managers/AgentManager'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
 const WIN_MAXIMIZE_CHANNEL = 'window:maximize'
@@ -55,22 +55,22 @@ function addDialogEventListeners() {
   ipcMain.handle('dialog:show-confirmation', async () => {
     const result = await dialog.showMessageBox({
       type: 'warning',
-      buttons: ['아니오', '예'],
+      buttons: ['이 페이지에 머무르기', '저장하지 않고 나가기'],
       title: '저장되지 않은 변경사항',
-      message: '저장되지 않은 변경사항이 있습니다.',
-      detail: '나가시면 모든 변경사항이 사라집니다. 저장 없이 나가시겠습니까?'
+      message: '변경사항이 저장되지 않았습니다.',
+      detail: '저장하지 않고 나가시면 변경사항이 모두 사라집니다. 계속하시겠습니까?'
     })
     return result.response === 0
   })
 }
 
-let currentManager: NotAutoManager | null = null
+let currentManager: AgentManager | null = null
 
 export function addAgentEventListeners() {
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
     log.info('Start agent button clicked with params:', params)
     try {
-      currentManager = new NotAutoManager(params.workType, params.workList, params.config)
+      currentManager = new AgentManager(params.workType, params.workList, params.config)
       await currentManager.start(params.config, params.workList)
 
       log.info('Agent started successfully')
