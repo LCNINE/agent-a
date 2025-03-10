@@ -120,21 +120,18 @@ export type Database = {
           last_check_time: string
           member_id: string
           status: Database["public"]["Enums"]["my_feed_status"]
-          updated_at: string
         }
         Insert: {
           created_at?: string
           last_check_time?: string
           member_id?: string
           status?: Database["public"]["Enums"]["my_feed_status"]
-          updated_at?: string
         }
         Update: {
           created_at?: string
           last_check_time?: string
           member_id?: string
           status?: Database["public"]["Enums"]["my_feed_status"]
-          updated_at?: string
         }
         Relationships: [
           {
