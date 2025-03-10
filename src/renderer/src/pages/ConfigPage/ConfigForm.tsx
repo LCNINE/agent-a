@@ -53,7 +53,7 @@ export function ConfigForm() {
   }, [form.formState.isDirty, setIsDirty])
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={100}>
       <div className="container mx-auto max-w-3xl p-4">
         <Card className="flex h-[calc(100vh-150px)] flex-col shadow-lg">
           <CardHeader className="flex-shrink-0 bg-muted/50 p-2">
