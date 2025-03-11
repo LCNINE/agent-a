@@ -38,6 +38,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
     const account = accounts.find((acc) => acc.username === username)
     if (account && account.password) {
       selectAccount(account)
+      toast.success(`${account.username} ${t('accountTable.accountSelected')}`)
     }
   }
 
