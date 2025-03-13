@@ -70,7 +70,7 @@ export function addAgentEventListeners() {
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
     log.info('Start agent button clicked with params:', params)
     try {
-      currentManager = new AgentManager(params.workType, params.workList, params.config)
+      currentManager = new AgentManager(params.workList, params.config)
       await currentManager.start(params.config, params.workList)
 
       log.info('Agent started successfully')

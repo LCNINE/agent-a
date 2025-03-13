@@ -55,75 +55,79 @@ export class HashtagService {
     }
   }
 
-  async processHashtag(tag: string): Promise<void> {
-    // 해시태그 검색 및 페이지 이동
-    await this.searchHashtag(tag)
+  async processHashtag(tags: string[]): Promise<void> {
+    for (const tag of tags) {
+      // 해시태그 검색 및 페이지 이동
+      await this.searchHashtag(tag)
 
-    this.shouldStop = false
-    this.processed = false
-    this.processedPosts.clear()
-    this.idCounter = 0
+      this.shouldStop = false
+      this.processed = false
+      this.processedPosts.clear()
+      this.idCounter = 0
 
-    while (true) {
-      const postLocators = await this.page.locator('a[role="link"][tabindex="0"]').all()
+      while (true) {
+        const postLocators = await this.page.locator('a[role="link"][tabindex="0"]').all()
 
-      if (postLocators.length === 0) {
-        console.log('더 이상 처리할 게시물이 없습니다.')
-        break
-      }
-
-      for (const postLoc of postLocators) {
-        // 최대 처리 수에 도달했는지 확인
-        if (this.processedPosts.size >= this.options.maxPosts) {
-          console.log(`최대 게시물 수(${this.options.maxPosts})에 도달했습니다. 작업을 종료합니다.`)
-          this.shouldStop = true
+        if (postLocators.length === 0) {
+          console.log('더 이상 처리할 게시물이 없습니다.')
           break
         }
 
-        const postElementHandle = await postLoc.elementHandle()
-        if (postElementHandle == null) {
-          console.log('[processHashtag] postElementHandle is null')
-          continue
-        }
-
-        const articleId = await this.ensureArticleId(postLoc, 'data-articleId', this.idCounter)
-        if (this.processedPosts.has(articleId)) continue
-
-        await smoothScrollToElement(this.page, postElementHandle)
-        await chooseRandomSleep(scrollDelays)
-
-        const delay =
-          Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
-          this.options.processingDelay.min
-        await this.page.waitForTimeout(delay)
-
-        try {
-          this.processed = await this.hashtagProcessor(postLoc, articleId)
-        } catch (error) {
-          console.error(
-            `Hashtag processing failed: ${error instanceof Error ? error.message : String(error)}`
-          )
-          continue
-        } finally {
-          // 실제로 댓글을 작성한 경우에만 카운트에 추가
-          if (this.processed) {
-            this.processedPosts.add(articleId)
+        for (const postLoc of postLocators) {
+          // 최대 처리 수에 도달했는지 확인
+          if (this.processedPosts.size >= this.options.maxPosts) {
+            console.log(
+              `최대 게시물 수(${this.options.maxPosts})에 도달했습니다. 작업을 종료합니다.`
+            )
+            this.shouldStop = true
+            break
           }
-          // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
-          this.idCounter++
-          await wait(this.config.postIntervalSeconds * 1000)
+
+          const postElementHandle = await postLoc.elementHandle()
+          if (postElementHandle == null) {
+            console.log('[processHashtag] postElementHandle is null')
+            continue
+          }
+
+          const articleId = await this.ensureArticleId(postLoc, 'data-articleId', this.idCounter)
+          if (this.processedPosts.has(articleId)) continue
+
+          await smoothScrollToElement(this.page, postElementHandle)
+          await chooseRandomSleep(scrollDelays)
+
+          const delay =
+            Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
+            this.options.processingDelay.min
+          await this.page.waitForTimeout(delay)
+
+          try {
+            this.processed = await this.hashtagProcessor(postLoc, articleId)
+          } catch (error) {
+            console.error(
+              `Hashtag processing failed: ${error instanceof Error ? error.message : String(error)}`
+            )
+            continue
+          } finally {
+            // 실제로 댓글을 작성한 경우에만 카운트에 추가
+            if (this.processed) {
+              this.processedPosts.add(articleId)
+            }
+            // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
+            this.idCounter++
+            await wait(this.config.postIntervalSeconds * 1000)
+          }
         }
+
+        if (this.shouldStop) {
+          break
+        }
+
+        await this.page.waitForTimeout(1000)
       }
 
-      if (this.shouldStop) {
-        break
-      }
-
-      await this.page.waitForTimeout(1000)
+      console.log('작업종료:', this.processedPosts.size, this.options.maxPosts)
+      console.log(`처리된 게시물: ${this.processedPosts.size}개`)
     }
-
-    console.log('작업종료:', this.processedPosts.size, this.options.maxPosts)
-    console.log(`처리된 게시물: ${this.processedPosts.size}개`)
   }
 
   async searchHashtag(tag: string): Promise<void> {

@@ -153,24 +153,24 @@ export async function smoothScrollToElement(
   await page.waitForTimeout(100)
 }
 
-export async function isLoggedIn(browser: BrowserContext, credentials: LoginCredentials) {
-  const page = await browser.newPage()
-  await page.goto('https://www.instagram.com/accounts/login/')
+// export async function isLoggedIn(browser: BrowserContext, credentials: LoginCredentials) {
+//   const page = await browser.newPage()
+//   await page.goto('https://www.instagram.com/accounts/login/')
 
-  try {
-    await page.waitForURL('https://www.instagram.com/', { timeout: 3000 })
-    return true
-  } catch {
-    try {
-      loginWithCredentials(page, credentials)
-      return true
-    } catch {
-      return false
-    }
-  } finally {
-    page.close()
-  }
-}
+//   try {
+//     await page.waitForURL('https://www.instagram.com/', { timeout: 3000 })
+//     return true
+//   } catch {
+//     try {
+//       loginWithCredentials(page, credentials)
+//       return true
+//     } catch {
+//       return false
+//     }
+//   } finally {
+//     page.close()
+//   }
+// }
 
 export async function loginWithCredentials(page: Page, credentials: LoginCredentials) {
   const { username, password } = credentials

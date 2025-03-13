@@ -1,32 +1,207 @@
-import Footer from '@/components/template/Footer'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
-import WorkTypeDropdown from './components/WorkTypeDropdown'
-import WorkTypeSelector from './components/WorkTypeSelector'
-import WorkManger from './components/workManager'
-import useWorkTypeStore, { WorkType } from '@/store/workTypeStore'
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { useWorkStore } from '@/store/workStore'
+import Footer from '@renderer/components/template/Footer'
+import { ScrollArea } from '@renderer/components/ui/scroll-area'
+import { ChevronDown, ChevronUp, Hash, Heart, MessageSquare, Rss, X } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 export default function WorkPage() {
-  const { t } = useTranslation()
-  const { workType, changeWorkType } = useWorkTypeStore((state) => state)
+  const { workList, upsert } = useWorkStore()
+  const [newHashtag, setNewHashtag] = useState('')
+  const [isHashtagListOpen, setIsHashtagListOpen] = useState(false)
+  const hashtagInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAddHashtag = () => {
+    const trimmedHashtag = newHashtag.replace(/\s+/g, '')
+    if (trimmedHashtag) {
+      upsert({ ...workList, hashtags: [...workList.hashtags, trimmedHashtag] })
+      setNewHashtag('')
+    }
+    hashtagInputRef.current?.focus()
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="relative flex flex-col flex-1 gap-2">
-        {!workType ? (
-          <WorkTypeSelector onSelect={(workType: WorkType) => changeWorkType(workType)} />
-        ) : (
-          <>
-            <WorkTypeDropdown
-              value={workType}
-              onChange={(workType: WorkType) => changeWorkType(workType)}
-            />
-            <WorkManger type={workType} />
-          </>
-        )}
-        <Footer />
-      </div>
+    <div className="flex h-[calc(100vh-90px)] flex-col">
+      <ScrollArea className="h-full">
+        <div className="p-4">
+          <div className="mx-auto max-w-2xl space-y-6">
+            <div className="space-y-4 rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Rss className="h-5 w-5 text-gray-700" />
+                  <Label htmlFor="feed-work" className="font-medium">
+                    피드 작업
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">
+                    {workList.feedWork ? '활성화됨' : '비활성화됨'}
+                  </span>
+                  <Switch
+                    id="feed-work"
+                    checked={workList.feedWork}
+                    onCheckedChange={() => upsert({ feedWork: !workList.feedWork })}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                </div>
+              </div>
+              <p className="ml-7 text-sm text-gray-600">
+                피드에서 자동으로 좋아요 및 댓글을 작성합니다.
+              </p>
+            </div>
+
+            <div className="space-y-4 rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Hash className="h-5 w-5 text-gray-700" />
+                  <Label htmlFor="hashtag-search" className="font-medium">
+                    해시태그 검색 작업
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">
+                    {workList.hashtagWork ? '활성화됨' : '비활성화됨'}
+                  </span>
+                  <Switch
+                    id="hashtag-search"
+                    checked={workList.hashtagWork}
+                    onCheckedChange={() => upsert({ hashtagWork: !workList.hashtagWork })}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                </div>
+              </div>
+              <p className="ml-7 text-sm text-gray-600">
+                특정 해시태그로 검색된 게시물에 자동으로 상호작용합니다.
+              </p>
+              <div className="mb-2 flex items-center space-x-2">
+                <Input
+                  type="text"
+                  placeholder="해시태그 입력 (# 제외)"
+                  value={newHashtag}
+                  onChange={(e) => setNewHashtag(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddHashtag()
+                    }
+                  }}
+                  ref={hashtagInputRef}
+                  className="flex-grow"
+                />
+                <Button onClick={handleAddHashtag} size="sm">
+                  추가
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
+                >
+                  해시태그 목록 ({workList.hashtags.length})
+                  {isHashtagListOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+                {isHashtagListOpen && (
+                  <ScrollArea className="relative h-[120px] rounded-md bg-gray-50 p-2 dark:bg-gray-800">
+                    <div className="space-y-2">
+                      {workList.hashtags.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {workList.hashtags.map((tag, index) => (
+                            <div
+                              key={index}
+                              className="relative flex items-center rounded-full border bg-white px-3 py-1 shadow-sm"
+                            >
+                              <span className="mr-2 text-sm dark:text-input">#{tag}</span>
+                              <button
+                                onClick={() =>
+                                  upsert({
+                                    ...workList,
+                                    hashtags: workList.hashtags.filter((t) => t !== tag)
+                                  })
+                                }
+                                className="text-gray-500 hover:text-gray-700"
+                                aria-label={`${tag} 태그 삭제`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">추가된 해시태그가 없습니다.</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <MessageSquare className="h-5 w-5 text-gray-700" />
+                  <Label htmlFor="comment-interaction" className="font-medium">
+                    내 피드 댓글에 좋아요 및 대댓글 달기
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">
+                    {workList.myFeedInteraction ? '활성화됨' : '비활성화됨'}
+                  </span>
+                  <Switch
+                    id="comment-interaction"
+                    checked={workList.myFeedInteraction}
+                    onCheckedChange={() =>
+                      upsert({ myFeedInteraction: !workList.myFeedInteraction })
+                    }
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                </div>
+              </div>
+              <p className="ml-7 text-sm text-gray-600">
+                내 게시물에 달린 댓글에 자동으로 좋아요와 답글을 작성합니다.
+              </p>
+            </div>
+
+            <div className="space-y-4 rounded-md border p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Heart className="h-5 w-5 text-gray-700" />
+                  <Label htmlFor="commentor-feed" className="font-medium">
+                    댓글 작성자 피드에 좋아요 및 댓글 달기
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">
+                    {workList.myFeedCommentorInteraction ? '활성화됨' : '비활성화됨'}
+                  </span>
+                  <Switch
+                    id="commentor-feed"
+                    checked={workList.myFeedCommentorInteraction}
+                    onCheckedChange={() =>
+                      upsert({ myFeedCommentorInteraction: !workList.myFeedCommentorInteraction })
+                    }
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                </div>
+              </div>
+              <p className="ml-7 text-sm text-gray-600">
+                내 게시물에 댓글을 단 사용자의 피드에 자동으로 좋아요와 댓글을 작성합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </ScrollArea>
+      <Footer />
     </div>
   )
 }

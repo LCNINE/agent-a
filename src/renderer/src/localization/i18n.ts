@@ -169,6 +169,7 @@ i18n.use(initReactI18next).init({
           accountAdded: 'Account has been added',
           accountUpdated: 'Account has been updated',
           accountDeleted: 'Account has been deleted',
+          accountSelected: 'Account has been selected',
           requiredFields: 'Please fill in all fields',
           usernameExists: 'Username already exists',
           addError: 'An error occurred while adding the account'
@@ -346,6 +347,7 @@ i18n.use(initReactI18next).init({
           accountAdded: '계정이 추가되었습니다',
           accountUpdated: '계정이 수정되었습니다',
           accountDeleted: '계정이 삭제되었습니다',
+          accountSelected: '계정이 선택되었습니다',
           requiredFields: '모든 필드를 입력해주세요',
           usernameExists: '이미 존재하는 사용자 이름입니다',
           addError: '계정 추가 중 오류가 발생했습니다'

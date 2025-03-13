@@ -25,6 +25,7 @@ import { toast } from 'sonner'
 
 export default function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const { t } = useTranslation()
+  const supabase = useCreateClient()
 
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -35,7 +36,6 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
   })
 
   async function onSubmit(values: LoginSchema) {
-    const supabase = useCreateClient()
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password
@@ -100,7 +100,7 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm">
-                {t('loginForm.noAccount')}{' '}
+                {t('loginForm.noAccount')}
                 <a
                   href="https://www.agent-a.me/auth"
                   target="_blank"

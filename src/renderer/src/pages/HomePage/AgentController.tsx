@@ -20,6 +20,7 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
         <p>{t('AgentController.status.idle')}</p>
         <Button
           onClick={() => {
+            console.log('dd')
             if (selectedAccount) {
               startAgent({
                 username: selectedAccount.username,
