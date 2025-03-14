@@ -408,7 +408,6 @@ export class AgentManager {
           this.page,
           async (
             commentLocator: Locator,
-            commentId: string,
             notificationInfo: {
               author: string
               content: string
@@ -418,8 +417,6 @@ export class AgentManager {
             let isProcessed = false
 
             try {
-              console.log(`댓글 ID ${commentId} 처리 중...`)
-
               if (this.excludeUsernames.has(notificationInfo.author)) {
                 console.log(`[runWork] ${notificationInfo.author} 제외 유저 스킵`)
                 return false
@@ -526,7 +523,7 @@ export class AgentManager {
           work
         )
 
-        await feedWorkBasicModeService.processNotifications()
+        await feedWorkBasicModeService.processNotificationsComment()
       }
 
       if (work.myFeedCommentorInteraction) {

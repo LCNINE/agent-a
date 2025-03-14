@@ -115,24 +115,4 @@ export class ArticleProcessingService {
     console.log('작업종료:', this.successCount, this.options.maxArticles)
     console.log(`처리된 게시물: ${this.successCount}개`)
   }
-
-  private async ensureArticleId(
-    articleLoc: Locator,
-    idAttribute: string,
-    currentCount: number
-  ): Promise<string> {
-    const existingId = await articleLoc.getAttribute(idAttribute)
-    if (existingId) return existingId
-
-    const newId = `article-${currentCount}`
-
-    await articleLoc.evaluate(
-      async (element, { idAttribute, newId }) => {
-        element.setAttribute(idAttribute, newId)
-      },
-      { idAttribute, newId }
-    )
-    console.log(`${newId}번 할당함`)
-    return newId
-  }
 }

@@ -1,7 +1,7 @@
 import { Locator, Page } from 'playwright'
 import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
-import { chooseRandomSleep, majorActionDelays, scrollDelays, wait } from '../common/timeUtils'
+import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
 
 type HashtagProcessor = (hashtag: Locator) => Promise<boolean>
 
@@ -166,25 +166,5 @@ export class HashtagService {
       )
       throw error
     }
-  }
-
-  private async ensureArticleId(
-    articleLoc: Locator,
-    idAttribute: string,
-    currentCount: number
-  ): Promise<string> {
-    const existingId = await articleLoc.getAttribute(idAttribute)
-    if (existingId) return existingId
-
-    const newId = `article-${currentCount}`
-
-    await articleLoc.evaluate(
-      async (element, { idAttribute, newId }) => {
-        element.setAttribute(idAttribute, newId)
-      },
-      { idAttribute, newId }
-    )
-    console.log(`${newId}번 할당함`)
-    return newId
   }
 }
