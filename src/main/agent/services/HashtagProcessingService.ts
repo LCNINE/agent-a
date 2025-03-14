@@ -3,7 +3,7 @@ import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
 import { chooseRandomSleep, majorActionDelays, scrollDelays, wait } from '../common/timeUtils'
 
-type HashtagProcessor = (hashtag: Locator, articleId: string) => Promise<boolean>
+type HashtagProcessor = (hashtag: Locator) => Promise<boolean>
 
 interface ScrollOptions {
   maxPosts: number
@@ -30,10 +30,9 @@ export class HashtagService {
   private hashtagProcessor: HashtagProcessor
   private options: ScrollOptions
   private config: AgentConfig
-  private processedPosts: Set<string> = new Set()
   private shouldStop: boolean = false
   private processed: boolean = false
-  private idCounter: number = 0
+  private successCount: number = 0
 
   constructor(
     page: Page,
@@ -62,8 +61,7 @@ export class HashtagService {
 
       this.shouldStop = false
       this.processed = false
-      this.processedPosts.clear()
-      this.idCounter = 0
+      this.successCount = 0
 
       while (true) {
         const postLocators = await this.page.locator('a[role="link"][tabindex="0"]').all()
@@ -75,7 +73,7 @@ export class HashtagService {
 
         for (const postLoc of postLocators) {
           // 최대 처리 수에 도달했는지 확인
-          if (this.processedPosts.size >= this.options.maxPosts) {
+          if (this.successCount >= this.options.maxPosts) {
             console.log(
               `최대 게시물 수(${this.options.maxPosts})에 도달했습니다. 작업을 종료합니다.`
             )
@@ -89,9 +87,6 @@ export class HashtagService {
             continue
           }
 
-          const articleId = await this.ensureArticleId(postLoc, 'data-articleId', this.idCounter)
-          if (this.processedPosts.has(articleId)) continue
-
           await smoothScrollToElement(this.page, postElementHandle)
           await chooseRandomSleep(scrollDelays)
 
@@ -101,7 +96,7 @@ export class HashtagService {
           await this.page.waitForTimeout(delay)
 
           try {
-            this.processed = await this.hashtagProcessor(postLoc, articleId)
+            this.processed = await this.hashtagProcessor(postLoc)
           } catch (error) {
             console.error(
               `Hashtag processing failed: ${error instanceof Error ? error.message : String(error)}`
@@ -110,10 +105,8 @@ export class HashtagService {
           } finally {
             // 실제로 댓글을 작성한 경우에만 카운트에 추가
             if (this.processed) {
-              this.processedPosts.add(articleId)
+              this.successCount++
             }
-            // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
-            this.idCounter++
             await wait(this.config.postIntervalSeconds * 1000)
           }
         }
@@ -125,8 +118,8 @@ export class HashtagService {
         await this.page.waitForTimeout(1000)
       }
 
-      console.log('작업종료:', this.processedPosts.size, this.options.maxPosts)
-      console.log(`처리된 게시물: ${this.processedPosts.size}개`)
+      console.log('작업종료:', this.successCount, this.options.maxPosts)
+      console.log(`처리된 게시물: ${this.successCount}개`)
     }
   }
 

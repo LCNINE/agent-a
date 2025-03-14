@@ -215,8 +215,6 @@ export class MyFeedInteractionService {
 
   private async openNotificationPanel(): Promise<void> {
     try {
-
-       여기 다시 살펴볼것!
       await this.page
         .locator('span.x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft')
         .getByText(/Notifications|알림/)

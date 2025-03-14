@@ -1,9 +1,9 @@
 import { Locator, Page } from 'playwright'
 import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
-import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
+import { chooseRandomSleep, scrollDelays } from '../common/timeUtils'
 
-type ArticleProcessor = (article: Locator, articleId: string) => Promise<boolean>
+type ArticleProcessor = (article: Locator) => Promise<boolean>
 
 interface ScrollOptions {
   maxArticles: number
@@ -30,10 +30,9 @@ export class ArticleProcessingService {
   private articleProcessor: ArticleProcessor
   private options: ScrollOptions
   private config: AgentConfig
-  private processedArticles: Set<string> = new Set()
   private shouldStop: boolean = false
   private processed: boolean = false
-  private idCounter: number = 0
+  private successCount: number = 0
 
   constructor(
     page: Page,
@@ -58,8 +57,7 @@ export class ArticleProcessingService {
   async processArticles(): Promise<void> {
     this.shouldStop = false
     this.processed = false
-    this.processedArticles.clear()
-    this.idCounter = 0
+    this.successCount = 0
 
     while (true) {
       const articleLocators = await this.page.locator('article').all()
@@ -71,7 +69,7 @@ export class ArticleProcessingService {
 
       for (const articleLoc of articleLocators) {
         // 최대 처리 수에 도달했는지 확인
-        if (this.processedArticles.size >= this.options.maxArticles) {
+        if (this.successCount >= this.options.maxArticles) {
           console.log(
             `최대 게시물 수(${this.options.maxArticles})에 도달했습니다. 작업을 종료합니다.`
           )
@@ -85,9 +83,6 @@ export class ArticleProcessingService {
           continue
         }
 
-        const articleId = await this.ensureArticleId(articleLoc, 'data-article-id', this.idCounter)
-        if (this.processedArticles.has(articleId)) continue
-
         await smoothScrollToElement(this.page, articleElementHandle)
         await chooseRandomSleep(scrollDelays)
 
@@ -97,19 +92,16 @@ export class ArticleProcessingService {
         await this.page.waitForTimeout(delay)
 
         try {
-          this.processed = await this.articleProcessor(articleLoc, articleId)
+          this.processed = await this.articleProcessor(articleLoc)
         } catch (error) {
           console.error(
             `Article processing failed: ${error instanceof Error ? error.message : String(error)}`
           )
           continue
         } finally {
-          // 실제로 처리에 성공한 경우에만 카운트에 추가
           if (this.processed) {
-            this.processedArticles.add(articleId)
+            this.successCount++
           }
-          // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
-          this.idCounter++
         }
       }
 
@@ -120,8 +112,8 @@ export class ArticleProcessingService {
       await this.page.waitForTimeout(1000)
     }
 
-    console.log('작업종료:', this.processedArticles.size, this.options.maxArticles)
-    console.log(`처리된 게시물: ${this.processedArticles.size}개`)
+    console.log('작업종료:', this.successCount, this.options.maxArticles)
+    console.log(`처리된 게시물: ${this.successCount}개`)
   }
 
   private async ensureArticleId(

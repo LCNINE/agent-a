@@ -7,6 +7,7 @@ import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
+import { checkedAction } from '../common/checkedAction'
 
 export interface BotStatus {
   isRunning: boolean
@@ -131,7 +132,7 @@ export class AgentManager {
 
         const articleService = new ArticleProcessingService(
           this.page,
-          async (articleLocator: Locator, articleId: string) => {
+          async (articleLocator: Locator) => {
             let isProcessed = false
 
             const authorLoc = await articleLocator
@@ -155,30 +156,41 @@ export class AgentManager {
               return false
             }
 
-            const likeButtonLoc = this.page!.locator(`article[data-article-id="${articleId}"]`)
-              .getByRole('button')
-              .filter({
-                hasText: /^(좋아요|Like)$/
-              })
-              .first()
-
-            if (await likeButtonLoc.isVisible()) {
-              await likeButtonLoc.evaluate((button) => {
-                ;(button as HTMLButtonElement).click()
-              })
+            const likeResult: boolean = await checkedAction(
+              articleLocator
+                .getByRole('button')
+                .filter({
+                  hasText: /^(좋아요|Like)$/
+                })
+                .first(),
+              this.page!,
+              '좋아요 버튼',
+              async (locator: Locator) => {
+                await locator.evaluate((button) => {
+                  ;(button as HTMLButtonElement).click()
+                })
+              }
+            )
+            if (likeResult) {
               await chooseRandomSleep(postInteractionDelays)
+            } else {
+              return likeResult
             }
 
-            const moreButtonLoc = this.page!.locator(`article[data-article-id="${articleId}"]`)
-              .getByRole('button')
-              .filter({
-                hasText: new RegExp('^(더\\s*보기|More)$', 'i')
-              })
-              .first()
-
-            if (await moreButtonLoc.isVisible()) {
-              await moreButtonLoc.click()
+            const moreButtonResult: boolean = await checkedAction(
+              articleLocator
+                .getByRole('button')
+                .filter({
+                  hasText: new RegExp('^(더\\s*보기|More)$', 'i')
+                })
+                .first(),
+              this.page!,
+              '더 보기'
+            )
+            if (moreButtonResult) {
               await chooseRandomSleep(postInteractionDelays)
+            } else {
+              return moreButtonResult
             }
 
             const articleScreenshot = await articleLocator.screenshot({ type: 'jpeg' })
@@ -216,28 +228,16 @@ export class AgentManager {
 
             await this.page!.waitForTimeout(500)
 
-            // 게시 버튼 찾기
-            let postButtonLoc = articleLocator
-              .getByRole('button', { name: '게시', exact: true })
-              .first()
-            console.log('[runWork] 게시 버튼 찾기 시도 (한국어):', postButtonLoc)
+            const postButtonResult = await checkedAction(
+              articleLocator
+                .getByRole('button')
+                .filter({ hasText: /^(게시|Post)$/ })
+                .first(),
+              this.page!,
+              '게시'
+            )
 
-            if (!(await postButtonLoc.isVisible())) {
-              console.log('[runWork] 한국어 게시 버튼이 보이지 않음, 영어 버튼 시도')
-              postButtonLoc = articleLocator
-                .getByRole('button', {
-                  name: 'Post',
-                  exact: true
-                })
-                .first()
-              console.log('[runWork] 게시 버튼 찾기 시도 (영어):', postButtonLoc)
-            }
-
-            if (await postButtonLoc.isVisible()) {
-              console.log('[runWork] 게시 버튼 클릭')
-              await postButtonLoc.click()
-            } else {
-              console.log('[runWork] 게시 버튼을 찾을 수 없음')
+            if (!postButtonResult) {
               return false
             }
 
@@ -258,7 +258,7 @@ export class AgentManager {
 
         const hashtagService = new HashtagService(
           this.page,
-          async (postLoc: Locator, articleId: string) => {
+          async (postLoc: Locator) => {
             let isProcessed = false
 
             try {
@@ -306,24 +306,28 @@ export class AgentManager {
                 return false
               }
 
-              const likeButtonLoc = this.page!.locator(
-                '[aria-label="좋아요"], [aria-label="Like"]'
-              ).first()
+              const likeButtonResult: boolean = await checkedAction(
+                this.page!.locator('[aria-label="좋아요"], [aria-label="Like"]').first(),
+                this.page!,
+                '좋아요',
+                async (locator: Locator) => {
+                  await locator.evaluate((element) => {
+                    element.dispatchEvent(
+                      new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                      })
+                    )
+                  })
+                }
+              )
 
-              if (await likeButtonLoc.isVisible()) {
-                await likeButtonLoc.evaluate((element) => {
-                  element.dispatchEvent(
-                    new MouseEvent('click', {
-                      bubbles: true,
-                      cancelable: true,
-                      view: window
-                    })
-                  )
-                })
-
+              if (likeButtonResult) {
                 await chooseRandomSleep(postInteractionDelays)
+              } else {
+                return likeButtonResult
               }
-              ;``
 
               const contentLoc = this.page!.locator(
                 'li._a9zj._a9zl._a9z5 h1._ap3a._aaco._aacu._aacx._aad7._aade'
@@ -353,24 +357,30 @@ export class AgentManager {
                 return false
               }
 
-              const commentTextarea = this.page!.locator(
-                'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
-              )
-              if (await commentTextarea.isVisible()) {
-                await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
-                await chooseRandomSleep(postInteractionDelays)
+              const commentTextareaResult: boolean = await checkedAction(
+                this.page!.locator(
+                  'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+                ),
+                this.page!,
+                '댓글 입력 영역',
+                async (locator: Locator) => {
+                  await locator.pressSequentially(commentRes.comment, { delay: 100 })
+                  await chooseRandomSleep(postInteractionDelays)
 
-                await this.page!.waitForSelector(
-                  'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
-                  { state: 'visible', timeout: 3000 }
-                )
+                  await this.page!.waitForSelector(
+                    'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
+                    { state: 'visible', timeout: 3000 }
+                  )
 
-                // 한국어 또는 영어 게시 버튼을 찾아 클릭
-                let postButton = this.page!.getByRole('button', { name: '게시', exact: true })
-                if (!(await postButton.isVisible())) {
-                  postButton = this.page!.getByRole('button', { name: 'Post', exact: true })
+                  await checkedAction(
+                    this.page!.getByRole('button', { name: /^(게시|Post)$/ }),
+                    this.page!,
+                    '게시'
+                  )
                 }
-                await postButton.click()
+              )
+
+              if (commentTextareaResult) {
                 isProcessed = true
               }
 
@@ -446,31 +456,20 @@ export class AgentManager {
                 return false
               }
 
-              // 좋아요 버튼
-              const likeButtonLoc = await commentLocator
-                .getByRole('button')
-                .filter({ hasText: /^(좋아요|Like)$/ })
-                .first()
+              await checkedAction(
+                commentLocator
+                  .getByRole('button')
+                  .filter({ hasText: /^(좋아요|Like)$/ })
+                  .first(),
+                this.page!,
+                '좋아요 버튼'
+              )
 
-              if (await likeButtonLoc.isVisible()) {
-                await likeButtonLoc.evaluate((button) => {
-                  ;(button as HTMLButtonElement).click()
-                })
-                await chooseRandomSleep(postInteractionDelays)
-              }
-
-              // 답글 달기 버튼
-              const replyButtonLoc = await commentLocator
-                .getByText(/답글 달기|Reply/i, { exact: false })
-                .first()
-
-              if (await replyButtonLoc.isVisible()) {
-                await replyButtonLoc.click()
-                await this.page!.waitForTimeout(1000)
-              } else {
-                console.log('[replyButtonLoc] 답글 달기 버튼을 찾을 수 없습니다.')
-                return false
-              }
+              await checkedAction(
+                commentLocator.getByText(/답글 달기|Reply/i, { exact: false }).first(),
+                this.page!,
+                '답글 달기'
+              )
 
               // 댓글 스크린샷 및 AI 답글 생성
               const commentScreenshot = await commentLocator.screenshot({ type: 'jpeg' })
@@ -503,18 +502,14 @@ export class AgentManager {
               await this.page!.waitForTimeout(500)
 
               // 게시 버튼 찾기 및 클릭
-              let postButton = this.page!.getByRole('button', { name: '게시', exact: true })
-              if (!(await postButton.isVisible())) {
-                postButton = this.page!.getByRole('button', { name: 'Post', exact: true })
-              }
+              isProcessed = await checkedAction(
+                this.page!.getByRole('button', { name: /^(게시|Post)$/, exact: true }),
+                this.page!,
+                '게시'
+              )
 
-              if (await postButton.isVisible()) {
-                await postButton.click()
-                isProcessed = true
+              if (isProcessed) {
                 console.log('답글 작성 성공!')
-              } else {
-                console.log('게시 버튼을 찾을 수 없습니다.')
-                return false
               }
 
               await chooseRandomSleep(postInteractionDelays)
