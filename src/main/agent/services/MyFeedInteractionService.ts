@@ -111,6 +111,15 @@ export class MyFeedInteractionService {
 
       console.log(`총 ${notiLocs.length}개의 알림을 찾았습니다.`)
 
+      // 알림이 없으면 작업 종료
+      if (notiLocs.length === 0) {
+        console.log('처리할 알림이 없습니다. 작업을 종료합니다.')
+        this.shouldStop = true
+        break
+      }
+
+      let foundCommentNotification = false
+
       for (const notiLoc of notiLocs) {
         // 최대 처리 수에 도달했는지 확인
         if (this.successCount >= this.options.maxNotifications) {
@@ -123,7 +132,8 @@ export class MyFeedInteractionService {
 
         const text = await notiLoc.textContent()
 
-        if (text?.includes('님이 댓글을 남겼습니다:')) {
+        if (text?.includes('님이 댓글을 남겼습니다:') || text?.includes('commented:')) {
+          foundCommentNotification = true
           const notificationElementHandle = await notiLoc.elementHandle()
 
           if (!notificationElementHandle) {
@@ -138,7 +148,6 @@ export class MyFeedInteractionService {
           const notificationInfo = await this.extractNotificationInfo(notiLoc, text)
           await this.page.waitForTimeout(3000)
 
-          // 알림 클릭하여 해당 게시물로 이동
           await notificationElementHandle.click()
           console.log('해당 댓글로 이동')
 
@@ -160,6 +169,7 @@ export class MyFeedInteractionService {
 
           try {
             this.processed = await this.notificationProcessor(commentLoc, notificationInfo)
+            console.log(`댓글 처리 결과: ${this.processed ? '성공' : '실패'}`)
           } catch (error) {
             console.error(
               `해당 댓글 좋아요 및 대댓글 작성 실패: ${error instanceof Error ? error.message : String(error)}`
@@ -168,17 +178,29 @@ export class MyFeedInteractionService {
           } finally {
             if (this.processed) {
               this.successCount++
+              console.log(`성공 카운트 증가: ${this.successCount}/${this.options.maxNotifications}`)
+            } else {
+              console.log(
+                `작업은 완료되었으나 성공으로 처리되지 않음 (processed: ${this.processed})`
+              )
             }
             await this.openNotificationPanel()
             await this.page.waitForTimeout(3000)
 
             await wait(this.config.postIntervalSeconds * 1000)
           }
-
-          if (this.shouldStop) {
-            break
-          }
         }
+      }
+
+      // 댓글 알림을 하나도 찾지 못한 경우
+      if (!foundCommentNotification) {
+        console.log('댓글 알림이 없습니다. 작업을 종료합니다.')
+        this.shouldStop = true
+      }
+
+      if (this.shouldStop) {
+        console.log('댓글 알림 작업 종료:', this.successCount, this.options.maxNotifications)
+        break
       }
     }
 
@@ -189,8 +211,11 @@ export class MyFeedInteractionService {
   private async openNotificationPanel(): Promise<void> {
     try {
       await this.page
-        .locator('span.x1lliihq.x193iq5w.x6ikm8r.x10wlt62.xlyipyv.xuxw1ft')
-        .getByText(/Notifications|알림/)
+        .locator(
+          'div.x9f619.x3nfvp2.xr9ek0c.xjpr12u.xo237n4.x6pnmvc.x7nr27j.x12dmmrz.xz9dl7a.xn6708d.xsag5q8.x1ye3gou.x80pfx3.x159b3zp.x1dn74xm.xif99yt.x172qv1o.x10djquj.x1lhsz42.xzauu7c.xdoji71.x1dejxi8.x9k3k5o.xs3sg5q.x11hdxyr.x12ldp4w.x1wj20lx.x1lq5wgf.xgqcy7u.x30kzoy.x9jhf4c'
+        )
+        .filter({ hasText: /Notifications|알림/ })
+        .first()
         .click()
     } catch (error) {
       console.error('알림 패널 열기 실패:', error)

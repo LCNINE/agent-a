@@ -412,7 +412,8 @@ export class AgentManager {
 
       if (work.myFeedInteraction) {
         await this.page
-          .locator('.x6s0dn4.x9f619.xxk0z11.x6ikm8r.xeq5yr9.x1swvt13.x1s85apg.xzzcqpx')
+          .locator('.x9f619.xxk0z11.xii2z7h.x11xpdln.x19c4wfv.xvy4d1p')
+          .filter({ hasText: /^(홈|Home)$/ })
           .first()
           .click()
           .catch(() => {
@@ -442,14 +443,10 @@ export class AgentManager {
                 console.log('[runWork] 자신의 댓글 스킵')
                 return false
               }
-
               const likeButtonResult: boolean = await checkedAction(
-                commentLocator
-                  .getByRole('button')
-                  .filter({ hasText: /^(좋아요|Like)$/ })
-                  .first(),
+                this.page!.locator('[aria-label="좋아요"], [aria-label="Like"]').first(),
                 this.page!,
-                '좋아요 버튼',
+                '좋아요',
                 async (locator: Locator) => {
                   await locator.evaluate((element) => {
                     element.dispatchEvent(
