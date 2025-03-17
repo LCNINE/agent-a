@@ -9,7 +9,6 @@ type NotificationProcessor = (
   notificationInfo: {
     author: string
     content: string
-    postUrl: string
   }
 ) => Promise<boolean>
 
@@ -136,12 +135,12 @@ export class MyFeedInteractionService {
 
             // 댓글 알림 정보 추출
             const notificationInfo = await this.extractNotificationInfo(notiLocs[i], text)
+            await this.page.waitForTimeout(3000)
 
             // 알림 클릭하여 해당 게시물로 이동
             await notificationElementHandle.click()
             console.log('해당 댓글로 이동')
 
-            // 페이지 로딩 대기
             await this.page.waitForTimeout(3000)
 
             // 댓글 찾기 (작성자 이름으로 검색)
@@ -221,7 +220,6 @@ export class MyFeedInteractionService {
   ): Promise<{
     author: string
     content: string
-    postUrl: string
   }> {
     // 작성자 추출
     const authorMatch = text.match(/([^\s]+)님이 댓글을 남겼습니다:/)
@@ -231,13 +229,9 @@ export class MyFeedInteractionService {
     const contentMatch = text.match(/남겼습니다:(.*)/)
     const content = contentMatch ? contentMatch[1].trim() : ''
 
-    // 게시물 URL 추출
-    const href = (await notification.locator('a').first().getAttribute('href')) || ''
-
     return {
       author,
-      content,
-      postUrl: href
+      content
     }
   }
 
@@ -250,22 +244,31 @@ export class MyFeedInteractionService {
           `${COMMENTS_LIST_WRAPPER} > ${COMMENTS_LIST} ${COMMENT_CLASS_NAME}:not(${COMMENT_CONTAINER} ul ${COMMENT_CLASS_NAME})`
         )
         .all()
+        .catch((err) => {
+          throw new Error(`댓글 컨테이너 가져오기 실패: ${err}`)
+        })
 
       for (const commentLoc of commentContainers) {
-        const commentLocElementHandle = await commentLoc
-          .locator('div.x5yr21d.xw2csxc.x1odjw0f.x1n2onr6')
-          .first()
-          .elementHandle()
+        // const commentLocElementHandle = await commentLoc
+        //   .locator('div.x5yr21d.xw2csxc.x1odjw0f.x1n2onr6')
+        //   .first()
+        //   .elementHandle()
+        //   .catch((err) => {
+        //     throw new Error(`댓글 핸들러 가져오기 실패: ${err}`)
+        //   })
 
-        if (commentLocElementHandle) {
-          await smoothScrollToElement(this.page, commentLocElementHandle)
-        }
+        // if (commentLocElementHandle) {
+        //   await smoothScrollToElement(this.page, commentLocElementHandle)
+        // }
 
         // 각 댓글의 작성자 확인
         const commentAuthor = await commentLoc
           .locator('span._ap3a._aaco._aacw._aacx._aad7._aade')
           .first()
           .textContent()
+          .catch((err) => {
+            throw new Error(`댓글 작성자 가져오기 실패: ${err}`)
+          })
 
         const commentContents = await commentLoc
           .locator(
@@ -273,20 +276,12 @@ export class MyFeedInteractionService {
           )
           .nth(1)
           .textContent()
-          .catch((error) => {
-            throw error('댓글 내용 가져오기 실패:', error)
+          .catch((err) => {
+            throw new Error(`댓글 내용 가져오기 실패: ${err}`)
           })
 
         if (commentAuthor?.includes(author)) {
           console.log(`${author}님의 댓글 찾음`)
-
-          // data-comment-id 속성 설정
-          await commentLoc.evaluate(
-            (element, id) => {
-              element.setAttribute('data-comment-id', id)
-            },
-            createHash('md5').update(`${author}|${content}`).digest('hex')
-          )
 
           return commentLoc
         }

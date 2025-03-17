@@ -411,7 +411,6 @@ export class AgentManager {
             notificationInfo: {
               author: string
               content: string
-              postUrl: string
             }
           ) => {
             let isProcessed = false
@@ -480,6 +479,7 @@ export class AgentManager {
                 prompt: this.config.prompt
               })
 
+              console.log('commentRes::', commentRes)
               if (!commentRes.isAllowed) {
                 console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
                 return false
