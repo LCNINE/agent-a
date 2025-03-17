@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
-import { StartAgentParams, Work } from '..'
+import { StartAgentParams, WorkType } from '..'
 import { AgentManager } from './agent/managers/AgentManager'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'

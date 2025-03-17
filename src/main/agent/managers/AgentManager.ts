@@ -1,17 +1,17 @@
 import { BrowserContext, Locator, Page } from 'playwright-core'
-import { AgentConfig, Work } from '../../..'
+import { AgentConfig, WorkType } from '../../..'
 import { startBrowser } from '../common/browser'
 import { loginWithCredentials } from '../common/browserUtils'
+import { checkedAction } from '../common/checkedAction'
 import { callGenerateComments, callGenerateReply } from '../common/fetchers'
 import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
-import { checkedAction } from '../common/checkedAction'
 
 export interface BotStatus {
   isRunning: boolean
-  currentWork: Work | null
+  currentWork: WorkType | null
   waiting: {
     for: string
     until: string
@@ -31,13 +31,13 @@ export class AgentManager {
   private isLoggedIn: Boolean = false
 
   constructor(
-    private works: Work,
+    private works: WorkType,
     private config: AgentConfig
   ) {
     this.excludeUsernames = new Set(this.config.excludeUsernames)
   }
 
-  async start(config: AgentConfig, workList: Work): Promise<void> {
+  async start(config: AgentConfig, workList: WorkType): Promise<void> {
     try {
       if (this._status.isRunning) {
         console.log('이미 실행 중입니다.')
@@ -80,7 +80,10 @@ export class AgentManager {
         console.log(
           `작업 완료. ${this.config.loopIntervalSeconds || 300}초 대기 후 다시 시작합니다.`
         )
+
+        // 임시
         await new Promise((resolve) => setTimeout(resolve, 200))
+
         // await new Promise((resolve) =>
         //   setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
         // )
@@ -99,7 +102,7 @@ export class AgentManager {
     }
   }
 
-  async runWork(work: Work) {
+  async runWork(work: WorkType) {
     try {
       if (await this.isBrowserClosed()) {
         console.log('브라우저가 닫혔거나 유효하지 않습니다.')
@@ -254,6 +257,14 @@ export class AgentManager {
       }
 
       if (work.hashtagWork) {
+        await this.page
+          .locator('.x6s0dn4.x9f619.xxk0z11.x6ikm8r.xeq5yr9.x1swvt13.x1s85apg.xzzcqpx')
+          .first()
+          .click()
+          .catch(() => {
+            console.log('Home버튼을 찾을 수 없습니다.')
+            return false
+          })
         await this.page.waitForTimeout(2000)
 
         const hashtagService = new HashtagService(
@@ -325,8 +336,6 @@ export class AgentManager {
 
               if (likeButtonResult) {
                 await chooseRandomSleep(postInteractionDelays)
-              } else {
-                return likeButtonResult
               }
 
               const contentLoc = this.page!.locator(
@@ -402,6 +411,14 @@ export class AgentManager {
       }
 
       if (work.myFeedInteraction) {
+        await this.page
+          .locator('.x6s0dn4.x9f619.xxk0z11.x6ikm8r.xeq5yr9.x1swvt13.x1s85apg.xzzcqpx')
+          .first()
+          .click()
+          .catch(() => {
+            console.log('Home버튼을 찾을 수 없습니다.')
+            return false
+          })
         await this.page.waitForTimeout(2000)
 
         const feedWorkBasicModeService = new MyFeedInteractionService(
@@ -424,6 +441,30 @@ export class AgentManager {
               if (this.config.credentials.username === notificationInfo.author) {
                 console.log('[runWork] 자신의 댓글 스킵')
                 return false
+              }
+
+              const likeButtonResult: boolean = await checkedAction(
+                commentLocator
+                  .getByRole('button')
+                  .filter({ hasText: /^(좋아요|Like)$/ })
+                  .first(),
+                this.page!,
+                '좋아요 버튼',
+                async (locator: Locator) => {
+                  await locator.evaluate((element) => {
+                    element.dispatchEvent(
+                      new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                      })
+                    )
+                  })
+                }
+              )
+
+              if (likeButtonResult) {
+                await chooseRandomSleep(postInteractionDelays)
               }
 
               // 답글 모두 보기 버튼
@@ -453,15 +494,6 @@ export class AgentManager {
               }
 
               await checkedAction(
-                commentLocator
-                  .getByRole('button')
-                  .filter({ hasText: /^(좋아요|Like)$/ })
-                  .first(),
-                this.page!,
-                '좋아요 버튼'
-              )
-
-              await checkedAction(
                 commentLocator.getByText(/답글 달기|Reply/i, { exact: false }).first(),
                 this.page!,
                 '답글 달기'
@@ -479,7 +511,6 @@ export class AgentManager {
                 prompt: this.config.prompt
               })
 
-              console.log('commentRes::', commentRes)
               if (!commentRes.isAllowed) {
                 console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
                 return false

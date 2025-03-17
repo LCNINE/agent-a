@@ -20,7 +20,7 @@ export interface LoginCredentials {
 export type WorkerStatus =
   | {
       state: 'running'
-      currentWork: Work
+      currentWork: WorkType
       running: {
         for: string
         until: string | null
@@ -28,7 +28,7 @@ export type WorkerStatus =
     }
   | {
       state: 'done'
-      currentWork: Work
+      currentWork: WorkType
     }
   | {
       state: 'error'
@@ -38,7 +38,7 @@ export type WorkerStatus =
       state: 'idle'
     }
 
-export type Work = {
+export type WorkType = {
   feedWork: boolean
   hashtagWork: boolean
   myFeedInteraction: boolean
@@ -48,7 +48,7 @@ export type Work = {
 
 export interface BotStatus {
   isRunning: boolean
-  currentWork: Work | null
+  currentWork: WorkType | null
   waiting: {
     for: string
     until: string
@@ -78,7 +78,7 @@ export type AgentConfig = {
 
 export interface StartAgentParams {
   config: AgentConfig
-  workList: Work
+  workList: WorkType
 }
 
 interface AgentContext {

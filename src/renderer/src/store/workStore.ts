@@ -1,10 +1,10 @@
-import { Work } from 'src'
+import { WorkType } from 'src'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 interface WorkState {
-  workList: Work
-  upsert(work: Partial<Work>): void
+  workList: WorkType
+  upsert(work: Partial<WorkType>): void
 }
 
 export const useWorkStore = create<WorkState>()(
@@ -18,7 +18,7 @@ export const useWorkStore = create<WorkState>()(
         hashtags: []
       },
 
-      upsert(work: Partial<Work>) {
+      upsert(work: Partial<WorkType>) {
         set((state) => ({
           workList: { ...state.workList, ...work }
         }))
