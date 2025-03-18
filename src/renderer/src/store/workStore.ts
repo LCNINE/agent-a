@@ -12,10 +12,11 @@ export const useWorkStore = create<WorkState>()(
     (set) => ({
       workList: {
         feedWork: true,
-        hashtagWork: true,
-        myFeedInteraction: true,
-        myFeedCommentorInteraction: true,
-        hashtags: []
+        hashtagWork: false,
+        myFeedInteraction: false,
+        hashtagInteractionWork: false,
+        hashtags: [],
+        interactionHashtags: []
       },
 
       upsert(work: Partial<WorkType>) {

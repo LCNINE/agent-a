@@ -1,5 +1,5 @@
+import { CustomToast } from '@renderer/components/CustomToast'
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import { BotStatus, LoginCredentials } from 'src'
 import { useConfigStore } from '../store/configStore'
 import { useWorkStore } from '../store/workStore'
@@ -25,12 +25,12 @@ export function useAgent() {
 
   const startAgent = async (credentials: LoginCredentials) => {
     if (!credentials.username || !credentials.password) {
-      toast.error('계정 정보가 올바르지 않습니다.')
-      return
-    }
-
-    if (workList.hashtagWork && workList.hashtags.length === 0) {
-      toast.error('해시태그 목록이 없어서 작업을 시작할 수 없습니다. 해시태그를 추가해주세요.')
+      CustomToast({
+        status: 'error',
+        message: '계정 정보가 올바르지 않습니다.',
+        position: 'top-center',
+        duration: 2000
+      })
       return
     }
 
@@ -55,7 +55,12 @@ export function useAgent() {
       })
     } catch (error) {
       console.error('Agent start error:', error)
-      toast.error('에이전트를 시작하지 못했습니다.', {
+
+      CustomToast({
+        status: 'error',
+        message: '에이전트를 시작하지 못했습니다.',
+        position: 'top-center',
+        duration: 2000,
         description: (error as Error).message
       })
     }
@@ -66,7 +71,11 @@ export function useAgent() {
       await window.agent.stop()
     } catch (error) {
       console.error('Agent stop error:', error)
-      toast.error('에이전트를 종료하지 못했습니다.', {
+      CustomToast({
+        status: 'error',
+        message: '에이전트를 종료하지 못했습니다.',
+        position: 'top-center',
+        duration: 2000,
         description: (error as Error).message
       })
     }

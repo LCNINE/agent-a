@@ -7,22 +7,48 @@ import { Switch } from '@/components/ui/switch'
 import { useWorkStore } from '@/store/workStore'
 import Footer from '@renderer/components/template/Footer'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
-import { ChevronDown, ChevronUp, Hash, Heart, MessageSquare, Rss, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useErrorStore } from '@renderer/store/errorStore'
+import { ChevronDown, ChevronUp, Hash, Heart, MessageSquare, Rss, Star, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function WorkPage() {
   const { workList, upsert } = useWorkStore()
+  const { errorType, clearError } = useErrorStore()
+
   const [newHashtag, setNewHashtag] = useState('')
+  const [newHashtagInteraction, setNewHashtagInteraction] = useState('')
   const [isHashtagListOpen, setIsHashtagListOpen] = useState(false)
+  const [isHashtagInteractionListOpen, setIsHashtagInteractionListOpen] = useState(false)
   const hashtagInputRef = useRef<HTMLInputElement>(null)
+  const hashtagInteractionInputRef = useRef<HTMLInputElement>(null)
 
   const handleAddHashtag = () => {
     const trimmedHashtag = newHashtag.replace(/\s+/g, '')
     if (trimmedHashtag) {
       upsert({ ...workList, hashtags: [...workList.hashtags, trimmedHashtag] })
       setNewHashtag('')
+      clearError()
     }
     hashtagInputRef.current?.focus()
+  }
+
+  const handleAddHashtagInteraction = () => {
+    const trimmedHashtag = newHashtagInteraction.replace(/\s+/g, '')
+
+    if (trimmedHashtag) {
+      upsert({
+        ...workList,
+        interactionHashtags: [...(workList.interactionHashtags || []), trimmedHashtag]
+      })
+      setNewHashtagInteraction('')
+      clearError()
+    }
+    hashtagInteractionInputRef.current?.focus()
+  }
+
+  const handleSwitchChange = (key: string, value: boolean) => {
+    upsert({ [key]: !value })
+    clearError()
   }
 
   return (
@@ -30,7 +56,7 @@ export default function WorkPage() {
       <ScrollArea className="h-full">
         <div className="p-4">
           <div className="mx-auto max-w-2xl space-y-6">
-            <div className="space-y-4 rounded-md border p-4">
+            <div className="relative space-y-4 rounded-md border p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Rss className="h-5 w-5 text-gray-700" />
@@ -45,7 +71,7 @@ export default function WorkPage() {
                   <Switch
                     id="feed-work"
                     checked={workList.feedWork}
-                    onCheckedChange={() => upsert({ feedWork: !workList.feedWork })}
+                    onCheckedChange={() => handleSwitchChange('feedWork', workList.feedWork)}
                     className="data-[state=checked]:bg-blue-600"
                   />
                 </div>
@@ -55,7 +81,14 @@ export default function WorkPage() {
               </p>
             </div>
 
-            <div className="space-y-4 rounded-md border p-4">
+            <div
+              className={`${errorType === 'hashtag' && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
+            >
+              {errorType === 'hashtag' && (
+                <div className="absolute -right-2 -top-2 animate-pulse">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Hash className="h-5 w-5 text-gray-700" />
@@ -70,7 +103,7 @@ export default function WorkPage() {
                   <Switch
                     id="hashtag-search"
                     checked={workList.hashtagWork}
-                    onCheckedChange={() => upsert({ hashtagWork: !workList.hashtagWork })}
+                    onCheckedChange={() => handleSwitchChange('hashtagWork', workList.hashtagWork)}
                     className="data-[state=checked]:bg-blue-600"
                   />
                 </div>
@@ -103,7 +136,7 @@ export default function WorkPage() {
                   className="w-full justify-between"
                   onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
                 >
-                  해시태그 목록 ({workList.hashtags.length})
+                  해시태그 목록 ({workList.hashtags?.length || 0})
                   {isHashtagListOpen ? (
                     <ChevronUp className="h-4 w-4" />
                   ) : (
@@ -113,7 +146,7 @@ export default function WorkPage() {
                 {isHashtagListOpen && (
                   <ScrollArea className="relative h-[120px] rounded-md bg-gray-50 p-2 dark:bg-gray-800">
                     <div className="space-y-2">
-                      {workList.hashtags.length > 0 ? (
+                      {workList.hashtags?.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {workList.hashtags.map((tag, index) => (
                             <div
@@ -150,7 +183,7 @@ export default function WorkPage() {
                 <div className="flex items-center space-x-2">
                   <MessageSquare className="h-5 w-5 text-gray-700" />
                   <Label htmlFor="comment-interaction" className="font-medium">
-                    내 피드 댓글에 좋아요 및 대댓글 달기
+                    내 피드 댓글에 좋아요 및 대댓글 달기 작업
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -161,7 +194,7 @@ export default function WorkPage() {
                     id="comment-interaction"
                     checked={workList.myFeedInteraction}
                     onCheckedChange={() =>
-                      upsert({ myFeedInteraction: !workList.myFeedInteraction })
+                      handleSwitchChange('myFeedInteraction', workList.myFeedInteraction)
                     }
                     className="data-[state=checked]:bg-blue-600"
                   />
@@ -172,31 +205,105 @@ export default function WorkPage() {
               </p>
             </div>
 
-            <div className="space-y-4 rounded-md border p-4">
+            <div
+              className={`${errorType === 'hashtagInteraction' && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
+            >
+              {errorType === 'hashtagInteraction' && (
+                <div className="absolute -right-2 -top-2 animate-pulse">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Heart className="h-5 w-5 text-gray-700" />
-                  <Label htmlFor="commentor-feed" className="font-medium">
-                    댓글 작성자 피드에 좋아요 및 댓글 달기
+                  <Hash className="h-5 w-5 text-gray-700" />
+                  <Label htmlFor="hashtag-search" className="font-medium">
+                    해시태그 검색 후 댓글 작성자 피드 방문
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium text-gray-500">
-                    {workList.myFeedCommentorInteraction ? '활성화됨' : '비활성화됨'}
+                    {workList.hashtagInteractionWork ? '활성화됨' : '비활성화됨'}
                   </span>
                   <Switch
-                    id="commentor-feed"
-                    checked={workList.myFeedCommentorInteraction}
+                    id="hashtag-search"
+                    checked={workList.hashtagInteractionWork}
                     onCheckedChange={() =>
-                      upsert({ myFeedCommentorInteraction: !workList.myFeedCommentorInteraction })
+                      handleSwitchChange('hashtagInteractionWork', workList.hashtagInteractionWork)
                     }
                     className="data-[state=checked]:bg-blue-600"
                   />
                 </div>
               </div>
               <p className="ml-7 text-sm text-gray-600">
-                내 게시물에 댓글을 단 사용자의 피드에 자동으로 좋아요와 댓글을 작성합니다.
+                댓글 작성자의 피드에 자동으로 좋아요와 댓글을 남겨 인맥과 노출을 늘립니다.
               </p>
+              <div className="mb-2 flex items-center space-x-2">
+                <Input
+                  type="text"
+                  placeholder="해시태그 입력 (# 제외)"
+                  value={newHashtagInteraction}
+                  onChange={(e) => setNewHashtagInteraction(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddHashtagInteraction()
+                    }
+                  }}
+                  ref={hashtagInteractionInputRef}
+                  className="flex-grow"
+                />
+                <Button onClick={handleAddHashtagInteraction} size="sm">
+                  추가
+                </Button>
+              </div>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-between"
+                  onClick={() => setIsHashtagInteractionListOpen(!isHashtagInteractionListOpen)}
+                >
+                  해시태그 목록 ({workList.interactionHashtags?.length || 0})
+                  {isHashtagInteractionListOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+                {isHashtagInteractionListOpen && (
+                  <ScrollArea className="relative h-[120px] rounded-md bg-gray-50 p-2 dark:bg-gray-800">
+                    <div className="space-y-2">
+                      {workList.interactionHashtags?.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {workList.interactionHashtags.map((tag, index) => (
+                            <div
+                              key={index}
+                              className="relative flex items-center rounded-full border bg-white px-3 py-1 shadow-sm"
+                            >
+                              <span className="mr-2 text-sm dark:text-input">#{tag}</span>
+                              <button
+                                onClick={() =>
+                                  upsert({
+                                    ...workList,
+                                    interactionHashtags: workList.interactionHashtags.filter(
+                                      (t) => t !== tag
+                                    )
+                                  })
+                                }
+                                className="text-gray-500 hover:text-gray-700"
+                                aria-label={`${tag} 태그 삭제`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">추가된 해시태그가 없습니다.</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
             </div>
           </div>
         </div>

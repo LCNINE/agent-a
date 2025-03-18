@@ -42,8 +42,9 @@ export type WorkType = {
   feedWork: boolean
   hashtagWork: boolean
   myFeedInteraction: boolean
-  myFeedCommentorInteraction: boolean
+  hashtagInteractionWork: boolean
   hashtags: string[]
+  interactionHashtags: string[]
 }
 
 export interface BotStatus {

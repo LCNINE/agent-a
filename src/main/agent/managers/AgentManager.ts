@@ -554,8 +554,8 @@ export class AgentManager {
         await feedWorkBasicModeService.processNotificationsComment()
       }
 
-      if (work.myFeedCommentorInteraction) {
-        console.log('myFeedCommentorInteraction 기능은 아직 구현되지 않았습니다.')
+      if (work.hashtagInteractionWork) {
+        console.log('hashtagInteractionWork 기능은 아직 구현되지 않았습니다.')
       }
 
       // 어떤 작업도 지정되지 않은 경우 에러 처리
@@ -563,7 +563,7 @@ export class AgentManager {
         !work.myFeedInteraction &&
         !work.feedWork &&
         !work.hashtagWork &&
-        !work.myFeedCommentorInteraction
+        !work.hashtagInteractionWork
       ) {
         throw Error('지원하지 않는 작업')
       }
