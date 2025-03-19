@@ -8,8 +8,8 @@ import { useWorkStore } from '@/store/workStore'
 import Footer from '@renderer/components/template/Footer'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { ChevronDown, ChevronUp, Hash, Heart, MessageSquare, Rss, Star, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { ChevronDown, ChevronUp, Hash, MessageSquare, Rss, Star, X } from 'lucide-react'
+import { useRef, useState } from 'react'
 
 export default function WorkPage() {
   const { workList, upsert } = useWorkStore()
