@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectContent
 } from '@renderer/components/ui/select'
+import blockGuideImage from '../../images/guide_to_blocking_users.png'
 
 export function ConfigForm() {
   const { t } = useTranslation()
@@ -400,8 +401,14 @@ export function ConfigForm() {
                                 <TooltipTrigger asChild>
                                   <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
-                                <TooltipContent>
+                                <TooltipContent className="py-4">
                                   <p>{t('configForm.description.excludeUsernames')}</p>
+
+                                  <img
+                                    src={blockGuideImage}
+                                    alt="block"
+                                    className="aspect-video w-96 object-contain"
+                                  />
                                 </TooltipContent>
                               </Tooltip>
                             </div>
