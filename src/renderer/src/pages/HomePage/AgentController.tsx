@@ -71,7 +71,12 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       return
     }
 
-    if (!workList.feedWork && !workList.hashtagWork && !workList.hashtagInteractionWork) {
+    if (
+      !workList.feedWork &&
+      !workList.hashtagWork &&
+      !workList.hashtagInteractionWork &&
+      !workList.myFeedInteraction
+    ) {
       setError('all')
       CustomToast({
         status: 'error',
