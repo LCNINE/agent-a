@@ -1,13 +1,16 @@
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
-import { Switch } from '@renderer/components/ui/switch'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
-import { ChevronDown, ChevronUp, X, Star } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { Switch } from '@renderer/components/ui/switch'
+import { ChevronDown, ChevronUp, Star, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { WorkCountField } from './WorkCountField'
+import { WorkType } from 'src'
 
 interface WorkSectionProps {
   title: string
+  type: string
   icon: React.ReactNode
   description: string
   enabled: boolean
@@ -20,6 +23,7 @@ interface WorkSectionProps {
 
 export default function WorkSection({
   title,
+  type,
   icon,
   description,
   enabled,
@@ -43,35 +47,44 @@ export default function WorkSection({
   }
 
   return (
-    <div
-      className={`${error && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
-    >
+    <div className={`${error && 'border-2 border-blue-500'} space-y-4 rounded-md border p-4`}>
       {error && (
         <div className="absolute -right-2 -top-2 animate-pulse">
-          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+          <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
         </div>
       )}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          {icon}
-          <Label className="font-medium">{title}</Label>
+
+      <div className="flex justify-between">
+        <div className="flex flex-col space-y-1">
+          <div className="flex items-center gap-1">
+            {icon}
+            <Label className="font-medium">{title}</Label>
+          </div>
+
+          <p className="text-sm text-gray-600">{description}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-500">
-            {enabled ? '활성화됨' : '비활성화됨'}
-          </span>
-          <Switch
-            checked={enabled}
-            onCheckedChange={onToggle}
-            className="data-[state=checked]:bg-blue-600"
-          />
+
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-gray-500">
+                {enabled ? '활성화됨' : '비활성화됨'}
+              </span>
+              <Switch
+                checked={enabled}
+                onCheckedChange={onToggle}
+                className="data-[state=checked]:bg-blue-600"
+              />
+            </div>
+
+            {enabled && <WorkCountField type={type as keyof WorkType} />}
+          </div>
         </div>
       </div>
-      <p className="ml-7 text-sm text-gray-600">{description}</p>
 
-      {hashtags && onAddHashtag && (
+      {hashtags && enabled && onAddHashtag && (
         <div>
-          <div className="mb-2 flex items-center space-x-2">
+          <div className="flex items-center mb-2 space-x-2">
             <Input
               type="text"
               placeholder="해시태그 입력 (# 제외)"
@@ -93,14 +106,14 @@ export default function WorkSection({
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-between"
+              className="justify-between w-full"
               onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
             >
               해시태그 목록 ({hashtags.length || 0})
               {isHashtagListOpen ? (
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="w-4 h-4" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="w-4 h-4" />
               )}
             </Button>
 
@@ -112,16 +125,16 @@ export default function WorkSection({
                       {hashtags.map((tag, index) => (
                         <div
                           key={index}
-                          className="relative flex items-center rounded-full border bg-white px-3 py-1 shadow-sm"
+                          className="relative flex items-center px-3 py-1 bg-white border rounded-full shadow-sm"
                         >
                           <span className="mr-2 text-sm dark:text-input">#{tag}</span>
                           {onRemoveHashtag && (
                             <button
-                              onClick={() => onRemoveHashtag(tag)} // 삭제 기능 추가
+                              onClick={() => onRemoveHashtag(tag)}
                               className="text-gray-500 hover:text-gray-700"
                               aria-label={`${tag} 태그 삭제`}
                             >
-                              <X className="h-3 w-3" />
+                              <X className="w-3 h-3" />
                             </button>
                           )}
                         </div>

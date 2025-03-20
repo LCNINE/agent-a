@@ -38,13 +38,16 @@ export type WorkerStatus =
       state: 'idle'
     }
 
+type WorkItem = {
+  count: number
+  enabled: boolean
+}
+
 export type WorkType = {
-  feedWork: boolean
-  hashtagWork: boolean
-  myFeedInteraction: boolean
-  hashtagInteractionWork: boolean
-  hashtags: string[]
-  interactionHashtags: string[]
+  feedWork: WorkItem
+  hashtagWork: WorkItem & { hashtags: string[] }
+  myFeedInteraction: WorkItem
+  hashtagInteractionWork: WorkItem & { hashtags: string[] }
 }
 
 export interface BotStatus {

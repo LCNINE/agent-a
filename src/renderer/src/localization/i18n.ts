@@ -89,8 +89,7 @@ i18n.use(initReactI18next).init({
               min: "Sets the user's minimum length",
               max: "Sets the user's maximum length"
             },
-            commentCount:
-              'The maximum number to automatically work with. Example: If set to 10, comments and likes will only work for up to 10 items.',
+            workCount: 'Works up to this number only. Higher number means more tasks.',
             prompt: {
               formalDesc:
                 'Creates comments using a respectful and formal tone. Employs polite expressions and honorific speech to convey a professional impression.',
@@ -266,8 +265,7 @@ i18n.use(initReactI18next).init({
               min: '작성할 댓글의 최소 길이를 설정합니다',
               max: '작성할 댓글의 최대 길이를 설정합니다'
             },
-            commentCount:
-              '자동으로 작업할 최대 개수입니다. 예시: 10개로 설정하면 최대 10개까지만 댓글과 좋아요 동작을 합니다.',
+            workCount: '이 숫자만큼만 작업해요. 많은 숫자를 입력하면 더 많이 작업합니다.',
             prompt: {
               formalDesc:
                 '존중하고 격식 있는 어조로 댓글을 작성합니다. 정중한 표현과 높임말을 사용하여 전문적인 인상을 전달합니다.',

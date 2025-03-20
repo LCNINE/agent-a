@@ -5,29 +5,50 @@ import { persist } from 'zustand/middleware'
 interface WorkState {
   workList: WorkType
   upsert(work: Partial<WorkType>): void
+  reset(): void
 }
 
+const defaultWorkList: WorkType = {
+  feedWork: {
+    count: 3,
+    enabled: true
+  },
+  hashtagWork: {
+    count: 0,
+    enabled: false,
+    hashtags: []
+  },
+  myFeedInteraction: {
+    count: 3,
+    enabled: true
+  },
+  hashtagInteractionWork: {
+    count: 0,
+    enabled: false,
+    hashtags: []
+  }
+}
 export const useWorkStore = create<WorkState>()(
   persist(
     (set) => ({
-      workList: {
-        feedWork: true,
-        hashtagWork: false,
-        myFeedInteraction: false,
-        hashtagInteractionWork: false,
-        hashtags: [],
-        interactionHashtags: []
-      },
+      workList: defaultWorkList,
 
-      upsert(work: Partial<WorkType>) {
+      upsert(work: WorkType) {
         set((state) => ({
           workList: { ...state.workList, ...work }
         }))
+      },
+
+      reset() {
+        set({
+          workList: defaultWorkList
+        })
       }
     }),
 
     {
-      name: 'work' // localStorage 등에 저장될 key
+      name: 'work',
+      version: 1
     }
   )
 )
