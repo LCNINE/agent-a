@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import blockGuideImage from '../../images/guide_to_blocking_users.png'
 import { configSchema, type ConfigSchema } from './schema'
+import { useBlocker } from '@tanstack/react-router'
 
 export function ConfigForm() {
   const { t } = useTranslation()
@@ -42,6 +43,16 @@ export function ConfigForm() {
   useEffect(() => {
     form.reset(config)
   }, [])
+
+  // useBlocker({
+  //   shouldBlockFn: ({ current, next }) => {
+  //     console.log(current, next)
+  //     if (!form.formState.isDirty) return false
+
+  //     const shouldLeave = confirm('Are you sure you want to leave?')
+  //     return !shouldLeave
+  //   }
+  // })
 
   async function onSubmit(values: ConfigSchema) {
     setConfig(values)
@@ -349,7 +360,7 @@ export function ConfigForm() {
                         )}
                       />
 
-                      {/* 제외 유저 목록 */}
+                      {/* 차단 유저 목록 */}
                       <FormField
                         control={form.control}
                         name="excludeUsernames"
@@ -364,7 +375,9 @@ export function ConfigForm() {
                                   <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent className="py-4">
-                                  <p>{t('configForm.description.excludeUsernames')}</p>
+                                  <p className="text-lg">
+                                    {t('configForm.description.excludeUsernames')}
+                                  </p>
 
                                   <img
                                     src={blockGuideImage}

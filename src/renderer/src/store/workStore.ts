@@ -14,16 +14,16 @@ const defaultWorkList: WorkType = {
     enabled: true
   },
   hashtagWork: {
-    count: 0,
+    count: 1,
     enabled: false,
     hashtags: []
   },
-  myFeedInteraction: {
-    count: 3,
-    enabled: true
+  myFeedInteractionWork: {
+    count: 1,
+    enabled: false
   },
   hashtagInteractionWork: {
-    count: 0,
+    count: 1,
     enabled: false,
     hashtags: []
   }
@@ -48,7 +48,7 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 1
+      version: 3
     }
   )
 )

@@ -17,7 +17,7 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
   const selectedAccount = useAccountStore((state) => state.selectedAccount)
   const { status, startAgent, stopAgent } = useAgent()
   const workList = useWorkStore((state) => state.workList)
-  const { setError } = useErrorStore()
+  const { hasError, addError } = useErrorStore()
   const router = useRouter()
 
   const validateAndStart = () => {
@@ -42,10 +42,25 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
     }
 
     if (workList.hashtagWork.enabled && workList.hashtagWork.hashtags.length === 0) {
-      setError('hashtag')
+      addError('noHashtags')
       CustomToast({
         status: 'error',
         message: '해시태그가 설정되지 않았습니다',
+        position: 'top-center',
+        duration: 2000,
+        action: {
+          label: '설정하기',
+          onClick: () => router.navigate({ to: '/work' })
+        }
+      })
+      return
+    }
+
+    if (workList.myFeedInteractionWork.enabled && workList.myFeedInteractionWork.count === 0) {
+      addError('myFeedInteractionWorkCount')
+      CustomToast({
+        status: 'error',
+        message: '내 피드에 댓글 작업 개수가 설정되지 않았습니다.',
         position: 'top-center',
         duration: 2000,
         action: {
@@ -60,7 +75,7 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       workList.hashtagInteractionWork.enabled &&
       workList.hashtagInteractionWork.hashtags.length === 0
     ) {
-      setError('hashtagInteraction')
+      addError('noHashtagInteractions')
       CustomToast({
         status: 'error',
         message: '관심 해시태그가 설정되지 않았습니다',
@@ -78,9 +93,9 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       !workList.feedWork.enabled &&
       !workList.hashtagWork.enabled &&
       !workList.hashtagInteractionWork.enabled &&
-      !workList.myFeedInteraction.enabled
+      !workList.myFeedInteractionWork.enabled
     ) {
-      setError('all')
+      addError('all')
       CustomToast({
         status: 'error',
         message: '작업 목록이 없어서 작업을 시작할 수 없습니다. 작업을 추가해주세요.',

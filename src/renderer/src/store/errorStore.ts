@@ -1,16 +1,38 @@
 import { create } from 'zustand'
 
-type ErrorSectionType = 'all' | 'hashtag' | 'hashtagInteraction' | null
+export type ErrorSectionType =
+  | 'all'
+  | 'feedWork'
+  | 'hashtagWork'
+  | 'myFeedInteractionWork'
+  | 'hashtagInteractionWork'
+  | 'feedWorkCount'
+  | 'hashtagWorkCount'
+  | 'myFeedInteractionWorkCount'
+  | 'hashtagInteractionWorkCount'
+  | 'noHashtags'
+  | 'noHashtagInteractions'
 
 interface ErrorState {
-  errorType: ErrorSectionType
-
-  setError: (errorType: ErrorSectionType) => void
-  clearError: () => void
+  errorTypes: ErrorSectionType[]
+  addError: (errorType: ErrorSectionType) => void
+  removeError: (errorType: ErrorSectionType) => void
+  clearAllErrors: () => void
+  hasError: (errorType: ErrorSectionType) => boolean
 }
 
-export const useErrorStore = create<ErrorState>((set) => ({
-  errorType: null,
-  setError: (errorType) => set({ errorType }),
-  clearError: () => set({ errorType: null })
+export const useErrorStore = create<ErrorState>((set, get) => ({
+  errorTypes: [],
+  addError: (errorType) =>
+    set((state) => ({
+      errorTypes: state.errorTypes.includes(errorType)
+        ? state.errorTypes
+        : [...state.errorTypes, errorType]
+    })),
+  removeError: (errorType) =>
+    set((state) => ({
+      errorTypes: state.errorTypes.filter((type) => type !== errorType)
+    })),
+  clearAllErrors: () => set({ errorTypes: [] }),
+  hasError: (errorType) => get().errorTypes.includes(errorType)
 }))

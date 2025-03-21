@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, Star, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { WorkCountField } from './WorkCountField'
 import { WorkType } from 'src'
+import { useErrorStore } from '@renderer/store/errorStore'
 
 interface WorkSectionProps {
   title: string
@@ -36,6 +37,7 @@ export default function WorkSection({
   const [newHashtag, setNewHashtag] = useState('')
   const [isHashtagListOpen, setIsHashtagListOpen] = useState(false)
   const hashtagInputRef = useRef<HTMLInputElement>(null)
+  const { errorTypes } = useErrorStore()
 
   const handleAddHashtag = () => {
     const trimmedHashtag = newHashtag.replace(/\s+/g, '')
@@ -47,7 +49,9 @@ export default function WorkSection({
   }
 
   return (
-    <div className={`${error && 'border-2 border-blue-500'} space-y-4 rounded-md border p-4`}>
+    <div
+      className={`${error && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
+    >
       {error && (
         <div className="absolute -right-2 -top-2 animate-pulse">
           <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
@@ -77,6 +81,7 @@ export default function WorkSection({
               />
             </div>
 
+            {/* 작업 개수 설정 필드 */}
             {enabled && <WorkCountField type={type as keyof WorkType} />}
           </div>
         </div>

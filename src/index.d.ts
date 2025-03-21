@@ -46,7 +46,7 @@ type WorkItem = {
 export type WorkType = {
   feedWork: WorkItem
   hashtagWork: WorkItem & { hashtags: string[] }
-  myFeedInteraction: WorkItem
+  myFeedInteractionWork: WorkItem
   hashtagInteractionWork: WorkItem & { hashtags: string[] }
 }
 

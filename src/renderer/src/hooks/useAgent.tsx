@@ -1,4 +1,5 @@
 import { CustomToast } from '@renderer/components/CustomToast'
+import { useErrorStore } from '@renderer/store/errorStore'
 import { useEffect, useState } from 'react'
 import { BotStatus, LoginCredentials } from 'src'
 import { useConfigStore } from '../store/configStore'
@@ -7,6 +8,7 @@ import { useWorkStore } from '../store/workStore'
 export function useAgent() {
   const config = useConfigStore((state) => state.config)
   const workList = useWorkStore((state) => state.workList)
+  const { clearAllErrors } = useErrorStore()
 
   const [status, setStatus] = useState<BotStatus>({
     isRunning: false,
@@ -53,6 +55,8 @@ export function useAgent() {
         config: agentConfig,
         workList
       })
+
+      clearAllErrors()
     } catch (error) {
       console.error('Agent start error:', error)
 
