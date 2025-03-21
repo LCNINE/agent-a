@@ -80,7 +80,11 @@ export default function WorkPage() {
   return (
     <TooltipProvider delayDuration={100}>
       <Form {...form}>
-        <form>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+          }}
+        >
           <div className="flex h-[calc(100vh-90px)] flex-col">
             <ScrollArea className="h-full">
               <div className="max-w-2xl p-4 mx-auto space-y-6">
