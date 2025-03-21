@@ -15,7 +15,7 @@ import { WorkSchema } from './schema'
 export function WorkCountField({ type }: { type: keyof WorkSchema }) {
   const { t } = useTranslation()
   const { workList, upsert } = useWorkStore()
-  const { hasError, errorTypes, removeError, addError } = useErrorStore()
+  const { hasError, errorTypes, removeError, addError, clearAllErrors } = useErrorStore()
 
   const router = useRouter()
   const navigate = useNavigate()
