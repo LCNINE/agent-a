@@ -18,6 +18,8 @@ import { useConfigStore } from '@renderer/store/configStore'
 import ProtectedLink from './ProtectedLink'
 
 export default function UserMenu() {
+  const supabase = useCreateClient()
+
   const { t } = useTranslation()
   const { user } = useAuthContext()
   const { config } = useConfigStore()
@@ -28,7 +30,6 @@ export default function UserMenu() {
   }
 
   async function logout() {
-    const supabase = useCreateClient()
     const { error } = await supabase.auth.signOut()
     if (error) {
       console.error('userMenu logout Error: ', error)
