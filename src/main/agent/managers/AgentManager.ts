@@ -1,7 +1,7 @@
 import { BrowserContext, Locator, Page } from 'playwright-core'
 import { AgentConfig, WorkType } from '../../..'
 import { startBrowser } from '../common/browser'
-import { loginWithCredentials } from '../common/browserUtils'
+import { loginWithCredentials, navigateToHome } from '../common/browserUtils'
 import { checkedAction } from '../common/checkedAction'
 import { callGenerateComments, callGenerateReply } from '../common/fetchers'
 import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
@@ -81,12 +81,13 @@ export class AgentManager {
           `작업 완료. ${this.config.loopIntervalSeconds || 300}초 대기 후 다시 시작합니다.`
         )
 
-        // 임시
-        await new Promise((resolve) => setTimeout(resolve, 200))
+        // 테스트할때 주석제거
+        // await new Promise((resolve) => setTimeout(resolve, 200))
 
-        // await new Promise((resolve) =>
-        //   setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
-        // )
+        // 테스트할때 주석처리
+        await new Promise((resolve) =>
+          setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
+        )
       } catch (error) {
         console.error('Error in work loop:', error)
 
@@ -122,16 +123,8 @@ export class AgentManager {
         await this.page.goto('https://www.instagram.com/')
       }
 
-      if (work.feedWork) {
-        await this.page.waitForTimeout(2000)
-        await this.page
-          .locator('.x6s0dn4.x9f619.xxk0z11.x6ikm8r.xeq5yr9.x1swvt13.x1s85apg.xzzcqpx')
-          .first()
-          .click()
-          .catch(() => {
-            console.log('Home버튼을 찾을 수 없습니다.')
-            return false
-          })
+      if (work.feedWork.enabled) {
+        await navigateToHome(this.page)
 
         const articleService = new ArticleProcessingService(
           this.page,
@@ -250,21 +243,14 @@ export class AgentManager {
             return isProcessed
           },
           {},
-          this.config
+          this.works.feedWork.count
         )
 
         await articleService.processArticles()
       }
 
-      if (work.hashtagWork) {
-        await this.page
-          .locator('.x6s0dn4.x9f619.xxk0z11.x6ikm8r.xeq5yr9.x1swvt13.x1s85apg.xzzcqpx')
-          .first()
-          .click()
-          .catch(() => {
-            console.log('Home버튼을 찾을 수 없습니다.')
-            return false
-          })
+      if (work.hashtagWork.enabled) {
+        await navigateToHome(this.page)
         await this.page.waitForTimeout(2000)
 
         const hashtagService = new HashtagService(
@@ -404,22 +390,16 @@ export class AgentManager {
             return isProcessed
           },
           {},
+          this.works.hashtagWork.count,
           this.config
         )
 
-        await hashtagService.processHashtag(work.hashtags)
+        await hashtagService.processHashtag(work.hashtagWork.hashtags)
       }
 
-      if (work.myFeedInteraction) {
-        await this.page
-          .locator('.x9f619.xxk0z11.xii2z7h.x11xpdln.x19c4wfv.xvy4d1p')
-          .filter({ hasText: /^(홈|Home)$/ })
-          .first()
-          .click()
-          .catch(() => {
-            console.log('Home버튼을 찾을 수 없습니다.')
-            return false
-          })
+      if (work.myFeedInteraction.enabled) {
+        await navigateToHome(this.page)
+
         await this.page.waitForTimeout(2000)
 
         const feedWorkBasicModeService = new MyFeedInteractionService(
@@ -554,7 +534,9 @@ export class AgentManager {
         await feedWorkBasicModeService.processNotificationsComment()
       }
 
-      if (work.hashtagInteractionWork) {
+      if (work.hashtagInteractionWork.enabled) {
+        await navigateToHome(this.page)
+        await this.page.waitForTimeout(2000)
         console.log('hashtagInteractionWork 기능은 아직 구현되지 않았습니다.')
       }
 

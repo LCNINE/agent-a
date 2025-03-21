@@ -41,7 +41,7 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       return
     }
 
-    if (workList.hashtagWork && workList.hashtags.length === 0) {
+    if (workList.hashtagWork.enabled && workList.hashtagWork.hashtags.length === 0) {
       setError('hashtag')
       CustomToast({
         status: 'error',
@@ -56,7 +56,10 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       return
     }
 
-    if (workList.hashtagInteractionWork && workList.interactionHashtags.length === 0) {
+    if (
+      workList.hashtagInteractionWork.enabled &&
+      workList.hashtagInteractionWork.hashtags.length === 0
+    ) {
       setError('hashtagInteraction')
       CustomToast({
         status: 'error',
@@ -72,10 +75,10 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
     }
 
     if (
-      !workList.feedWork &&
-      !workList.hashtagWork &&
-      !workList.hashtagInteractionWork &&
-      !workList.myFeedInteraction
+      !workList.feedWork.enabled &&
+      !workList.hashtagWork.enabled &&
+      !workList.hashtagInteractionWork.enabled &&
+      !workList.myFeedInteraction.enabled
     ) {
       setError('all')
       CustomToast({

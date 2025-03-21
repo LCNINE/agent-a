@@ -1,5 +1,4 @@
 import { Locator, Page } from 'playwright'
-import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
 import { chooseRandomSleep, scrollDelays } from '../common/timeUtils'
 
@@ -29,7 +28,7 @@ export class ArticleProcessingService {
   private page: Page
   private articleProcessor: ArticleProcessor
   private options: ScrollOptions
-  private config: AgentConfig
+  private workCount: number
   private shouldStop: boolean = false
   private processed: boolean = false
   private successCount: number = 0
@@ -38,7 +37,7 @@ export class ArticleProcessingService {
     page: Page,
     articleProcessor: ArticleProcessor,
     options: Partial<ScrollOptions>,
-    config: AgentConfig
+    workCount: number
   ) {
     this.page = page
     this.articleProcessor = articleProcessor
@@ -46,11 +45,11 @@ export class ArticleProcessingService {
       ...DEFAULT_OPTIONS,
       ...options
     }
-    this.config = config
+    this.workCount = workCount
 
-    if (config.workCount && config.workCount > 0) {
-      this.options.maxArticles = config.workCount
-      console.log(`ArticleProcessingService가 최대 ${config.workCount}개의 게시물을 처리합니다`)
+    if (this.workCount > 0) {
+      this.options.maxArticles = this.workCount
+      console.log(`ArticleProcessingService가 최대 ${this.workCount}개의 게시물을 처리합니다`)
     }
   }
 

@@ -1,7 +1,7 @@
 import { Locator, Page } from 'playwright'
-import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
 import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
+import { AgentConfig } from '../../..'
 
 type HashtagProcessor = (hashtag: Locator) => Promise<boolean>
 
@@ -29,6 +29,7 @@ export class HashtagService {
   private page: Page
   private hashtagProcessor: HashtagProcessor
   private options: ScrollOptions
+  private workCount: number
   private config: AgentConfig
   private shouldStop: boolean = false
   private processed: boolean = false
@@ -38,6 +39,7 @@ export class HashtagService {
     page: Page,
     hashtagProcessor: HashtagProcessor,
     options: Partial<ScrollOptions>,
+    workCount: number,
     config: AgentConfig
   ) {
     this.page = page
@@ -46,11 +48,12 @@ export class HashtagService {
       ...DEFAULT_OPTIONS,
       ...options
     }
+    this.workCount = workCount
     this.config = config
 
-    if (config.workCount && config.workCount > 0) {
-      this.options.maxPosts = config.workCount
-      console.log(`HashtagService가 최대 ${config.workCount}개의 게시물을 처리합니다`)
+    if (workCount && workCount > 0) {
+      this.options.maxPosts = workCount
+      console.log(`HashtagService가 최대 ${workCount}개의 게시물을 처리합니다`)
     }
   }
 
