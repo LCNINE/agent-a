@@ -56,6 +56,21 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       return
     }
 
+    if (workList.hashtagWork.enabled && workList.hashtagWork.count === 0) {
+      addError('noHashtags')
+      CustomToast({
+        status: 'error',
+        message: '해시태그 검색 작업 개수가 설정되지 않았습니다',
+        position: 'top-center',
+        duration: 2000,
+        action: {
+          label: '설정하기',
+          onClick: () => router.navigate({ to: '/work' })
+        }
+      })
+      return
+    }
+
     if (workList.hashtagWork.enabled && workList.hashtagWork.hashtags.length === 0) {
       addError('noHashtags')
       CustomToast({
