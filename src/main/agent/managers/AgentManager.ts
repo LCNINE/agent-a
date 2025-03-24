@@ -82,12 +82,12 @@ export class AgentManager {
         )
 
         // 테스트할때 사용
-        await new Promise((resolve) => setTimeout(resolve, 200))
+        // await new Promise((resolve) => setTimeout(resolve, 200))
 
         // 테스트할때 주석처리
-        // await new Promise((resolve) =>
-        //   setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
-        // )
+        await new Promise((resolve) =>
+          setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
+        )
       } catch (error) {
         console.error('Error in work loop:', error)
 
