@@ -1,6 +1,7 @@
 import { Locator, Page } from 'playwright'
 import { smoothScrollToElement } from '../common/browserUtils'
-import { chooseRandomSleep, scrollDelays } from '../common/timeUtils'
+import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
+import { AgentConfig } from '../../..'
 
 type ArticleProcessor = (article: Locator) => Promise<boolean>
 
@@ -32,12 +33,14 @@ export class ArticleProcessingService {
   private shouldStop: boolean = false
   private processed: boolean = false
   private successCount: number = 0
+  private config: AgentConfig
 
   constructor(
     page: Page,
     articleProcessor: ArticleProcessor,
     options: Partial<ScrollOptions>,
-    workCount: number
+    workCount: number,
+    config: AgentConfig
   ) {
     this.page = page
     this.articleProcessor = articleProcessor
@@ -46,6 +49,7 @@ export class ArticleProcessingService {
       ...options
     }
     this.workCount = workCount
+    this.config = config
 
     if (this.workCount > 0) {
       this.options.maxArticles = this.workCount
@@ -100,6 +104,10 @@ export class ArticleProcessingService {
       } finally {
         if (this.processed) {
           this.successCount++
+
+          // 댓글 작성 성공 후 대기
+          console.log(`댓글 작성 완료. ${this.config.postIntervalSeconds * 1000}초 대기 중...`)
+          await wait(this.config.postIntervalSeconds * 1000)
         }
       }
 
