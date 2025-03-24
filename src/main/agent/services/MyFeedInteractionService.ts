@@ -70,10 +70,10 @@ export class MyFeedInteractionService {
       console.error('Work가 정의되지 않았습니다. 알림 작업을 진행할 수 없습니다.')
     }
 
-    if (work.myFeedInteraction.count && work.myFeedInteraction.count > 0) {
-      this.options.maxNotifications = work.myFeedInteraction.count
+    if (work.myFeedInteractionWork.count && work.myFeedInteractionWork.count > 0) {
+      this.options.maxNotifications = work.myFeedInteractionWork.count
       console.log(
-        `NotificationInteractionService 최대 ${work.myFeedInteraction.count}개의 작업을 처리합니다`
+        `NotificationInteractionService 최대 ${work.myFeedInteractionWork.count}개의 작업을 처리합니다`
       )
     }
   }

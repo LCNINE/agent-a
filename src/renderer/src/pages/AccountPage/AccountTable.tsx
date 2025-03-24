@@ -47,12 +47,6 @@ export function AccountTable({ accounts }: AccountTableProps) {
     toast.success(t('accountTable.accountDeleted'))
   }
 
-  useEffect(() => {
-    if (accounts.length === 1) {
-      handleAccountSelect(accounts[0].username)
-    }
-  }, [accounts])
-
   return (
     <div className="w-full">
       <Table>
@@ -77,21 +71,21 @@ export function AccountTable({ accounts }: AccountTableProps) {
               <TableCell className="px-2">
                 <div className="flex items-center justify-center">
                   {selectedAccount?.username === account.username ? (
-                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
                   ) : (
-                    <Circle className="w-5 h-5 text-muted-foreground" />
+                    <Circle className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
               </TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
-                  <Key className="flex-shrink-0 w-4 h-4 text-muted-foreground" />
+                  <Key className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                   <span className="truncate">{account.username}</span>
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Lock className="flex-shrink-0 w-4 h-4 text-muted-foreground" />
+                  <Lock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                   <span className="font-mono">••••••••</span>
                 </div>
               </TableCell>
@@ -101,16 +95,16 @@ export function AccountTable({ accounts }: AccountTableProps) {
                     account={account}
                     trigger={
                       <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                        <Edit2 className="w-4 h-4" />
-                        <span className="hidden ml-2 sm:inline">{t('accountTable.edit')}</span>
+                        <Edit2 className="h-4 w-4" />
+                        <span className="ml-2 hidden sm:inline">{t('accountTable.edit')}</span>
                       </Button>
                     }
                   />
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                        <span className="hidden ml-2 text-destructive sm:inline">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <span className="ml-2 hidden text-destructive sm:inline">
                           {t('accountTable.delete')}
                         </span>
                       </Button>

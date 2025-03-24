@@ -48,13 +48,15 @@ export default function WorkSection({
     hashtagInputRef.current?.focus()
   }
 
+  console.log('onRemoveHashtag:', onRemoveHashtag)
+
   return (
     <div
       className={`${error && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
     >
       {error && (
         <div className="absolute -right-2 -top-2 animate-pulse">
-          <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
         </div>
       )}
 
@@ -89,7 +91,7 @@ export default function WorkSection({
 
       {hashtags && enabled && onAddHashtag && (
         <div>
-          <div className="flex items-center mb-2 space-x-2">
+          <div className="mb-2 flex items-center space-x-2">
             <Input
               type="text"
               placeholder="해시태그 입력 (# 제외)"
@@ -111,14 +113,14 @@ export default function WorkSection({
             <Button
               variant="outline"
               size="sm"
-              className="justify-between w-full"
+              className="w-full justify-between"
               onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
             >
               해시태그 목록 ({hashtags.length || 0})
               {isHashtagListOpen ? (
-                <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="h-4 w-4" />
               ) : (
-                <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="h-4 w-4" />
               )}
             </Button>
 
@@ -130,16 +132,17 @@ export default function WorkSection({
                       {hashtags.map((tag, index) => (
                         <div
                           key={index}
-                          className="relative flex items-center px-3 py-1 bg-white border rounded-full shadow-sm"
+                          className="relative flex items-center rounded-full border bg-white px-3 py-1 shadow-sm"
                         >
                           <span className="mr-2 text-sm dark:text-input">#{tag}</span>
+
                           {onRemoveHashtag && (
                             <button
                               onClick={() => onRemoveHashtag(tag)}
                               className="text-gray-500 hover:text-gray-700"
                               aria-label={`${tag} 태그 삭제`}
                             >
-                              <X className="w-3 h-3" />
+                              <X className="h-3 w-3" />
                             </button>
                           )}
                         </div>

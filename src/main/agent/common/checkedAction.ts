@@ -1,4 +1,5 @@
 import { Locator, Page } from 'playwright-core'
+import { chooseRandomSleep, postInteractionDelays } from './timeUtils'
 
 export async function checkedAction(
   locator: Locator,
@@ -19,6 +20,8 @@ export async function checkedAction(
 
     if (!isVisible) {
       console.log(`[${actionName}] 요소가 보이지 않습니다. 이미 처리되었을 수 있습니다.`)
+      await chooseRandomSleep(postInteractionDelays)
+
       return false
     }
 

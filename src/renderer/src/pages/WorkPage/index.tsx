@@ -87,11 +87,11 @@ export default function WorkPage() {
         >
           <div className="flex h-[calc(100vh-90px)] flex-col">
             <ScrollArea className="h-full">
-              <div className="max-w-2xl p-4 mx-auto space-y-6">
+              <div className="mx-auto max-w-2xl space-y-6 p-4">
                 <WorkSection
                   title="피드 작업"
                   type="feedWork"
-                  icon={<Rss className="w-5 h-5 text-gray-700" />}
+                  icon={<Rss className="h-5 w-5 text-gray-700" />}
                   description="피드에서 자동으로 좋아요 및 댓글을 작성합니다."
                   enabled={workList.feedWork.enabled}
                   onToggle={() => {
@@ -105,7 +105,7 @@ export default function WorkPage() {
                 <WorkSection
                   title="해시태그 검색 작업"
                   type="hashtagWork"
-                  icon={<Hash className="w-5 h-5 text-gray-700" />}
+                  icon={<Hash className="h-5 w-5 text-gray-700" />}
                   description="특정 해시태그로 검색된 게시물에 자동으로 상호작용합니다."
                   enabled={workList.hashtagWork.enabled}
                   onToggle={() => {
@@ -114,7 +114,7 @@ export default function WorkPage() {
                     removeError('noHashtags')
                   }}
                   hashtags={workList.hashtagWork.hashtags}
-                  onAddHashtag={(tag) =>
+                  onAddHashtag={(tag) => {
                     upsert({
                       ...workList,
                       hashtagWork: {
@@ -122,14 +122,25 @@ export default function WorkPage() {
                         hashtags: [...workList.hashtagWork.hashtags, tag]
                       }
                     })
-                  }
+                    removeError('noHashtags')
+                  }}
+                  onRemoveHashtag={(tag) => {
+                    upsert({
+                      ...workList,
+                      hashtagWork: {
+                        ...workList.hashtagWork,
+                        hashtags: workList.hashtagWork.hashtags.filter((hashtag) => hashtag !== tag)
+                      }
+                    })
+                    removeError('noHashtags')
+                  }}
                   error={hasError('noHashtags')}
                 />
 
                 <WorkSection
                   title="내 피드 댓글에 좋아요 및 대댓글 달기 작업"
                   type="myFeedInteractionWork"
-                  icon={<MessageSquare className="w-5 h-5 text-gray-700" />}
+                  icon={<MessageSquare className="h-5 w-5 text-gray-700" />}
                   description="내 게시물에 달린 댓글에 자동으로 좋아요와 답글을 작성합니다."
                   enabled={workList.myFeedInteractionWork.enabled}
                   onToggle={() => {

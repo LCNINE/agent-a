@@ -81,13 +81,13 @@ export class AgentManager {
           `작업 완료. ${this.config.loopIntervalSeconds || 300}초 대기 후 다시 시작합니다.`
         )
 
-        // 테스트할때 주석제거
-        // await new Promise((resolve) => setTimeout(resolve, 200))
+        // 테스트할때 사용
+        await new Promise((resolve) => setTimeout(resolve, 200))
 
         // 테스트할때 주석처리
-        await new Promise((resolve) =>
-          setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
-        )
+        // await new Promise((resolve) =>
+        //   setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
+        // )
       } catch (error) {
         console.error('Error in work loop:', error)
 
@@ -124,7 +124,9 @@ export class AgentManager {
       }
 
       if (work.feedWork.enabled) {
+        await this.page.waitForTimeout(2000)
         await navigateToHome(this.page)
+        await this.page.waitForTimeout(2000)
 
         const articleService = new ArticleProcessingService(
           this.page,
@@ -233,6 +235,8 @@ export class AgentManager {
               '게시'
             )
 
+            console.log('[runWork] 댓글 작성 완료')
+
             if (!postButtonResult) {
               return false
             }
@@ -250,6 +254,7 @@ export class AgentManager {
       }
 
       if (work.hashtagWork.enabled) {
+        await this.page.waitForTimeout(2000)
         await navigateToHome(this.page)
         await this.page.waitForTimeout(2000)
 
@@ -397,9 +402,9 @@ export class AgentManager {
         await hashtagService.processHashtag(work.hashtagWork.hashtags)
       }
 
-      if (work.myFeedInteraction.enabled) {
+      if (work.myFeedInteractionWork.enabled) {
+        await this.page.waitForTimeout(2000)
         await navigateToHome(this.page)
-
         await this.page.waitForTimeout(2000)
 
         const feedWorkBasicModeService = new MyFeedInteractionService(
@@ -535,14 +540,16 @@ export class AgentManager {
       }
 
       if (work.hashtagInteractionWork.enabled) {
+        await this.page.waitForTimeout(2000)
         await navigateToHome(this.page)
         await this.page.waitForTimeout(2000)
+
         console.log('hashtagInteractionWork 기능은 아직 구현되지 않았습니다.')
       }
 
       // 어떤 작업도 지정되지 않은 경우 에러 처리
       if (
-        !work.myFeedInteraction &&
+        !work.myFeedInteractionWork &&
         !work.feedWork &&
         !work.hashtagWork &&
         !work.hashtagInteractionWork

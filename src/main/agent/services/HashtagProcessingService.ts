@@ -1,5 +1,5 @@
 import { Locator, Page } from 'playwright'
-import { smoothScrollToElement } from '../common/browserUtils'
+import { navigateToHome, smoothScrollToElement } from '../common/browserUtils'
 import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
 import { AgentConfig } from '../../..'
 
@@ -59,6 +59,9 @@ export class HashtagService {
 
   async processHashtag(tags: string[]): Promise<void> {
     for (const tag of tags) {
+      await navigateToHome(this.page)
+      await this.page.waitForTimeout(2000)
+
       // 해시태그 검색 및 페이지 이동
       await this.searchHashtag(tag)
 
