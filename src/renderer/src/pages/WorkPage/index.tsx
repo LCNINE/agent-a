@@ -155,30 +155,42 @@ export default function WorkPage() {
                   error={hasError('myFeedInteractionWorkCount')}
                 />
 
-                {/* <WorkSection
-            title="해시태그 검색 후 댓글 작성자 피드 방문"
-            icon={<Hash className="w-5 h-5 text-gray-700" />}
-            description="댓글 작성자의 피드에 자동으로 좋아요와 댓글을 남겨 인맥과 노출을 늘립니다."
-            enabled={workList.hashtagInteractionWork}
-            onToggle={() =>
-              handleSwitchChange('hashtagInteractionWork', workList.hashtagInteractionWork)
-            }
-            hashtags={workList.interactionHashtags}
-            onAddHashtag={(tag) => {
-              upsert({
-                ...workList,
-                interactionHashtags: [...(workList.interactionHashtags || []), tag]
-              })
-              clearError()
-            }}
-            onRemoveHashtag={(tag) =>
-              upsert({
-                ...workList,
-                interactionHashtags: workList.interactionHashtags.filter((t) => t !== tag)
-              })
-            }
-            error={errorType === 'hashtagInteraction'}
-          /> */}
+                <WorkSection
+                  title="해시태그 검색 후 댓글 작성자 피드 방문"
+                  type="hashtagInteractionWork"
+                  icon={<Hash className="h-5 w-5 text-gray-700" />}
+                  description="댓글 작성자의 피드에 자동으로 좋아요와 댓글을 남겨 인맥과 노출을 늘립니다."
+                  enabled={workList.hashtagInteractionWork.enabled}
+                  onToggle={() =>
+                    handleSwitchChange(
+                      'hashtagInteractionWork',
+                      workList.hashtagInteractionWork.enabled
+                    )
+                  }
+                  hashtags={workList.hashtagInteractionWork.hashtags}
+                  onAddHashtag={(tag) => {
+                    upsert({
+                      ...workList,
+                      hashtagInteractionWork: {
+                        ...workList.hashtagInteractionWork,
+                        hashtags: [...workList.hashtagInteractionWork.hashtags, tag]
+                      }
+                    })
+                    removeError('noHashtagInteractions')
+                  }}
+                  onRemoveHashtag={(tag) =>
+                    upsert({
+                      ...workList,
+                      hashtagInteractionWork: {
+                        ...workList.hashtagInteractionWork,
+                        hashtags: workList.hashtagInteractionWork.hashtags.filter(
+                          (hashtag) => hashtag !== tag
+                        )
+                      }
+                    })
+                  }
+                  error={hasError('noHashtagInteractions')}
+                />
               </div>
             </ScrollArea>
             <Footer />
