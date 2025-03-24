@@ -1,10 +1,9 @@
-import { Locator, Page } from 'playwright-core'
+import { Locator, Page } from 'playwright'
+import { navigateToHome, smoothScrollToElement } from '../common/browserUtils'
+import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
 import { AgentConfig } from '../../..'
-import { chooseRandomSleep, wait } from '../common/timeUtils'
-import { scrollDelays } from '../common/timeUtils'
-import { smoothScrollToElement } from '../common/browserUtils'
 
-type HashtagInteractionProcessor = (hashtag: Locator) => Promise<boolean>
+type HashtagProcessor = (hashtag: Locator) => Promise<boolean>
 
 interface ScrollOptions {
   maxPosts: number
@@ -28,36 +27,43 @@ const DEFAULT_OPTIONS: ScrollOptions = {
 
 export class HashtagInteractionService {
   private page: Page
-  private hashtagInteractionProcessor: HashtagInteractionProcessor
+  private hashtagProcessor: HashtagProcessor
+  private options: ScrollOptions
+  private workCount: number
+  private config: AgentConfig
   private shouldStop: boolean = false
   private processed: boolean = false
   private successCount: number = 0
-  private config: AgentConfig
-  private options: ScrollOptions
 
   constructor(
     page: Page,
-    hashtagInteractionProcessor: HashtagInteractionProcessor,
-    config: AgentConfig,
-    options: Partial<ScrollOptions>
+    hashtagProcessor: HashtagProcessor,
+    options: Partial<ScrollOptions>,
+    workCount: number,
+    config: AgentConfig
   ) {
     this.page = page
-    this.hashtagInteractionProcessor = hashtagInteractionProcessor
-    this.config = config
+    this.hashtagProcessor = hashtagProcessor
     this.options = {
       ...DEFAULT_OPTIONS,
       ...options
     }
+    this.workCount = workCount
+    this.config = config
 
-    if (config.workCount && config.workCount > 0) {
-      this.options.maxPosts = config.workCount
-      console.log(`HashtagInteractionService가 최대 ${config.workCount}개의 게시물을 처리합니다`)
+    if (workCount && workCount > 0) {
+      this.options.maxPosts = workCount
+      console.log(`HashtagInteractionService가 최대 ${workCount}개의 게시물을 처리합니다`)
     }
   }
 
-  async processHashtagInteraction(hashtags: string): Promise<void> {
-    for (const hashtag of hashtags) {
-      await this.searchHashtag(hashtag)
+  async processHashtag(tags: string[]): Promise<void> {
+    for (const tag of tags) {
+      await navigateToHome(this.page)
+      await this.page.waitForTimeout(2000)
+
+      // 해시태그 검색 및 페이지 이동
+      await this.searchHashtag(tag)
 
       this.shouldStop = false
       this.processed = false
@@ -75,7 +81,7 @@ export class HashtagInteractionService {
           // 최대 처리 수에 도달했는지 확인
           if (this.successCount >= this.options.maxPosts) {
             console.log(
-              `최대 작업물 수수(${this.options.maxPosts})에 도달했습니다. 작업을 종료합니다.`
+              `최대 게시물 수(${this.options.maxPosts})에 도달했습니다. 작업을 종료합니다.`
             )
             this.shouldStop = true
             break
@@ -96,7 +102,7 @@ export class HashtagInteractionService {
           await this.page.waitForTimeout(delay)
 
           try {
-            this.processed = await this.hashtagInteractionProcessor(postLoc)
+            this.processed = await this.hashtagProcessor(postLoc)
           } catch (error) {
             console.error(
               `Hashtag processing failed: ${error instanceof Error ? error.message : String(error)}`
@@ -110,7 +116,16 @@ export class HashtagInteractionService {
             await wait(this.config.postIntervalSeconds * 1000)
           }
         }
+
+        if (this.shouldStop) {
+          break
+        }
+
+        await this.page.waitForTimeout(1000)
       }
+
+      console.log('작업종료:', this.successCount, this.options.maxPosts)
+      console.log(`처리된 게시물: ${this.successCount}개`)
     }
   }
 
