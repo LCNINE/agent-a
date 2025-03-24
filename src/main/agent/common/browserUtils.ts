@@ -153,24 +153,24 @@ export async function smoothScrollToElement(
   await page.waitForTimeout(100)
 }
 
-export async function isLoggedIn(browser: BrowserContext, credentials: LoginCredentials) {
-  const page = await browser.newPage()
-  await page.goto('https://www.instagram.com/accounts/login/')
+// export async function isLoggedIn(browser: BrowserContext, credentials: LoginCredentials) {
+//   const page = await browser.newPage()
+//   await page.goto('https://www.instagram.com/accounts/login/')
 
-  try {
-    await page.waitForURL('https://www.instagram.com/', { timeout: 3000 })
-    return true
-  } catch {
-    try {
-      loginWithCredentials(page, credentials)
-      return true
-    } catch {
-      return false
-    }
-  } finally {
-    page.close()
-  }
-}
+//   try {
+//     await page.waitForURL('https://www.instagram.com/', { timeout: 3000 })
+//     return true
+//   } catch {
+//     try {
+//       loginWithCredentials(page, credentials)
+//       return true
+//     } catch {
+//       return false
+//     }
+//   } finally {
+//     page.close()
+//   }
+// }
 
 export async function loginWithCredentials(page: Page, credentials: LoginCredentials) {
   const { username, password } = credentials
@@ -208,5 +208,33 @@ export async function loginWithCredentials(page: Page, credentials: LoginCredent
     return true
   } catch (error) {
     throw new Error(`로그인 실패: ${(error as Error).message}`)
+  }
+}
+
+/**
+ * 홈 버튼을 찾아 클릭합니다.
+ * @param page Playwright Page 객체
+ */
+export async function navigateToHome(page: Page): Promise<void> {
+  try {
+    await page.reload({ waitUntil: 'domcontentloaded' })
+
+    console.log('홈 버튼 찾는중...')
+    await page.waitForSelector('a:has(span:text-matches("홈|home", "i"))', {
+      timeout: 5000
+    })
+
+    const homeMenu = page.locator('a', {
+      has: page.locator('span', {
+        hasText: /홈|home/i
+      }),
+      hasText: /홈|home/i
+    })
+
+    await homeMenu.click()
+    console.log('홈 버튼 클릭')
+  } catch (error) {
+    console.error('홈 버튼 찾기 실패:', error instanceof Error ? error.message : String(error))
+    throw new Error('홈 버튼을 찾을 수 없습니다.')
   }
 }

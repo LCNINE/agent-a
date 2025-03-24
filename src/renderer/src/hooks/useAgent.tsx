@@ -1,18 +1,15 @@
+import { CustomToast } from '@renderer/components/CustomToast'
+import { useErrorStore } from '@renderer/store/errorStore'
 import { useEffect, useState } from 'react'
+import { BotStatus, LoginCredentials } from 'src'
 import { useConfigStore } from '../store/configStore'
 import { useWorkStore } from '../store/workStore'
-import { toast } from 'sonner'
-import { BotStatus, LoginCredentials } from 'src'
-import useMyFeedWorkStore from '@renderer/store/myFeedWorkStore'
-import useWorkTypeStore from '@renderer/store/workTypeStore'
 
 export function useAgent() {
   const config = useConfigStore((state) => state.config)
   const workList = useWorkStore((state) => state.workList)
-  const workType = useWorkTypeStore((state) => state.workType)
-  const feedList = useMyFeedWorkStore((state) => state.feedList)
+  const { clearAllErrors } = useErrorStore()
 
-  const { feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled } = useMyFeedWorkStore()
   const [status, setStatus] = useState<BotStatus>({
     isRunning: false,
     currentWork: null,
@@ -30,17 +27,12 @@ export function useAgent() {
 
   const startAgent = async (credentials: LoginCredentials) => {
     if (!credentials.username || !credentials.password) {
-      toast.error('계정 정보가 올바르지 않습니다.')
-      return
-    }
-
-    if (workType && workType === 'hashtag_and_feed' && workList.length === 0) {
-      toast.error('작업이 없습니다.')
-      return
-    }
-
-    if (workType && workType === 'my_feed' && feedList.length === 0) {
-      toast.error('피드 목록이 없습니다.')
+      CustomToast({
+        status: 'error',
+        message: '계정 정보가 올바르지 않습니다.',
+        position: 'top-center',
+        duration: 2000
+      })
       return
     }
 
@@ -56,33 +48,23 @@ export function useAgent() {
 
       console.log('Starting agent with config:', {
         username: credentials.username,
-        hasPassword: !!credentials.password,
-        workListLength: workList.length,
-        workType: workType
+        hasPassword: !!credentials.password
       })
 
-      if (workType === 'hashtag_and_feed') {
-        await window.agent.start({
-          config: agentConfig,
-          workType: 'hashtag_and_feed',
-          workList
-        })
+      await window.agent.start({
+        config: agentConfig,
+        workList
+      })
 
-        return
-      }
-
-      if (workType === 'my_feed') {
-        await window.agent.start({
-          config: agentConfig,
-          workType: 'my_feed',
-          workList: [{ feedWorkModeType, likeCommentsEnabled, replyCommentsEnabled, feedList }]
-        })
-
-        return
-      }
+      clearAllErrors()
     } catch (error) {
       console.error('Agent start error:', error)
-      toast.error('에이전트를 시작하지 못했습니다.', {
+
+      CustomToast({
+        status: 'error',
+        message: '에이전트를 시작하지 못했습니다.',
+        position: 'top-center',
+        duration: 2000,
         description: (error as Error).message
       })
     }
@@ -93,7 +75,11 @@ export function useAgent() {
       await window.agent.stop()
     } catch (error) {
       console.error('Agent stop error:', error)
-      toast.error('에이전트를 종료하지 못했습니다.', {
+      CustomToast({
+        status: 'error',
+        message: '에이전트를 종료하지 못했습니다.',
+        position: 'top-center',
+        duration: 2000,
         description: (error as Error).message
       })
     }

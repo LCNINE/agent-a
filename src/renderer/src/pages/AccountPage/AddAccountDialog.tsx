@@ -21,18 +21,23 @@ interface AddAccountForm {
 
 export function AddAccountDialog({ trigger }: { trigger: React.ReactNode }) {
   const { t } = useTranslation()
-  const addAccount = useAccountStore((state) => state.addAccount)
+  const { addAccount, selectAccount, accountList } = useAccountStore()
   const form = useForm<AddAccountForm>()
   const [open, setOpen] = React.useState(false)
 
   async function onSubmit(values: AddAccountForm) {
-    console.log('add버튼 눌림')
     if (!values.username || !values.password) {
       toast.error(t('accountTable.requiredFields'))
       return
     }
     try {
       addAccount(values)
+
+      // 계정리스트가 0개면 하나 선택
+      if (accountList.length === 0) {
+        selectAccount(values)
+      }
+
       toast.success(t('accountTable.accountAdded'))
       form.reset()
       setOpen(false)

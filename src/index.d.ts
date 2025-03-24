@@ -20,7 +20,7 @@ export interface LoginCredentials {
 export type WorkerStatus =
   | {
       state: 'running'
-      currentWork: Work
+      currentWork: WorkType
       running: {
         for: string
         until: string | null
@@ -28,7 +28,7 @@ export type WorkerStatus =
     }
   | {
       state: 'done'
-      currentWork: Work
+      currentWork: WorkType
     }
   | {
       state: 'error'
@@ -38,37 +38,21 @@ export type WorkerStatus =
       state: 'idle'
     }
 
-export type WorkType = 'hashtag_and_feed' | 'my_feed'
-
-export type Work = (
-  | {
-      type: 'feed'
-    }
-  | {
-      type: 'hashtag'
-      tag: string
-    }
-) & {
-  id: string
+type WorkItem = {
+  count: number
+  enabled: boolean
 }
 
-export interface Feed {
-  id: number
-  url: string
-  name: string | null
-  active: boolean
-}
-
-export type FeedWork = {
-  feedWorkModeType: 'basic' | 'advanced'
-  likeCommentsEnabled: boolean
-  replyCommentsEnabled: boolean
-  feedList: Feed[]
+export type WorkType = {
+  feedWork: WorkItem
+  hashtagWork: WorkItem & { hashtags: string[] }
+  myFeedInteractionWork: WorkItem
+  hashtagInteractionWork: WorkItem & { hashtags: string[] }
 }
 
 export interface BotStatus {
   isRunning: boolean
-  currentWork: Work | null
+  currentWork: WorkType | null
   waiting: {
     for: string
     until: string
@@ -84,7 +68,6 @@ export type AgentConfig = {
         preset: 'custom'
         custom: string
       }
-  workCount: number
   commentLength: {
     min: number
     max: number
@@ -98,8 +81,7 @@ export type AgentConfig = {
 
 export interface StartAgentParams {
   config: AgentConfig
-  workType: WorkType
-  workList: Work[] | FeedWork[]
+  workList: WorkType
 }
 
 interface AgentContext {

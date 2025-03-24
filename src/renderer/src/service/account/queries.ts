@@ -1,10 +1,10 @@
 // src>service>account>queries.ts
 import { useQuery } from '@tanstack/react-query'
 import AccountService from './accountService'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 
 export function useAccountQuery(userId: string | undefined) {
-  const supabase = createClient()
+  const supabase = useCreateClient()
   return useQuery({
     queryKey: ['accounts', userId],
     queryFn: async () => {

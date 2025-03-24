@@ -1,0 +1,296 @@
+import { createHash } from 'crypto'
+import { Locator, Page } from 'playwright'
+import { AgentConfig, WorkType } from '../../..'
+import { wait } from '../common/timeUtils'
+import { smoothScrollToElement } from '../common/browserUtils'
+
+type NotificationProcessor = (
+  notification: Locator,
+  notificationInfo: {
+    author: string
+    content: string
+  }
+) => Promise<boolean>
+
+interface NotificationOptions {
+  maxNotifications: number
+  processingDelay: {
+    min: number
+    max: number
+  }
+}
+
+const DEFAULT_OPTIONS: NotificationOptions = {
+  maxNotifications: Infinity,
+  processingDelay: {
+    min: 500,
+    max: 1000
+  }
+}
+
+const COMMENTS_LIST_WRAPPER =
+  '.x9f619.x78zum5.xdt5ytf.x5yr21d.xexx8yu.x1pi30zi.x1l90r2v.x1swvt13.x10l6tqk.xh8yej3'
+const COMMENTS_LIST = '.x78zum5.xdt5ytf.x1iyjqo2'
+const COMMENT_CLASS_NAME =
+  '.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.xsag5q8.xz9dl7a.x1uhb9sk.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.x1q0g3np.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1'
+const COMMENT_CONTAINER =
+  '.x9f619.xjbqb8w.x78zum5.x168nmei.x13lgxp2.x5pf9jr.xo71vjh.x1uhb9sk.x1plvlek.xryxfnj.x1c4vz4f.x2lah0s.xdt5ytf.xqjyukv.x1qjc9v5.x1oa3qoh.x1nhvcw1'
+
+export class MyFeedInteractionService {
+  private page: Page
+  private notificationProcessor: NotificationProcessor
+  private options: NotificationOptions
+  private config: AgentConfig
+  private shouldStop: boolean = false
+  private processed: boolean = false
+  private currentWorkIndex: number
+  private work: WorkType
+  private notificationId: string | null = null
+  private successCount: number = 0
+
+  constructor(
+    page: Page,
+    notificationProcessor: NotificationProcessor,
+    options: Partial<NotificationOptions>,
+    config: AgentConfig,
+    currentWorkIndex: number,
+    work: WorkType
+  ) {
+    this.page = page
+    this.notificationProcessor = notificationProcessor
+    this.config = config
+    this.options = {
+      ...DEFAULT_OPTIONS,
+      ...options
+    }
+    this.currentWorkIndex = currentWorkIndex
+    this.work = work
+
+    if (!this.work) {
+      console.error('Work가 정의되지 않았습니다. 알림 작업을 진행할 수 없습니다.')
+    }
+
+    if (work.myFeedInteractionWork.count && work.myFeedInteractionWork.count > 0) {
+      this.options.maxNotifications = work.myFeedInteractionWork.count
+      console.log(
+        `NotificationInteractionService 최대 ${work.myFeedInteractionWork.count}개의 작업을 처리합니다`
+      )
+    }
+  }
+
+  async processNotificationsComment(): Promise<void> {
+    this.shouldStop = false
+    this.processed = false
+
+    while (true) {
+      if (this.successCount >= this.options.maxNotifications) {
+        console.log(
+          `최대 게시물 수(${this.options.maxNotifications})에 도달했습니다. 작업을 종료합니다.`
+        )
+        this.shouldStop = true
+        break
+      }
+
+      await this.openNotificationPanel()
+      await this.page.waitForTimeout(3000)
+
+      const notiContainer = await this.page
+        .locator(
+          '.xvbhtw8.xopu45v.xu3j5b3.xm81vs4.x168nmei.xoqspk4.x12v9rci.xo71vjh.xzmilaz.x9f619.x78zum5.xdt5ytf.x1dr59a3.x1odjw0f.xish69e.x1y1aw1k.x4uap5.xwib8y2.xkhd6sd.x1zvrr1 .x5yr21d.xh8yej3'
+        )
+        .first()
+
+      await notiContainer.evaluate(() => {
+        window.scrollTo(0, document.body.scrollHeight)
+      })
+      await this.page.waitForTimeout(1000)
+
+      const notiLocs = await notiContainer
+        .locator(
+          '.x6s0dn4.x1q4h3jn.x78zum5.x1y1aw1k.xxbr6pl.xwib8y2.xbbxn1n.x87ps6o.x1wq6e7o.x1di1pr7.x1h4gsww.xux34ky.x1ypdohk.x1l895ks'
+        )
+        .all()
+
+      console.log(`총 ${notiLocs.length}개의 알림을 찾았습니다.`)
+
+      // 알림이 없으면 작업 종료
+      if (notiLocs.length === 0) {
+        console.log('처리할 알림이 없습니다. 작업을 종료합니다.')
+        this.shouldStop = true
+        break
+      }
+
+      let foundCommentNotification = false
+
+      for (const notiLoc of notiLocs) {
+        // 최대 처리 수에 도달했는지 확인
+        if (this.successCount >= this.options.maxNotifications) {
+          console.log(
+            `최대 작업 수(${this.options.maxNotifications})에 도달했습니다. 작업을 종료합니다.`
+          )
+          this.shouldStop = true
+          break
+        }
+
+        const text = await notiLoc.textContent()
+
+        if (text?.includes('님이 댓글을 남겼습니다:') || text?.includes('commented:')) {
+          foundCommentNotification = true
+          const notificationElementHandle = await notiLoc.elementHandle()
+
+          if (!notificationElementHandle) {
+            console.log('[processNotifications] 알림 요소를 가져올 수 없습니다.')
+            await this.openNotificationPanel()
+            await this.page.waitForTimeout(3000)
+
+            continue
+          }
+
+          // 댓글 알림 정보 추출
+          const notificationInfo = await this.extractNotificationInfo(notiLoc, text)
+          await this.page.waitForTimeout(3000)
+
+          await notificationElementHandle.click()
+          console.log('해당 댓글로 이동')
+
+          await this.page.waitForTimeout(3000)
+
+          // 댓글 찾기 (작성자 이름으로 검색)
+          const commentLoc = await this.findCommentByAuthor(
+            notificationInfo.author,
+            notificationInfo.content
+          )
+
+          if (!commentLoc) {
+            console.log('해당 댓글을 찾을 수 없습니다. 다음 알림으로 넘어갑니다.')
+            await this.openNotificationPanel()
+            await this.page.waitForTimeout(3000)
+
+            continue
+          }
+
+          try {
+            this.processed = await this.notificationProcessor(commentLoc, notificationInfo)
+            console.log(`댓글 처리 결과: ${this.processed ? '성공' : '실패'}`)
+          } catch (error) {
+            console.error(
+              `해당 댓글 좋아요 및 대댓글 작성 실패: ${error instanceof Error ? error.message : String(error)}`
+            )
+            continue
+          } finally {
+            if (this.processed) {
+              this.successCount++
+              console.log(`성공 카운트 증가: ${this.successCount}/${this.options.maxNotifications}`)
+            } else {
+              console.log(
+                `작업은 완료되었으나 성공으로 처리되지 않음 (processed: ${this.processed})`
+              )
+            }
+            await this.openNotificationPanel()
+            await this.page.waitForTimeout(3000)
+
+            await wait(this.config.postIntervalSeconds * 1000)
+          }
+        }
+      }
+
+      // 댓글 알림을 하나도 찾지 못한 경우
+      if (!foundCommentNotification) {
+        console.log('댓글 알림이 없습니다. 작업을 종료합니다.')
+        this.shouldStop = true
+      }
+
+      if (this.shouldStop) {
+        console.log('댓글 알림 작업 종료:', this.successCount, this.options.maxNotifications)
+        break
+      }
+    }
+
+    console.log('알림 작업 종료:', this.successCount, this.options.maxNotifications)
+    console.log(`처리된 알림: ${this.successCount}개`)
+  }
+
+  private async openNotificationPanel(): Promise<void> {
+    try {
+      await this.page
+        .locator(
+          'div.x9f619.x3nfvp2.xr9ek0c.xjpr12u.xo237n4.x6pnmvc.x7nr27j.x12dmmrz.xz9dl7a.xn6708d.xsag5q8.x1ye3gou.x80pfx3.x159b3zp.x1dn74xm.xif99yt.x172qv1o.x10djquj.x1lhsz42.xzauu7c.xdoji71.x1dejxi8.x9k3k5o.xs3sg5q.x11hdxyr.x12ldp4w.x1wj20lx.x1lq5wgf.xgqcy7u.x30kzoy.x9jhf4c'
+        )
+        .filter({ hasText: /Notifications|알림/ })
+        .first()
+        .click()
+    } catch (error) {
+      console.error('알림 패널 열기 실패:', error)
+      throw error
+    }
+  }
+
+  private async extractNotificationInfo(
+    notification: Locator,
+    text: string
+  ): Promise<{
+    author: string
+    content: string
+  }> {
+    // 작성자 추출
+    const authorMatch = text.match(/([^\s]+)님이 댓글을 남겼습니다:/)
+    const author = authorMatch ? authorMatch[1] : ''
+
+    // 댓글 내용 추출
+    const contentMatch = text.match(/남겼습니다:(.*)/)
+    const content = contentMatch ? contentMatch[1].trim() : ''
+
+    return {
+      author,
+      content
+    }
+  }
+
+  private async findCommentByAuthor(author: string, content: string): Promise<Locator | null> {
+    try {
+      console.log(`${author}님의 댓글 찾는 중...`)
+
+      const commentContainers = await this.page
+        .locator(
+          `${COMMENTS_LIST_WRAPPER} > ${COMMENTS_LIST} ${COMMENT_CLASS_NAME}:not(${COMMENT_CONTAINER} ul ${COMMENT_CLASS_NAME})`
+        )
+        .all()
+        .catch((err) => {
+          throw new Error(`댓글 컨테이너 가져오기 실패: ${err}`)
+        })
+
+      for (const commentLoc of commentContainers) {
+        // 각 댓글의 작성자 확인
+        const commentAuthor = await commentLoc
+          .locator('span._ap3a._aaco._aacw._aacx._aad7._aade')
+          .first()
+          .textContent()
+          .catch((err) => {
+            throw new Error(`댓글 작성자 가져오기 실패: ${err}`)
+          })
+
+        const commentContents = await commentLoc
+          .locator(
+            'span.x1lliihq.x1plvlek.xryxfnj.x1n2onr6.x1ji0vk5.x18bv5gf.x193iq5w.xeuugli.x1fj9vlw.x13faqbe.x1vvkbs.x1s928wv.xhkezso.x1gmr53x.x1cpjm7i.x1fgarty.x1943h6x.x1i0vuye.xvs91rp.xo1l8bm.x5n08af.x10wh9bi.x1wdrske.x8viiok.x18hxmgj'
+          )
+          .nth(1)
+          .textContent()
+          .catch((err) => {
+            throw new Error(`댓글 내용 가져오기 실패: ${err}`)
+          })
+
+        if (commentAuthor?.includes(author)) {
+          console.log(`${author}님의 댓글 찾음`)
+
+          return commentLoc
+        }
+      }
+
+      console.log(`${author}님의 댓글을 찾을 수 없습니다.`)
+      return null
+    } catch (error) {
+      console.error('댓글 찾기 오류:', error)
+      return null
+    }
+  }
+}

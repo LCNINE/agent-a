@@ -1,12 +1,12 @@
 // src/renderer/src/pages/HomePage/HomePage.tsx
-import React from 'react'
-import { useTranslation } from 'react-i18next'
 import Footer from '@/components/template/Footer'
-import { AgentController } from './AgentController'
-import { useAuthContext } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
+import { useAuthContext } from '@/hooks/useAuth'
 import { useFreeTrialQuery, useStartFreeTrialMutation } from '@/service/free-trial/queries'
 import { useCurrentSubscriptionQuery } from '@/service/subscription/queries'
+import React from 'react'
+import { useTranslation } from 'react-i18next'
+import { AgentController } from './AgentController'
 
 export default function HomePage() {
   const { t } = useTranslation()

@@ -1,9 +1,8 @@
 import { Locator, Page } from 'playwright'
-import { AgentConfig } from '../../..'
 import { smoothScrollToElement } from '../common/browserUtils'
-import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
+import { chooseRandomSleep, scrollDelays } from '../common/timeUtils'
 
-type ArticleProcessor = (article: Locator, articleId: string) => Promise<boolean>
+type ArticleProcessor = (article: Locator) => Promise<boolean>
 
 interface ScrollOptions {
   maxArticles: number
@@ -29,17 +28,16 @@ export class ArticleProcessingService {
   private page: Page
   private articleProcessor: ArticleProcessor
   private options: ScrollOptions
-  private config: AgentConfig
-  private processedArticles: Set<string> = new Set()
+  private workCount: number
   private shouldStop: boolean = false
   private processed: boolean = false
-  private idCounter: number = 0
+  private successCount: number = 0
 
   constructor(
     page: Page,
     articleProcessor: ArticleProcessor,
     options: Partial<ScrollOptions>,
-    config: AgentConfig
+    workCount: number
   ) {
     this.page = page
     this.articleProcessor = articleProcessor
@@ -47,100 +45,77 @@ export class ArticleProcessingService {
       ...DEFAULT_OPTIONS,
       ...options
     }
-    this.config = config
+    this.workCount = workCount
 
-    if (config.workCount && config.workCount > 0) {
-      this.options.maxArticles = config.workCount
-      console.log(`ArticleProcessingService가 최대 ${config.workCount}개의 게시물을 처리합니다`)
+    if (this.workCount > 0) {
+      this.options.maxArticles = this.workCount
+      console.log(`ArticleProcessingService가 최대 ${this.workCount}개의 게시물을 처리합니다`)
     }
   }
 
   async processArticles(): Promise<void> {
     this.shouldStop = false
     this.processed = false
-    this.processedArticles.clear()
-    this.idCounter = 0
+    this.successCount = 0
 
-    while (true) {
-      const articleLocators = await this.page.locator('article').all()
+    // 시작할 때 이전에 숨겨진 요소들 초기화
+    await this.page.evaluate(() => {
+      document.querySelectorAll('article[style*="display: none"]').forEach((el) => {
+        ;(el as HTMLElement).style.display = ''
+      })
+    })
 
-      if (articleLocators.length === 0) {
+    while (!this.shouldStop && this.successCount < this.options.maxArticles) {
+      const articleLoc = await this.page.locator('article:not([style*="display: none"])').first()
+
+      // 요소가 존재하는지 확인
+      const isVisible = await articleLoc.isVisible().catch(() => false)
+      if (!isVisible) {
         console.log('더 이상 처리할 게시물이 없습니다.')
         break
       }
 
-      for (const articleLoc of articleLocators) {
-        // 최대 처리 수에 도달했는지 확인
-        if (this.processedArticles.size >= this.options.maxArticles) {
-          console.log(
-            `최대 게시물 수(${this.options.maxArticles})에 도달했습니다. 작업을 종료합니다.`
-          )
-          this.shouldStop = true
-          break
-        }
+      const articleElementHandle = await articleLoc.elementHandle()
+      if (articleElementHandle == null) {
+        console.log('[processArticles] articleElementHandle is null')
 
-        const articleElementHandle = await articleLoc.elementHandle()
-        if (articleElementHandle == null) {
-          console.log('[processArticles] articleElementHandle is null')
-          continue
-        }
-
-        const articleId = await this.ensureArticleId(articleLoc, 'data-article-id', this.idCounter)
-        if (this.processedArticles.has(articleId)) continue
-
-        await smoothScrollToElement(this.page, articleElementHandle)
-        await chooseRandomSleep(scrollDelays)
-
-        const delay =
-          Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
-          this.options.processingDelay.min
-        await this.page.waitForTimeout(delay)
-
-        try {
-          this.processed = await this.articleProcessor(articleLoc, articleId)
-        } catch (error) {
-          console.error(
-            `Article processing failed: ${error instanceof Error ? error.message : String(error)}`
-          )
-          continue
-        } finally {
-          // 실제로 처리에 성공한 경우에만 카운트에 추가
-          if (this.processed) {
-            this.processedArticles.add(articleId)
-          }
-          // 처리 시도 후 카운터 증가 (성공 여부와 관계없이)
-          this.idCounter++
-        }
+        await this.page.waitForTimeout(1000)
+        continue
       }
 
-      if (this.shouldStop) {
-        break
+      await smoothScrollToElement(this.page, articleElementHandle)
+      await chooseRandomSleep(scrollDelays)
+
+      const delay =
+        Math.random() * (this.options.processingDelay.max - this.options.processingDelay.min) +
+        this.options.processingDelay.min
+      await this.page.waitForTimeout(delay)
+
+      try {
+        this.processed = await this.articleProcessor(articleLoc)
+      } catch (error) {
+        console.error(
+          `Article processing failed: ${error instanceof Error ? error.message : String(error)}`
+        )
+      } finally {
+        if (this.processed) {
+          this.successCount++
+        }
       }
 
       await this.page.waitForTimeout(1000)
+
+      // 요소를 화면에서 숨기기
+      await this.page.evaluate((articleEl) => {
+        if (articleEl) {
+          articleEl.style.display = 'none'
+        }
+      }, articleElementHandle)
+
+      await this.page.waitForTimeout(500)
     }
 
-    console.log('작업종료:', this.processedArticles.size, this.options.maxArticles)
-    console.log(`처리된 게시물: ${this.processedArticles.size}개`)
-  }
-
-  private async ensureArticleId(
-    articleLoc: Locator,
-    idAttribute: string,
-    currentCount: number
-  ): Promise<string> {
-    const existingId = await articleLoc.getAttribute(idAttribute)
-    if (existingId) return existingId
-
-    const newId = `article-${currentCount}`
-
-    await articleLoc.evaluate(
-      async (element, { idAttribute, newId }) => {
-        element.setAttribute(idAttribute, newId)
-      },
-      { idAttribute, newId }
-    )
-    console.log(`${newId}번 할당함`)
-    return newId
+    console.log('작업종료:', this.successCount, this.options.maxArticles)
+    console.log(`처리된 게시물: ${this.successCount}개`)
   }
 }

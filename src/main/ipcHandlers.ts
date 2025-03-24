@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
-import { StartAgentParams, Work } from '..'
+import { StartAgentParams, WorkType } from '..'
 import { AgentManager } from './agent/managers/AgentManager'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
@@ -70,7 +70,7 @@ export function addAgentEventListeners() {
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
     log.info('Start agent button clicked with params:', params)
     try {
-      currentManager = new AgentManager(params.workType, params.workList, params.config)
+      currentManager = new AgentManager(params.workList, params.config)
       await currentManager.start(params.config, params.workList)
 
       log.info('Agent started successfully')

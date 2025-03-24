@@ -25,7 +25,7 @@ const DEFAULT_OPTIONS: ScrollOptions = {
   }
 }
 
-export class HashtagService {
+export class HashtagInteractionService {
   private page: Page
   private hashtagProcessor: HashtagProcessor
   private options: ScrollOptions
@@ -53,7 +53,7 @@ export class HashtagService {
 
     if (workCount && workCount > 0) {
       this.options.maxPosts = workCount
-      console.log(`HashtagService가 최대 ${workCount}개의 게시물을 처리합니다`)
+      console.log(`HashtagInteractionService가 최대 ${workCount}개의 게시물을 처리합니다`)
     }
   }
 

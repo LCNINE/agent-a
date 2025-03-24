@@ -89,8 +89,7 @@ i18n.use(initReactI18next).init({
               min: "Sets the user's minimum length",
               max: "Sets the user's maximum length"
             },
-            commentCount:
-              'The maximum number to automatically work with. Example: If set to 10, comments and likes will only work for up to 10 items.',
+            workCount: 'Works up to this number only. Higher number means more tasks.',
             prompt: {
               formalDesc:
                 'Creates comments using a respectful and formal tone. Employs polite expressions and honorific speech to convey a professional impression.',
@@ -123,14 +122,14 @@ i18n.use(initReactI18next).init({
             postIntervalSeconds: 'Post Interval (Seconds)',
             workIntervalSeconds: 'Work Interval (Seconds)',
             loopIntervalSeconds: 'Loop Interval (Seconds)',
-            excludeUsernames: 'Exclude Usernames'
+            excludeUsernames: 'Blocked Accounts'
           },
           description: {
             postIntervalSeconds: 'Time interval between posting comments on each post',
             workIntervalSeconds: 'Time interval between each task in the task list',
             loopIntervalSeconds:
               'Time interval after all tasks in the task list are completed before restarting from the first task',
-            excludeUsernames: 'Enter the usernames you want to exclude'
+            excludeUsernames: 'Enter the accounts you want to block'
           },
           field: {
             prompt: {
@@ -169,6 +168,7 @@ i18n.use(initReactI18next).init({
           accountAdded: 'Account has been added',
           accountUpdated: 'Account has been updated',
           accountDeleted: 'Account has been deleted',
+          accountSelected: 'Account has been selected',
           requiredFields: 'Please fill in all fields',
           usernameExists: 'Username already exists',
           addError: 'An error occurred while adding the account'
@@ -265,8 +265,7 @@ i18n.use(initReactI18next).init({
               min: '작성할 댓글의 최소 길이를 설정합니다',
               max: '작성할 댓글의 최대 길이를 설정합니다'
             },
-            commentCount:
-              '자동으로 작업할 최대 개수입니다. 예시: 10개로 설정하면 최대 10개까지만 댓글과 좋아요 동작을 합니다.',
+            workCount: '이 숫자만큼만 작업해요. 많은 숫자를 입력하면 더 많이 작업합니다.',
             prompt: {
               formalDesc:
                 '존중하고 격식 있는 어조로 댓글을 작성합니다. 정중한 표현과 높임말을 사용하여 전문적인 인상을 전달합니다.',
@@ -301,13 +300,13 @@ i18n.use(initReactI18next).init({
             postIntervalSeconds: '댓글 시간 간격 (초)',
             workIntervalSeconds: '작업 간 간격 (초)',
             loopIntervalSeconds: '전체 작업 간 간격 (초)',
-            excludeUsernames: '제외할 유저 이름'
+            excludeUsernames: '차단할 계정'
           },
           description: {
             postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격',
             workIntervalSeconds: '작업 목록의 각 작업 간 시간 간격',
             loopIntervalSeconds: '작업 목록의 작업이 모두 끝나고 다시 첫 작업을 시작하는 시간 간격',
-            excludeUsernames: '제외할 유저 이름을 입력해주세요'
+            excludeUsernames: '차단할 계정을 입력해주세요'
           },
           field: {
             prompt: {
@@ -346,6 +345,7 @@ i18n.use(initReactI18next).init({
           accountAdded: '계정이 추가되었습니다',
           accountUpdated: '계정이 수정되었습니다',
           accountDeleted: '계정이 삭제되었습니다',
+          accountSelected: '계정이 선택되었습니다',
           requiredFields: '모든 필드를 입력해주세요',
           usernameExists: '이미 존재하는 사용자 이름입니다',
           addError: '계정 추가 중 오류가 발생했습니다'

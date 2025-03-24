@@ -9,7 +9,7 @@ import LangToggle from '@/components/LangToggle'
 import { useForm } from 'react-hook-form'
 import { loginSchema, LoginSchema } from './schema'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { createClient } from '@/supabase/client'
+import useCreateClient from '@/supabase/client'
 import {
   Form,
   FormControl,
@@ -25,6 +25,7 @@ import { toast } from 'sonner'
 
 export default function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const { t } = useTranslation()
+  const supabase = useCreateClient()
 
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -35,7 +36,6 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
   })
 
   async function onSubmit(values: LoginSchema) {
-    const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password
@@ -100,7 +100,7 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
                 </Button>
               </div>
               <div className="mt-4 text-center text-sm">
-                {t('loginForm.noAccount')}{' '}
+                {t('loginForm.noAccount')}
                 <a
                   href="https://www.agent-a.me/auth"
                   target="_blank"
