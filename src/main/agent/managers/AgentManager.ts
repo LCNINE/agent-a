@@ -247,7 +247,8 @@ export class AgentManager {
             return isProcessed
           },
           {},
-          this.works.feedWork.count
+          this.works.feedWork.count,
+          this.config
         )
 
         await articleService.processArticles()
