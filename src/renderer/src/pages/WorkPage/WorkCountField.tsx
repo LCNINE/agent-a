@@ -12,7 +12,7 @@ import { HelpCircle } from 'lucide-react'
 import { useFormContext } from 'react-hook-form'
 import { WorkSchema } from './schema'
 
-export function WorkCountField({ type }: { type: keyof WorkSchema }) {
+export function WorkCountField({ type, label }: { type: keyof WorkSchema; label: string }) {
   const { t } = useTranslation()
   const { workList, upsert } = useWorkStore()
   const { hasError, errorTypes, removeError, addError, clearAllErrors } = useErrorStore()
@@ -43,7 +43,7 @@ export function WorkCountField({ type }: { type: keyof WorkSchema }) {
       render={({ field }) => (
         <FormItem>
           <div className="flex items-center mb-2">
-            <FormLabel className={`m-0 text-xs`}>{t('configForm.label.workCount')}</FormLabel>
+            <FormLabel className={`m-0 text-xs`}>{label}</FormLabel>
 
             <Tooltip>
               <TooltipTrigger asChild>

@@ -8,10 +8,14 @@ import { useRef, useState } from 'react'
 import { WorkCountField } from './WorkCountField'
 import { WorkType } from 'src'
 import { useErrorStore } from '@renderer/store/errorStore'
+import WorkGuide from './WorkGuide'
+import AdvancedSettings from './AdvancedSettings'
+import { useTranslation } from 'react-i18next'
 
 interface WorkSectionProps {
   title: string
   type: string
+  guide?: boolean
   icon: React.ReactNode
   description: string
   enabled: boolean
@@ -22,9 +26,13 @@ interface WorkSectionProps {
   error?: boolean
 }
 
+// TODO: 컴포넌트가 너무 복잡해지는것같음 children으로 하위컴포넌트들을 받고 부모는 그냥 스타일정의만 해주는식으로 하는게 나아보임
+//       혹은 shadcnui의 Card를 써서 걍 필드별로 한다던가...?
+// 추후 기능 구현끝나고 리펙토링 고민해볼것 by 2025-03-25 정중식.
 export default function WorkSection({
   title,
   type,
+  guide = false,
   icon,
   description,
   enabled,
@@ -34,6 +42,7 @@ export default function WorkSection({
   onRemoveHashtag,
   error
 }: WorkSectionProps) {
+  const { t } = useTranslation()
   const [newHashtag, setNewHashtag] = useState('')
   const [isHashtagListOpen, setIsHashtagListOpen] = useState(false)
   const hashtagInputRef = useRef<HTMLInputElement>(null)
@@ -48,50 +57,49 @@ export default function WorkSection({
     hashtagInputRef.current?.focus()
   }
 
-  console.log('onRemoveHashtag:', onRemoveHashtag)
-
   return (
     <div
       className={`${error && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
     >
       {error && (
         <div className="absolute -right-2 -top-2 animate-pulse">
-          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+          <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
         </div>
       )}
 
-      <div className="flex justify-between">
-        <div className="flex flex-col space-y-1">
-          <div className="flex items-center gap-1">
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             {icon}
             <Label className="font-medium">{title}</Label>
           </div>
 
-          <p className="text-sm text-gray-600">{description}</p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-500">
-                {enabled ? '활성화됨' : '비활성화됨'}
-              </span>
-              <Switch
-                checked={enabled}
-                onCheckedChange={onToggle}
-                className="data-[state=checked]:bg-blue-600"
-              />
-            </div>
-
-            {/* 작업 개수 설정 필드 */}
-            {enabled && <WorkCountField type={type as keyof WorkType} />}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-500">
+              {enabled ? '활성화됨' : '비활성화됨'}
+            </span>
+            <Switch
+              checked={enabled}
+              onCheckedChange={onToggle}
+              className="data-[state=checked]:bg-blue-600"
+            />
           </div>
         </div>
+
+        <p className="text-sm text-gray-600">{description}</p>
+
+        {/* 작업 가이드 */}
+        {guide && enabled && <WorkGuide />}
+
+        {/* 작업 개수 설정 필드 */}
+        {type !== 'hashtagInteractionWork' && enabled && (
+          <WorkCountField type={type as keyof WorkType} label={t('configForm.label.workCount')} />
+        )}
       </div>
 
       {hashtags && enabled && onAddHashtag && (
         <div>
-          <div className="mb-2 flex items-center space-x-2">
+          <div className="flex items-center mb-2 space-x-2">
             <Input
               type="text"
               placeholder="해시태그 입력 (# 제외)"
@@ -113,14 +121,14 @@ export default function WorkSection({
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-between"
+              className="justify-between w-full"
               onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
             >
               해시태그 목록 ({hashtags.length || 0})
               {isHashtagListOpen ? (
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="w-4 h-4" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="w-4 h-4" />
               )}
             </Button>
 
@@ -132,7 +140,7 @@ export default function WorkSection({
                       {hashtags.map((tag, index) => (
                         <div
                           key={index}
-                          className="relative flex items-center rounded-full border bg-white px-3 py-1 shadow-sm"
+                          className="relative flex items-center px-3 py-1 bg-white border rounded-full shadow-sm"
                         >
                           <span className="mr-2 text-sm dark:text-input">#{tag}</span>
 
@@ -142,7 +150,7 @@ export default function WorkSection({
                               className="text-gray-500 hover:text-gray-700"
                               aria-label={`${tag} 태그 삭제`}
                             >
-                              <X className="h-3 w-3" />
+                              <X className="w-3 h-3" />
                             </button>
                           )}
                         </div>
@@ -154,6 +162,8 @@ export default function WorkSection({
                 </div>
               </ScrollArea>
             )}
+
+            <AdvancedSettings />
           </div>
         </div>
       )}

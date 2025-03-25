@@ -23,7 +23,7 @@ const defaultWorkList: WorkType = {
     enabled: false
   },
   hashtagInteractionWork: {
-    count: 1,
+    
     enabled: false,
     hashtags: []
   }
