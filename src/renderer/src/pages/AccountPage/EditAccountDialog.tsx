@@ -4,7 +4,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
+  DialogDescription
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,6 +55,7 @@ export function EditAccountDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('accountTable.edit')}</DialogTitle>
+          <DialogDescription>{t('accountTable.editDescription')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

@@ -34,8 +34,11 @@ export function AccountTable({ accounts }: AccountTableProps) {
   const { t } = useTranslation()
   const { deleteAccount, selectAccount, selectedAccount } = useAccountStore()
 
-  const handleAccountSelect = (username: string) => {
+  const handleAccountSelect = (e: React.MouseEvent<HTMLTableRowElement>, username: string) => {
+    e.stopPropagation()
+
     const account = accounts.find((acc) => acc.username === username)
+
     if (account && account.password) {
       selectAccount(account)
       toast.success(`${account.username} ${t('accountTable.accountSelected')}`)
@@ -66,7 +69,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
                 'group cursor-pointer transition-colors hover:bg-muted/50',
                 selectedAccount?.username === account.username && 'bg-muted/30'
               )}
-              onClick={() => handleAccountSelect(account.username)}
+              onClick={(e) => handleAccountSelect(e, account.username)}
             >
               <TableCell className="px-2">
                 <div className="flex items-center justify-center">
@@ -90,11 +93,20 @@ export function AccountTable({ accounts }: AccountTableProps) {
                 </div>
               </TableCell>
               <TableCell>
-                <div className="flex items-center justify-end gap-2">
+                <div
+                  className="flex items-center justify-end gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <EditAccountDialog
                     account={account}
                     trigger={
-                      <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                        }}
+                      >
                         <Edit2 className="h-4 w-4" />
                         <span className="ml-2 hidden sm:inline">{t('accountTable.edit')}</span>
                       </Button>
@@ -119,9 +131,14 @@ export function AccountTable({ accounts }: AccountTableProps) {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>{t('accountTable.cancel')}</AlertDialogCancel>
+                        <AlertDialogCancel onClick={(e) => e.stopPropagation()}>
+                          {t('accountTable.cancel')}
+                        </AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={() => handleDeleteAccount(account.username)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteAccount(account.username)
+                          }}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           {t('accountTable.delete')}

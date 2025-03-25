@@ -48,8 +48,6 @@ export default function WorkSection({
     hashtagInputRef.current?.focus()
   }
 
-  console.log('onRemoveHashtag:', onRemoveHashtag)
-
   return (
     <div
       className={`${error && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}

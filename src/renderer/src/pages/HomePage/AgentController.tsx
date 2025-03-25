@@ -101,23 +101,23 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
       return
     }
 
-    if (
-      workList.hashtagInteractionWork.enabled &&
-      workList.hashtagInteractionWork.hashtags.length === 0
-    ) {
-      addError('noHashtagInteractions')
-      CustomToast({
-        status: 'error',
-        message: '관심 해시태그가 설정되지 않았습니다',
-        position: 'top-center',
-        duration: 2000,
-        action: {
-          label: '설정하기',
-          onClick: () => router.navigate({ to: '/work' })
-        }
-      })
-      return
-    }
+    // if (
+    //   workList.hashtagInteractionWork.enabled &&
+    //   workList.hashtagInteractionWork.hashtags.length === 0
+    // ) {
+    //   addError('noHashtagInteractions')
+    //   CustomToast({
+    //     status: 'error',
+    //     message: '관심 해시태그가 설정되지 않았습니다',
+    //     position: 'top-center',
+    //     duration: 2000,
+    //     action: {
+    //       label: '설정하기',
+    //       onClick: () => router.navigate({ to: '/work' })
+    //     }
+    //   })
+    //   return
+    // }
 
     if (
       !workList.feedWork.enabled &&
