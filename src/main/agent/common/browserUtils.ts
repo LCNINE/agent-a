@@ -204,7 +204,8 @@ export async function loginWithCredentials(page: Page, credentials: LoginCredent
       .first()
       .click()
 
-    await page.waitForTimeout(3000)
+    await page.waitForURL('https://instagram.com', { timeout: 300000 })
+
     return true
   } catch (error) {
     throw new Error(`로그인 실패: ${(error as Error).message}`)
