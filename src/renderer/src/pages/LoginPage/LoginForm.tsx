@@ -102,7 +102,7 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
               <div className="mt-4 text-center text-sm">
                 {t('loginForm.noAccount')}
                 <a
-                  href="https://www.agent-a.me/auth"
+                  href="https://www.agent-a.me/auth/login"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline underline-offset-4"
