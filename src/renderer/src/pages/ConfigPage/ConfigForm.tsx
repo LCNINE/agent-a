@@ -44,7 +44,7 @@ export function ConfigForm() {
     form.reset(config)
   }, [])
 
-  // TODO:알아봐야함
+  // TODO:왜 안되는지 알아봐야함
   // useBlocker({
   //   shouldBlockFn: ({ current, next }) => {
   //     console.log(current, next)
@@ -67,9 +67,9 @@ export function ConfigForm() {
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="container max-w-3xl p-4 mx-auto">
+      <div className="container mx-auto max-w-3xl p-4">
         <Card className="flex h-[calc(100vh-150px)] flex-col shadow-lg">
-          <CardHeader className="flex-shrink-0 p-2 bg-muted/50">
+          <CardHeader className="flex-shrink-0 bg-muted/50 p-2">
             <div className="flex items-center justify-between px-5">
               <CardTitle className="text-xl font-bold">{t('configPage.title')}</CardTitle>
 
@@ -77,9 +77,9 @@ export function ConfigForm() {
               <Button
                 type="submit"
                 form="config-form"
-                className="flex items-center justify-center gap-1 px-4 py-2 text-sm font-medium text-white transition-all duration-200 transform bg-green-600 shadow-md hover:bg-green-500"
+                className="flex transform items-center justify-center gap-1 bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all duration-200 hover:bg-green-500"
               >
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
                 {t('configForm.submit')}
               </Button>
             </div>
@@ -94,8 +94,8 @@ export function ConfigForm() {
                     control={form.control}
                     name="prompt.preset"
                     render={({ field }) => (
-                      <FormItem className="p-4 border rounded-lg bg-card">
-                        <div className="flex items-center mb-4">
+                      <FormItem className="rounded-lg border bg-card p-4">
+                        <div className="mb-4 flex items-center">
                           <FormLabel className="m-0 text-base font-medium">
                             {t('configForm.label.prompt')}
                           </FormLabel>
@@ -198,14 +198,14 @@ export function ConfigForm() {
                       control={form.control}
                       name="commentLength.min"
                       render={({ field }) => (
-                        <FormItem className="p-4 border rounded-lg bg-card">
-                          <div className="flex items-center mb-2">
+                        <FormItem className="rounded-lg border bg-card p-4">
+                          <div className="mb-2 flex items-center">
                             <FormLabel className="m-0 text-base">
                               {t('configForm.label.commentLength.min')}
                             </FormLabel>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{t('configForm.tooltip.commentLength.min')}</p>
@@ -229,14 +229,14 @@ export function ConfigForm() {
                       control={form.control}
                       name="commentLength.max"
                       render={({ field }) => (
-                        <FormItem className="p-4 border rounded-lg bg-card">
-                          <div className="flex items-center mb-2">
+                        <FormItem className="rounded-lg border bg-card p-4">
+                          <div className="mb-2 flex items-center">
                             <FormLabel className="m-0 text-base">
                               {t('configForm.label.commentLength.max')}
                             </FormLabel>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>{t('configForm.tooltip.commentLength.max')}</p>
@@ -257,7 +257,7 @@ export function ConfigForm() {
                   </div>
 
                   {/* 시간 간격 설정 */}
-                  <div className="p-4 border rounded-lg bg-card">
+                  <div className="rounded-lg border bg-card p-4">
                     <div className="space-y-4">
                       {/* 댓글 시간 간격 */}
                       <FormField
@@ -265,13 +265,13 @@ export function ConfigForm() {
                         name="postIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.postIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{t('configForm.description.postIntervalSeconds')}</p>
@@ -292,13 +292,13 @@ export function ConfigForm() {
                         name="workIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.workIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{t('configForm.description.workIntervalSeconds')}</p>
@@ -319,13 +319,13 @@ export function ConfigForm() {
                         name="loopIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.loopIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{t('configForm.description.loopIntervalSeconds')}</p>
@@ -367,13 +367,13 @@ export function ConfigForm() {
                         name="excludeUsernames"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.excludeUsernames')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent className="py-4">
                                   <p className="text-lg">
@@ -383,7 +383,7 @@ export function ConfigForm() {
                                   <img
                                     src={blockGuideImage}
                                     alt="block"
-                                    className="object-contain aspect-video w-96"
+                                    className="aspect-video w-96 object-contain"
                                   />
                                 </TooltipContent>
                               </Tooltip>
@@ -394,7 +394,7 @@ export function ConfigForm() {
                                   {field.value?.map((username, index) => (
                                     <div
                                       key={index}
-                                      className="flex items-center px-2 py-1 rounded-md bg-secondary"
+                                      className="flex items-center rounded-md bg-secondary px-2 py-1"
                                     >
                                       <span className="text-sm">{username}</span>
                                       <button
