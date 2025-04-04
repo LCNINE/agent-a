@@ -5,7 +5,14 @@ export const configSchema = z.object({
     z.object({
       preset: z.enum(['formal', 'casual', 'hyper'])
     }),
-    z.object({ preset: z.literal('custom'), custom: z.string().min(1) })
+    z.object({
+      preset: z.literal('custom'),
+      custom: z
+        .string({
+          required_error: '대화 스타일을 입력해주세요'
+        })
+        .min(1, { message: '대화 스타일을 입력해주세요' })
+    })
   ]),
   commentLength: z
     .object({

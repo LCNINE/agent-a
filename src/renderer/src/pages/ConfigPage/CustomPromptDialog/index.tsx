@@ -19,12 +19,10 @@ import { useConfigStore } from '@/store/configStore'
 
 export default function CustomPromptDialog({
   active,
-  setActive,
-  onSubmit
+  setActive
 }: {
   active: boolean
   setActive: (active: boolean) => void
-  onSubmit: (values: ConfigSchema) => void
 }) {
   const [activeTab, setActiveTab] = useState<'help' | 'precautions' | null>(null)
   const { config } = useConfigStore()
@@ -203,7 +201,6 @@ export default function CustomPromptDialog({
                   return
                 }
 
-                onSubmit(form.getValues())
                 setActive(false)
               }}
             >
