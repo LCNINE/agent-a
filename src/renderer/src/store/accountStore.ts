@@ -7,18 +7,27 @@ import { persist } from 'zustand/middleware'
 interface AccountState {
   accountList: LoginCredentials[]
   selectedAccount: LoginCredentials | null
+  isAuthenticated: boolean
+  lastLoginTime: number | null
+  sessionTimeout: number
   syncAccounts(accounts: LoginCredentials[]): void
   addAccount(account: LoginCredentials): void
   deleteAccount(username: string): void
   updateAccount(params: { oldUsername: string; newUsername: string; password: string }): void
   selectAccount(credentials: LoginCredentials): void
+  login(credentials: LoginCredentials): void
+  logout(): void
+  checkSession(): boolean
 }
 
 export const useAccountStore = create<AccountState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       accountList: [],
       selectedAccount: null,
+      isAuthenticated: false,
+      lastLoginTime: null,
+      sessionTimeout: 7 * 24 * 60 * 60 * 1000, // 7일
 
       syncAccounts(accounts) {
         set((state) => ({
@@ -81,6 +90,41 @@ export const useAccountStore = create<AccountState>()(
       },
       selectAccount(credentials) {
         set({ selectedAccount: credentials })
+      },
+
+      login(credentials) {
+        set({
+          selectedAccount: credentials,
+          isAuthenticated: true,
+          lastLoginTime: Date.now()
+        })
+      },
+
+      logout() {
+        set({
+          selectedAccount: null,
+          isAuthenticated: false,
+          lastLoginTime: null
+        })
+      },
+
+      checkSession() {
+        const { lastLoginTime, sessionTimeout, isAuthenticated } = get()
+
+        if (!isAuthenticated || !lastLoginTime) return false
+
+        const now = Date.now()
+        const sessionValid = now - lastLoginTime < sessionTimeout
+
+        if (!sessionValid) {
+          // 세션이 만료되었으면 자동 로그아웃
+          get().logout()
+          return false
+        }
+
+        // 세션이 유효하면 마지막 로그인 시간 갱신
+        set({ lastLoginTime: now })
+        return true
       }
     }),
     {
