@@ -1,6 +1,9 @@
-import React from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
+import { HomeIcon } from 'lucide-react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import LangMenu from '../LangMenu'
+import ToggleTheme from '../ToggleTheme'
 import {
   NavigationMenu as NavigationMenuBase,
   NavigationMenuItem,
@@ -8,39 +11,49 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle
 } from '../ui/navigation-menu'
-import { HomeIcon } from 'lucide-react'
-import ToggleTheme from '../ToggleTheme'
 import UserMenu from '../UserMenu'
-import LangMenu from '../LangMenu'
-import ProtectedLink from '../ProtectedLink'
-import { useConfigStore } from '@renderer/store/configStore'
 
 export default function NavigationMenu() {
   const { t } = useTranslation()
-  const { config } = useConfigStore()
+
+  const location = useLocation()
+
+  useEffect(() => {
+    console.log('현재 URL:', location.pathname)
+  }, [location])
 
   return (
     <div className="flex w-full flex-row items-center justify-between px-2">
       <NavigationMenuBase className="font-spoqa text-muted-foreground">
         <NavigationMenuList>
           <NavigationMenuItem>
-            <ProtectedLink to="/" isDirty={config.isDirty}>
+            <Link to="/">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                <HomeIcon className="h-5 w-5" />
+                <HomeIcon
+                  className={`${location.pathname === '/' ? 'font-bold text-foreground' : ''} h-5 w-5`}
+                />
               </NavigationMenuLink>
-            </ProtectedLink>
+            </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <ProtectedLink to="/work" isDirty={config.isDirty}>
+            <Link to="/work">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                {t('nav.workPage')}
+                <span
+                  className={`${location.pathname === '/work' ? 'font-bold text-foreground' : ''}`}
+                >
+                  {t('nav.workPage')}
+                </span>
               </NavigationMenuLink>
-            </ProtectedLink>
+            </Link>
           </NavigationMenuItem>
           <NavigationMenuItem>
             <Link to="/config">
               <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                {t('nav.configPage')}
+                <span
+                  className={`${location.pathname === '/config' ? 'font-bold text-foreground' : ''}`}
+                >
+                  {t('nav.configPage')}
+                </span>
               </NavigationMenuLink>
             </Link>
           </NavigationMenuItem>
