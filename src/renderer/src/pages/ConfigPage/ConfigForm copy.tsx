@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@renderer/components/ui/select'
-import { HelpCircle, Save, BookOpen, Coffee, Sparkles, PencilLine } from 'lucide-react'
+import { HelpCircle, Save } from 'lucide-react'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -71,7 +71,17 @@ export function ConfigForm() {
         <Card className="flex h-[calc(100vh-150px)] flex-col shadow-lg">
           <CardHeader className="flex-shrink-0 bg-muted/50 p-2">
             <div className="flex items-center justify-between px-5">
-              <CardTitle className="hidden text-xl font-bold">{t('configPage.title')}</CardTitle>
+              <CardTitle className="text-xl font-bold">{t('configPage.title')}</CardTitle>
+
+              {/* 저장 버튼 */}
+              <Button
+                type="submit"
+                form="config-form"
+                className="flex transform items-center justify-center gap-1 bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all duration-200 hover:bg-green-500"
+              >
+                <Save className="h-4 w-4" />
+                {t('configForm.submit')}
+              </Button>
             </div>
           </CardHeader>
 
@@ -80,143 +90,106 @@ export function ConfigForm() {
               <Form {...form}>
                 <form id="config-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   {/* 대화 스타일 설정 */}
-                  <div className="h-full rounded-lg border p-4">
-                    <div className="mb-4 flex items-center">
-                      <FormLabel className="m-0 text-base font-medium">
-                        {t('configForm.label.prompt')}
-                      </FormLabel>
-                    </div>
+                  <FormField
+                    control={form.control}
+                    name="prompt.preset"
+                    render={({ field }) => (
+                      <FormItem className="rounded-lg border bg-card p-4">
+                        <div className="mb-4 flex items-center">
+                          <FormLabel className="m-0 text-base font-medium">
+                            {t('configForm.label.prompt')}
+                          </FormLabel>
+                        </div>
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                      {/* 정중한 모드 */}
-                      <FormField
-                        control={form.control}
-                        name="prompt.preset"
-                        render={({ field }) => (
-                          <FormItem className="m-0 p-0">
-                            <FormControl>
-                              <div
-                                className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
-                                  field.value === 'formal' ? 'border-primary bg-muted/50' : ''
+                        <ToggleGroup
+                          type="single"
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="flex flex-wrap gap-2"
+                        >
+                          {/* 격식체 */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ToggleGroupItem
+                                value="formal"
+                                className={`flex-1 py-3 ${field.value === 'formal' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''} ${
+                                  form.formState.errors.prompt?.preset
+                                    ? 'border border-red-500 text-red-500'
+                                    : 'border shadow-sm'
                                 }`}
-                                onClick={() => field.onChange('formal')}
                               >
-                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                                  <BookOpen className="h-6 w-6 text-blue-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold">
-                                    {t('configForm.field.prompt.formal')}
-                                  </p>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.formalDesc')}
-                                  </p>
-                                </div>
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                                {t('configForm.field.prompt.formal')}
+                              </ToggleGroupItem>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('configForm.tooltip.prompt.formalDesc')}</p>
+                            </TooltipContent>
+                          </Tooltip>
 
-                      {/* 친근한 모드 */}
-                      <FormField
-                        control={form.control}
-                        name="prompt.preset"
-                        render={({ field }) => (
-                          <FormItem className="m-0 p-0">
-                            <FormControl>
-                              <div
-                                className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
-                                  field.value === 'casual' ? 'border-primary bg-muted/50' : ''
+                          {/* 대화체 */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ToggleGroupItem
+                                value="casual"
+                                className={`flex-1 py-3 ${field.value === 'casual' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''} ${
+                                  form.formState.errors.prompt?.preset
+                                    ? 'border border-red-500 text-red-500'
+                                    : 'border shadow-sm'
                                 }`}
-                                onClick={() => field.onChange('casual')}
                               >
-                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-                                  <Coffee className="h-6 w-6 text-amber-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold">
-                                    {t('configForm.field.prompt.casual')}
-                                  </p>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.casualDesc')}
-                                  </p>
-                                </div>
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                                {t('configForm.field.prompt.casual')}
+                              </ToggleGroupItem>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('configForm.tooltip.prompt.casualDesc')}</p>
+                            </TooltipContent>
+                          </Tooltip>
 
-                      {/* 열정적인 모드 */}
-                      <FormField
-                        control={form.control}
-                        name="prompt.preset"
-                        render={({ field }) => (
-                          <FormItem className="m-0 p-0">
-                            <FormControl>
-                              <div
-                                className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
-                                  field.value === 'hyper' ? 'border-primary bg-muted/50' : ''
+                          {/* 과장형 */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ToggleGroupItem
+                                value="hyper"
+                                className={`flex-1 py-3 ${field.value === 'hyper' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''} ${
+                                  form.formState.errors.prompt?.preset
+                                    ? 'border border-red-500 text-red-500'
+                                    : 'border shadow-sm'
                                 }`}
-                                onClick={() => field.onChange('hyper')}
                               >
-                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-                                  <Sparkles className="h-6 w-6 text-purple-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold">
-                                    {t('configForm.field.prompt.hyper')}
-                                  </p>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.hyperDesc')}
-                                  </p>
-                                </div>
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                                {t('configForm.field.prompt.hyper')}
+                              </ToggleGroupItem>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('configForm.tooltip.prompt.hyperDesc')}</p>
+                            </TooltipContent>
+                          </Tooltip>
 
-                      {/* 사용자 지정 */}
-                      <FormField
-                        control={form.control}
-                        name="prompt.preset"
-                        render={({ field }) => (
-                          <FormItem className="m-0 p-0">
-                            <FormControl>
-                              <div
-                                className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
-                                  field.value === 'custom' ? 'border-primary bg-muted/50' : ''
-                                }`}
+                          {/* 사용자 지정 */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <ToggleGroupItem
+                                value="custom"
+                                className={`flex-1 py-3 ${field.value === 'custom' ? 'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground' : ''}`}
                                 onClick={() => {
-                                  field.onChange('custom')
                                   toast.info('개발중인 기능입니다.')
                                 }}
                               >
-                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                                  <PencilLine className="h-6 w-6 text-gray-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-semibold">
-                                    {t('configForm.field.prompt.custom')}
-                                  </p>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.customDesc')}
-                                  </p>
-                                </div>
-                              </div>
-                            </FormControl>
-                          </FormItem>
+                                {t('configForm.field.prompt.custom')}
+                              </ToggleGroupItem>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{t('configForm.tooltip.prompt.customDesc')}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </ToggleGroup>
+                        {form.formState.errors.prompt?.preset && (
+                          <p className="mt-1 text-center text-[0.8rem] font-medium text-destructive">
+                            {t('configForm.validation.preset')}
+                          </p>
                         )}
-                      />
-                    </div>
-                    {form.formState.errors.prompt?.preset && (
-                      <p className="mt-1 text-center text-[0.8rem] font-medium text-destructive">
-                        {t('configForm.validation.preset')}
-                      </p>
+                      </FormItem>
                     )}
-                  </div>
+                  />
 
                   {/* 댓글 길이 설정 */}
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

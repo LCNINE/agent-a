@@ -91,14 +91,10 @@ i18n.use(initReactI18next).init({
             },
             workCount: 'Works up to this number only. Higher number means more tasks.',
             prompt: {
-              formalDesc:
-                'Creates comments using a respectful and formal tone. Employs polite expressions and honorific speech to convey a professional impression.',
-              casualDesc:
-                'Creates comments using a relaxed and friendly tone. Utilizes natural conversational language and expressions that establish a sense of familiarity.',
-              hyperDesc:
-                'Creates comments using expressive and energetic language. Features an enthusiastic style that actively incorporates emoticons and emphatic expressions.',
-              customDesc:
-                'Creates comments using user-defined tone and style preferences. Provides a personalized comment creation environment. Note that creation may be suspended for content containing slander or profanity.'
+              formalDesc: 'Creates comments with a respectful and formal tone.',
+              casualDesc: 'Creates comments with a relaxed and friendly tone.',
+              hyperDesc: 'Creates comments with expressive and energetic language.',
+              customDesc: 'Provides a personalized comment creation environment.'
             }
           },
           toast: {
@@ -268,14 +264,10 @@ i18n.use(initReactI18next).init({
             },
             workCount: '이 숫자만큼만 작업해요. 많은 숫자를 입력하면 더 많이 작업합니다.',
             prompt: {
-              formalDesc:
-                '존중하고 격식 있는 어조로 댓글을 작성합니다. 정중한 표현과 높임말을 사용하여 전문적인 인상을 전달합니다.',
-              casualDesc:
-                '편안하고 친근한 어조로 댓글을 작성합니다. 자연스러운 대화체 언어와 표현을 활용하여 친밀감을 형성합니다.',
-              hyperDesc:
-                '표현력 있고 활기찬 언어로 댓글을 작성합니다. 이모티콘과 강조 표현을 적극적으로 활용하는 열정적인 스타일이 특징입니다.',
-              customDesc:
-                '사용자 정의 어조와 스타일 선호도를 사용하여 댓글을 작성합니다. 개인화된 댓글 작성 환경을 제공합니다. 비방이나 욕설이 포함된 내용에 대해서는 작성이 중단될 수 있습니다.'
+              formalDesc: '존중하고 격식 있는 어조로 댓글을 작성합니다.',
+              casualDesc: '편안하고 친근한 어조로 댓글을 작성합니다.',
+              hyperDesc: '표현력 있고 활기찬 언어로 댓글을 작성합니다.',
+              customDesc: '개인화된 댓글 작성 환경을 제공합니다.'
             }
           },
 
@@ -311,9 +303,9 @@ i18n.use(initReactI18next).init({
           },
           field: {
             prompt: {
-              formal: '격식체',
-              casual: '대화체',
-              hyper: '과장형',
+              formal: '정중한 모드',
+              casual: '친근한 모드',
+              hyper: '열정적인 모드',
               custom: '사용자 지정'
             }
           },
