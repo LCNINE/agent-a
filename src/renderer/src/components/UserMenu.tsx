@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,14 +7,14 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { useAuthContext } from '@/hooks/useAuth'
-import { UserRoundIcon } from 'lucide-react'
 import useCreateClient from '@/supabase/client'
-import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
-import { Button } from './ui/button'
-import { Link } from '@tanstack/react-router'
 import { useConfigStore } from '@renderer/store/configStore'
+import { UserRoundIcon } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import ProtectedLink from './ProtectedLink'
+import { Button } from './ui/button'
 
 export default function UserMenu() {
   const supabase = useCreateClient()
