@@ -15,6 +15,7 @@ export type AgentConfig = {
     min: number
     max: number
   }
+  commentLengthPreset: 'short' | 'normal' | 'long'
   postIntervalSeconds: number
   workIntervalSeconds: number
   loopIntervalSeconds: number
@@ -33,7 +34,8 @@ export type ConfigState = {
 
 const defaultConfig: AgentConfig = {
   prompt: { preset: 'casual' },
-  commentLength: { min: 20, max: 40 },
+  commentLength: { min: 30, max: 50 },
+  commentLengthPreset: 'normal',
   postIntervalSeconds: 600,
   workIntervalSeconds: 600,
   loopIntervalSeconds: 6 * 60 * 60,

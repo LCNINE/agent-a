@@ -84,40 +84,35 @@ i18n.use(initReactI18next).init({
         },
 
         configForm: {
-          tooltip: {
-            commentLength: {
-              min: "Sets the user's minimum length",
-              max: "Sets the user's maximum length"
-            },
-            workCount: 'Works up to this number only. Higher number means more tasks.',
-            prompt: {
-              formalDesc:
-                'Creates comments using a respectful and formal tone. Employs polite expressions and honorific speech to convey a professional impression.',
-              casualDesc:
-                'Creates comments using a relaxed and friendly tone. Utilizes natural conversational language and expressions that establish a sense of familiarity.',
-              hyperDesc:
-                'Creates comments using expressive and energetic language. Features an enthusiastic style that actively incorporates emoticons and emphatic expressions.',
-              customDesc:
-                'Creates comments using user-defined tone and style preferences. Provides a personalized comment creation environment. Note that creation may be suspended for content containing slander or profanity.'
-            }
+          prompt: {
+            formalDesc: 'Creates comments with a respectful and formal tone.',
+            casualDesc: 'Creates comments with a relaxed and friendly tone.',
+            hyperDesc: 'Creates comments with expressive and energetic language.',
+            customDesc: 'Provides a personalized comment creation environment.'
           },
+
           toast: {
             submitSuccess: 'Configuration saved successfully!'
           },
           validation: {
             preset: 'Choose one of the conversational styles',
-            workCount: 'The number of works must be at least 1',
-            commentLength: {
-              max: 'Comments must be a maximum of 40 characters',
-              min: 'Comments must be at least 20 characters long'
-            }
+            workCount: 'The number of works must be at least 1'
           },
           label: {
+            commentLength: 'Comment Length Setting',
             workCount: 'Work Count',
-            prompt: 'Conversational Style Setting',
-            commentLength: {
-              min: 'Minimum Comment Length',
-              max: 'Maximum Comment Length'
+            prompt: 'Comment Style Setting',
+            shortComment: {
+              label: 'Short',
+              description: '(20 characters or less)'
+            },
+            normalComment: {
+              label: 'Normal',
+              description: '(50 characters or less)'
+            },
+            longComment: {
+              label: 'Long',
+              description: '(100 characters or less)'
             },
             postIntervalSeconds: 'Post Interval (Seconds)',
             workIntervalSeconds: 'Work Interval (Seconds)',
@@ -125,11 +120,12 @@ i18n.use(initReactI18next).init({
             excludeUsernames: 'Blocked Accounts'
           },
           description: {
-            postIntervalSeconds: 'Time interval between posting comments on each post',
-            workIntervalSeconds: 'Time interval between each task in the task list',
+            postIntervalSeconds: 'This means the time interval for writing comments on each post.',
+            workIntervalSeconds:
+              'After one task is completed, the system will wait this amount of time before starting the next task. A task refers to a hashtag task, feed task, or my feed comment task.',
             loopIntervalSeconds:
-              'Time interval after all tasks in the task list are completed before restarting from the first task',
-            excludeUsernames: 'Enter the accounts you want to block'
+              'After all activated tasks are completed, the system will wait this amount of time before starting the first task again.',
+            excludeUsernames: 'Please enter the accounts you want to block'
           },
           field: {
             prompt: {
@@ -141,6 +137,7 @@ i18n.use(initReactI18next).init({
           },
 
           select: {
+            second: 'second',
             minute: 'minute',
             hour: 'hour'
           },
@@ -261,63 +258,59 @@ i18n.use(initReactI18next).init({
           title: '설정'
         },
         configForm: {
-          tooltip: {
-            commentLength: {
-              min: '작성할 댓글의 최소 길이를 설정합니다',
-              max: '작성할 댓글의 최대 길이를 설정합니다'
-            },
-            workCount: '이 숫자만큼만 작업해요. 많은 숫자를 입력하면 더 많이 작업합니다.',
-            prompt: {
-              formalDesc:
-                '존중하고 격식 있는 어조로 댓글을 작성합니다. 정중한 표현과 높임말을 사용하여 전문적인 인상을 전달합니다.',
-              casualDesc:
-                '편안하고 친근한 어조로 댓글을 작성합니다. 자연스러운 대화체 언어와 표현을 활용하여 친밀감을 형성합니다.',
-              hyperDesc:
-                '표현력 있고 활기찬 언어로 댓글을 작성합니다. 이모티콘과 강조 표현을 적극적으로 활용하는 열정적인 스타일이 특징입니다.',
-              customDesc:
-                '사용자 정의 어조와 스타일 선호도를 사용하여 댓글을 작성합니다. 개인화된 댓글 작성 환경을 제공합니다. 비방이나 욕설이 포함된 내용에 대해서는 작성이 중단될 수 있습니다.'
-            }
+          prompt: {
+            formalDesc: '존중하고 격식 있는 어조로 댓글을 작성합니다.',
+            casualDesc: '편안하고 친근한 어조로 댓글을 작성합니다.',
+            hyperDesc: '표현력 있고 활기찬 언어로 댓글을 작성합니다.',
+            customDesc: '개인화된 댓글 작성 환경을 제공합니다.'
           },
-
           toast: {
             submitSuccess: '설정이 저장되었습니다!'
           },
 
           validation: {
             workCount: '작업 갯수는 최소 1개 이상이어야 합니다',
-            preset: '대화체 하나를 선택해주세요',
-            commentLength: {
-              max: '댓글은 최대 40자 이하여야 합니다',
-              min: '댓글은 최소 20자 이상이어야 합니다'
-            }
+            preset: '대화체 하나를 선택해주세요'
           },
           label: {
-            prompt: '대화 스타일 설정 ',
+            prompt: '댓글 스타일 설정 ',
             workCount: '작업 개수',
-            commentLength: {
-              min: '최소 댓글 길이',
-              max: '최대 댓글 길이'
+            commentLength: '댓글 길이 설정',
+            shortComment: {
+              label: '짧게',
+              description: '(20자 이내)'
             },
-            postIntervalSeconds: '댓글 시간 간격 (초)',
-            workIntervalSeconds: '작업 간 간격 (초)',
-            loopIntervalSeconds: '전체 작업 간 간격 (초)',
+            normalComment: {
+              label: '보통',
+              description: '(50자 이내)'
+            },
+            longComment: {
+              label: '길게',
+              description: '(100자 이내)'
+            },
+            postIntervalSeconds: '댓글 작성후 쉬는 시간',
+            workIntervalSeconds: '작업 사이 대기 시간',
+            loopIntervalSeconds: '일일 총 작업 제한',
             excludeUsernames: '차단할 계정'
           },
           description: {
-            postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격',
-            workIntervalSeconds: '작업 목록의 각 작업 간 시간 간격',
-            loopIntervalSeconds: '작업 목록의 작업이 모두 끝나고 다시 첫 작업을 시작하는 시간 간격',
+            postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격을 의미합니다.',
+            workIntervalSeconds:
+              '한 작업이 끝나면 이 시간만큼 대기하고 다음 작업을 시작합니다. 한 작업이란 해시태그 작업 또는 피드 작업 또는 내 피드 댓글작업을 의미합니다.',
+            loopIntervalSeconds:
+              '활성화된 작업이 모두 끝나고 이 시간만큼 대기하고 다시 첫 작업을 시작합니다.',
             excludeUsernames: '차단할 계정을 입력해주세요'
           },
           field: {
             prompt: {
-              formal: '격식체',
-              casual: '대화체',
-              hyper: '과장형',
+              formal: '정중한 모드',
+              casual: '친근한 모드',
+              hyper: '열정적인 모드',
               custom: '사용자 지정'
             }
           },
           select: {
+            second: '초',
             minute: '분',
             hour: '시간'
           },

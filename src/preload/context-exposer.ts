@@ -60,16 +60,9 @@ function exposeUpdateContext() {
   })
 }
 
-function exposeDialogContext() {
-  contextBridge.exposeInMainWorld('dialog', {
-    showConfirmation: () => ipcRenderer.invoke('dialog:show-confirmation')
-  })
-}
-
 export default function exposeContexts() {
   exposeWindowContext()
   exposeThemeContext()
   exposeAgentContext()
   exposeUpdateContext()
-  exposeDialogContext()
 }

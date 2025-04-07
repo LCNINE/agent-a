@@ -1,6 +1,6 @@
-import { BrowserWindow, dialog, ipcMain, nativeTheme } from 'electron'
+import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
-import { StartAgentParams, WorkType } from '..'
+import { StartAgentParams } from '..'
 import { AgentManager } from './agent/managers/AgentManager'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
@@ -51,19 +51,6 @@ function addThemeEventListeners() {
   })
 }
 
-function addDialogEventListeners() {
-  ipcMain.handle('dialog:show-confirmation', async () => {
-    const result = await dialog.showMessageBox({
-      type: 'warning',
-      buttons: ['이 페이지에 머무르기', '저장하지 않고 나가기'],
-      title: '저장되지 않은 변경사항',
-      message: '변경사항이 저장되지 않았습니다.',
-      detail: '저장하지 않고 나가시면 변경사항이 모두 사라집니다. 계속하시겠습니까?'
-    })
-    return result.response === 0
-  })
-}
-
 let currentManager: AgentManager | null = null
 
 export function addAgentEventListeners() {
@@ -99,5 +86,4 @@ export function registerIpcHandlers(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow)
   addThemeEventListeners()
   addAgentEventListeners()
-  addDialogEventListeners()
 }

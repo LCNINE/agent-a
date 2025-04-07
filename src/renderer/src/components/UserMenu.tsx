@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,14 +7,14 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { useAuthContext } from '@/hooks/useAuth'
-import { UserRoundIcon } from 'lucide-react'
 import useCreateClient from '@/supabase/client'
-import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
-import { Button } from './ui/button'
-import { Link } from '@tanstack/react-router'
 import { useConfigStore } from '@renderer/store/configStore'
-import ProtectedLink from './ProtectedLink'
+import { Link } from '@tanstack/react-router'
+import { UserRoundIcon } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { Button } from './ui/button'
 
 export default function UserMenu() {
   const supabase = useCreateClient()
@@ -52,13 +51,9 @@ export default function UserMenu() {
         <DropdownMenuSeparator />
         {/* 계정 관리 메뉴 추가 */}
         <DropdownMenuItem asChild onClick={() => setOpen(false)}>
-          <ProtectedLink
-            to="/account"
-            isDirty={config.isDirty}
-            btnClassName="px-2 py-1.5 text-sm hover:bg-accent"
-          >
+          <Link to="/account" className="px-2 py-1.5 text-sm hover:bg-accent">
             {t('userMenu.manageAccount')}
-          </ProtectedLink>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem className="text-destructive" onClick={logout}>
           {t('userMenu.logout')}
