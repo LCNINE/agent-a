@@ -33,7 +33,7 @@ export type ConfigState = {
 
 const defaultConfig: AgentConfig = {
   prompt: { preset: 'casual' },
-  commentLength: { min: 20, max: 40 },
+  commentLength: { min: 20, max: 50 },
   postIntervalSeconds: 600,
   workIntervalSeconds: 600,
   loopIntervalSeconds: 6 * 60 * 60,

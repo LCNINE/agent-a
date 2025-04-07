@@ -84,36 +84,35 @@ i18n.use(initReactI18next).init({
         },
 
         configForm: {
-          tooltip: {
-            commentLength: {
-              min: "Sets the user's minimum length",
-              max: "Sets the user's maximum length"
-            },
-            workCount: 'Works up to this number only. Higher number means more tasks.',
-            prompt: {
-              formalDesc: 'Creates comments with a respectful and formal tone.',
-              casualDesc: 'Creates comments with a relaxed and friendly tone.',
-              hyperDesc: 'Creates comments with expressive and energetic language.',
-              customDesc: 'Provides a personalized comment creation environment.'
-            }
+          prompt: {
+            formalDesc: 'Creates comments with a respectful and formal tone.',
+            casualDesc: 'Creates comments with a relaxed and friendly tone.',
+            hyperDesc: 'Creates comments with expressive and energetic language.',
+            customDesc: 'Provides a personalized comment creation environment.'
           },
+
           toast: {
             submitSuccess: 'Configuration saved successfully!'
           },
           validation: {
             preset: 'Choose one of the conversational styles',
-            workCount: 'The number of works must be at least 1',
-            commentLength: {
-              max: 'Comments must be a maximum of 40 characters',
-              min: 'Comments must be at least 20 characters long'
-            }
+            workCount: 'The number of works must be at least 1'
           },
           label: {
+            commentLength: 'Comment Length Setting',
             workCount: 'Work Count',
-            prompt: 'Conversational Style Setting',
-            commentLength: {
-              min: 'Minimum Comment Length',
-              max: 'Maximum Comment Length'
+            prompt: 'Comment Style Setting',
+            shortComment: {
+              label: 'Short',
+              description: '(20 characters or less)'
+            },
+            normalComment: {
+              label: 'Normal',
+              description: '(50 characters or less)'
+            },
+            longComment: {
+              label: 'Long',
+              description: '(100 characters or less)'
             },
             postIntervalSeconds: 'Post Interval (Seconds)',
             workIntervalSeconds: 'Work Interval (Seconds)',
@@ -257,38 +256,35 @@ i18n.use(initReactI18next).init({
           title: '설정'
         },
         configForm: {
-          tooltip: {
-            commentLength: {
-              min: '작성할 댓글의 최소 길이를 설정합니다',
-              max: '작성할 댓글의 최대 길이를 설정합니다'
-            },
-            workCount: '이 숫자만큼만 작업해요. 많은 숫자를 입력하면 더 많이 작업합니다.',
-            prompt: {
-              formalDesc: '존중하고 격식 있는 어조로 댓글을 작성합니다.',
-              casualDesc: '편안하고 친근한 어조로 댓글을 작성합니다.',
-              hyperDesc: '표현력 있고 활기찬 언어로 댓글을 작성합니다.',
-              customDesc: '개인화된 댓글 작성 환경을 제공합니다.'
-            }
+          prompt: {
+            formalDesc: '존중하고 격식 있는 어조로 댓글을 작성합니다.',
+            casualDesc: '편안하고 친근한 어조로 댓글을 작성합니다.',
+            hyperDesc: '표현력 있고 활기찬 언어로 댓글을 작성합니다.',
+            customDesc: '개인화된 댓글 작성 환경을 제공합니다.'
           },
-
           toast: {
             submitSuccess: '설정이 저장되었습니다!'
           },
 
           validation: {
             workCount: '작업 갯수는 최소 1개 이상이어야 합니다',
-            preset: '대화체 하나를 선택해주세요',
-            commentLength: {
-              max: '댓글은 최대 40자 이하여야 합니다',
-              min: '댓글은 최소 20자 이상이어야 합니다'
-            }
+            preset: '대화체 하나를 선택해주세요'
           },
           label: {
-            prompt: '대화 스타일 설정 ',
+            prompt: '댓글 스타일 설정 ',
             workCount: '작업 개수',
-            commentLength: {
-              min: '최소 댓글 길이',
-              max: '최대 댓글 길이'
+            commentLength: '댓글 길이 설정',
+            shortComment: {
+              label: '짧게',
+              description: '(20자 이내)'
+            },
+            normalComment: {
+              label: '보통',
+              description: '(50자 이내)'
+            },
+            longComment: {
+              label: '길게',
+              description: '(100자 이내)'
             },
             postIntervalSeconds: '댓글 시간 간격 (초)',
             workIntervalSeconds: '작업 간 간격 (초)',

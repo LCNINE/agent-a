@@ -31,34 +31,40 @@ import { toast } from 'sonner'
 import blockGuideImage from '../../images/guide_to_blocking_users.png'
 import { configSchema, type ConfigSchema } from './schema'
 import { useBlocker } from '@tanstack/react-router'
+import { cn } from '@renderer/lib/utils'
 
 export function ConfigForm() {
   const { t } = useTranslation()
   const { config, setConfig, setIsDirty } = useConfigStore()
   const form = useForm<ConfigSchema>({
     resolver: zodResolver(configSchema),
-    defaultValues: config
+    defaultValues: { ...config, commentLengthPreset: 'normal' }
   })
 
   useEffect(() => {
     form.reset(config)
   }, [])
 
-  // TODO:왜 안되는지 알아봐야함
-  // useBlocker({
-  //   shouldBlockFn: ({ current, next }) => {
-  //     console.log(current, next)
-  //     if (!form.formState.isDirty) return false
+  function handleSubmit(values: Omit<ConfigSchema, 'commentLengthPreset'>) {
+    setConfig({
+      ...values,
+      commentLength: {
+        min:
+          form.watch('commentLengthPreset') === 'short'
+            ? 10
+            : form.watch('commentLengthPreset') === 'normal'
+              ? 20
+              : 30,
+        max:
+          form.watch('commentLengthPreset') === 'short'
+            ? 20
+            : form.watch('commentLengthPreset') === 'normal'
+              ? 50
+              : 100
+      }
+    })
 
-  //     const shouldLeave = confirm('Are you sure you want to leave?')
-  //     return !shouldLeave
-  //   }
-  // })
-
-  async function onSubmit(values: ConfigSchema) {
-    setConfig(values)
     form.reset(values)
-    toast.success(t('configForm.toast.submitSuccess'))
   }
 
   useEffect(() => {
@@ -78,11 +84,11 @@ export function ConfigForm() {
           <ScrollArea className="flex-grow">
             <CardContent className="p-6">
               <Form {...form}>
-                <form id="config-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form id="config-form" onSubmit={(e) => e.preventDefault()} className="space-y-6">
                   {/* 대화 스타일 설정 */}
                   <div className="h-full rounded-lg border p-4">
                     <div className="mb-4 flex items-center">
-                      <FormLabel className="m-0 text-base font-medium">
+                      <FormLabel className="m-0 text-base font-semibold">
                         {t('configForm.label.prompt')}
                       </FormLabel>
                     </div>
@@ -109,7 +115,7 @@ export function ConfigForm() {
                                     {t('configForm.field.prompt.formal')}
                                   </p>
                                   <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.formalDesc')}
+                                    {t('configForm.prompt.formalDesc')}
                                   </p>
                                 </div>
                               </div>
@@ -139,7 +145,7 @@ export function ConfigForm() {
                                     {t('configForm.field.prompt.casual')}
                                   </p>
                                   <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.casualDesc')}
+                                    {t('configForm.prompt.casualDesc')}
                                   </p>
                                 </div>
                               </div>
@@ -169,7 +175,7 @@ export function ConfigForm() {
                                     {t('configForm.field.prompt.hyper')}
                                   </p>
                                   <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.hyperDesc')}
+                                    {t('configForm.prompt.hyperDesc')}
                                   </p>
                                 </div>
                               </div>
@@ -202,7 +208,7 @@ export function ConfigForm() {
                                     {t('configForm.field.prompt.custom')}
                                   </p>
                                   <p className="mt-1 text-xs text-muted-foreground">
-                                    {t('configForm.tooltip.prompt.customDesc')}
+                                    {t('configForm.prompt.customDesc')}
                                   </p>
                                 </div>
                               </div>
@@ -219,68 +225,104 @@ export function ConfigForm() {
                   </div>
 
                   {/* 댓글 길이 설정 */}
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {/* 댓글 최소 길이 */}
-                    <FormField
-                      control={form.control}
-                      name="commentLength.min"
-                      render={({ field }) => (
-                        <FormItem className="rounded-lg border bg-card p-4">
-                          <div className="mb-2 flex items-center">
-                            <FormLabel className="m-0 text-base">
-                              {t('configForm.label.commentLength.min')}
-                            </FormLabel>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t('configForm.tooltip.commentLength.min')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <FormControl>
-                            <Input type="number" {...field} className="mt-2" />
-                          </FormControl>
-                          {form.formState.errors.commentLength?.min && (
-                            <p className="mt-1 text-[0.8rem] font-medium text-destructive">
-                              {t('configForm.validation.commentLength.min')}
-                            </p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
+                  <div className="h-full rounded-lg border p-4">
+                    <div className="mb-4 flex items-center font-semibold">
+                      {t('configForm.label.commentLength')}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      {/* 댓글 길이 짧게 */}
+                      <FormField
+                        control={form.control}
+                        name="commentLengthPreset"
+                        render={({ field }) => (
+                          <FormItem
+                            className={cn(
+                              'flex h-16 w-40 cursor-pointer items-center justify-center rounded-lg border p-4 transition-all hover:bg-muted/50',
+                              field.value === 'short' ? 'border-primary bg-muted/50' : ''
+                            )}
+                            onClick={() => {
+                              field.onChange('short')
+                              handleSubmit(form.getValues())
+                            }}
+                          >
+                            <FormControl>
+                              <div
+                                className={`flex w-full flex-col items-center justify-center ${field.value === 'short' ? 'font-medium text-primary' : ''}`}
+                              >
+                                <span className="font-semibold">
+                                  {t('configForm.label.shortComment.label')}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {t('configForm.label.shortComment.description')}
+                                </span>
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
 
-                    {/* 댓글 최대 길이 */}
-                    <FormField
-                      control={form.control}
-                      name="commentLength.max"
-                      render={({ field }) => (
-                        <FormItem className="rounded-lg border bg-card p-4">
-                          <div className="mb-2 flex items-center">
-                            <FormLabel className="m-0 text-base">
-                              {t('configForm.label.commentLength.max')}
-                            </FormLabel>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{t('configForm.tooltip.commentLength.max')}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                          <FormControl>
-                            <Input type="number" {...field} className="mt-2" />
-                          </FormControl>
-                          {form.formState.errors.commentLength?.max && (
-                            <p className="mt-1 text-[0.8rem] font-medium text-destructive">
-                              {t('configForm.validation.commentLength.max')}
-                            </p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
+                      {/* 댓글 길이 중간 */}
+                      <FormField
+                        control={form.control}
+                        name="commentLengthPreset"
+                        render={({ field }) => (
+                          <FormItem
+                            className={cn(
+                              'flex h-16 w-40 cursor-pointer items-center justify-center rounded-lg border p-4 transition-all hover:bg-muted/50',
+                              field.value === 'normal' ? 'border-primary bg-muted/50' : ''
+                            )}
+                            onClick={() => {
+                              field.onChange('normal')
+                              handleSubmit(form.getValues())
+                            }}
+                          >
+                            <FormControl>
+                              <div
+                                className={`flex w-full flex-col items-center justify-center ${field.value === 'normal' ? 'font-medium text-primary' : ''}`}
+                              >
+                                <span className="font-semibold">
+                                  {t('configForm.label.normalComment.label')}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {t('configForm.label.normalComment.description')}
+                                </span>
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 댓글 길이 길게 */}
+                      <FormField
+                        control={form.control}
+                        name="commentLengthPreset"
+                        render={({ field }) => (
+                          <FormItem
+                            className={cn(
+                              'flex h-16 w-40 cursor-pointer items-center justify-center rounded-lg border p-4 transition-all hover:bg-muted/50',
+                              field.value === 'long' ? 'border-primary bg-muted/50' : ''
+                            )}
+                            onClick={() => {
+                              field.onChange('long')
+                              handleSubmit(form.getValues())
+                            }}
+                          >
+                            <FormControl>
+                              <div
+                                className={`flex w-full flex-col items-center justify-center ${field.value === 'long' ? 'font-medium text-primary' : ''}`}
+                              >
+                                <span className="font-semibold">
+                                  {t('configForm.label.longComment.label')}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {t('configForm.label.longComment.description')}
+                                </span>
+                              </div>
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
 
                   {/* 시간 간격 설정 */}
