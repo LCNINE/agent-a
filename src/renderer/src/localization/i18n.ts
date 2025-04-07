@@ -120,11 +120,12 @@ i18n.use(initReactI18next).init({
             excludeUsernames: 'Blocked Accounts'
           },
           description: {
-            postIntervalSeconds: 'Time interval between posting comments on each post',
-            workIntervalSeconds: 'Time interval between each task in the task list',
+            postIntervalSeconds: 'This means the time interval for writing comments on each post.',
+            workIntervalSeconds:
+              'After one task is completed, the system will wait this amount of time before starting the next task. A task refers to a hashtag task, feed task, or my feed comment task.',
             loopIntervalSeconds:
-              'Time interval after all tasks in the task list are completed before restarting from the first task',
-            excludeUsernames: 'Enter the accounts you want to block'
+              'After all activated tasks are completed, the system will wait this amount of time before starting the first task again.',
+            excludeUsernames: 'Please enter the accounts you want to block'
           },
           field: {
             prompt: {
@@ -136,6 +137,7 @@ i18n.use(initReactI18next).init({
           },
 
           select: {
+            second: 'second',
             minute: 'minute',
             hour: 'hour'
           },
@@ -286,15 +288,17 @@ i18n.use(initReactI18next).init({
               label: '길게',
               description: '(100자 이내)'
             },
-            postIntervalSeconds: '댓글 시간 간격 (초)',
-            workIntervalSeconds: '작업 간 간격 (초)',
-            loopIntervalSeconds: '전체 작업 간 간격 (초)',
+            postIntervalSeconds: '댓글 작성후 쉬는 시간',
+            workIntervalSeconds: '작업 사이 대기 시간',
+            loopIntervalSeconds: '일일 총 작업 제한',
             excludeUsernames: '차단할 계정'
           },
           description: {
-            postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격',
-            workIntervalSeconds: '작업 목록의 각 작업 간 시간 간격',
-            loopIntervalSeconds: '작업 목록의 작업이 모두 끝나고 다시 첫 작업을 시작하는 시간 간격',
+            postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격을 의미합니다.',
+            workIntervalSeconds:
+              '한 작업이 끝나면 이 시간만큼 대기하고 다음 작업을 시작합니다. 한 작업이란 해시태그 작업 또는 피드 작업 또는 내 피드 댓글작업을 의미합니다.',
+            loopIntervalSeconds:
+              '활성화된 작업이 모두 끝나고 이 시간만큼 대기하고 다시 첫 작업을 시작합니다.',
             excludeUsernames: '차단할 계정을 입력해주세요'
           },
           field: {
@@ -306,6 +310,7 @@ i18n.use(initReactI18next).init({
             }
           },
           select: {
+            second: '초',
             minute: '분',
             hour: '시간'
           },
