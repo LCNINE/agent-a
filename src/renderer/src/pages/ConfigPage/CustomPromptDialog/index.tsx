@@ -18,18 +18,18 @@ import { ConfigSchema } from '../schema'
 import { useConfigStore } from '@/store/configStore'
 
 export default function CustomPromptDialog({
-  active,
-  setActive
+  visible,
+  setVisible
 }: {
-  active: boolean
-  setActive: (active: boolean) => void
+  visible: boolean
+  setVisible: (visible: boolean) => void
 }) {
   const [activeTab, setActiveTab] = useState<'help' | 'precautions' | null>(null)
-  const { config } = useConfigStore()
+  const { setConfig } = useConfigStore()
   const form = useFormContext<ConfigSchema>()
 
   return (
-    <Dialog open={active} onOpenChange={() => setActive(active)}>
+    <Dialog open={visible} onOpenChange={() => setVisible(visible)}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>대화 스타일 사용자 정의</DialogTitle>
@@ -51,7 +51,7 @@ export default function CustomPromptDialog({
                 </div>
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg sm:max-w-md">
+            <DialogContent className="bg max-h-[80vh] overflow-y-auto sm:max-w-md">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <HelpCircle className="w-5 h-5 text-blue-500" />
@@ -87,6 +87,8 @@ export default function CustomPromptDialog({
                   <div className="p-3 text-sm text-gray-700 bg-white border border-gray-200 rounded">
                     당신은 반영구 눈썹 아이라인 입술 미인점 smp 두피문신 속눈썹 펌을하는 디자이너고,
                     사당 이수에서 반영구 샵 오픈예정인 원장입니다.
+                    <br />
+                    또한 나랑 같은 직종에 일하는듯한 게시글에는 댓글을 달지말고 거부해주세요.
                     <br /> 이거를 명심하고 댓글 달 때 유의해서 달아주세요!
                   </div>
                 </div>
@@ -108,7 +110,7 @@ export default function CustomPromptDialog({
                 </div>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-md">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-amber-500" />
@@ -162,7 +164,7 @@ export default function CustomPromptDialog({
                 <FormControl>
                   <Textarea
                     {...field}
-                    placeholder="예시: 당신은 반영구 눈썹 아이라인 입술 미인점 smp 두피문신 속눈썹 펌을하는 디자이너이고, 사람 이수에게 방문한 상담예정인 원장이다. 이것을 명심하고 답변해줘."
+                    placeholder="예시: 당신은 반영구 눈썹 아이라인 입술 미인점 smp 두피문신 속눈썹 펌을하는 디자이너이고, 사람 이수에게 방문한 상담예정인 원장이다. 또한 나랑 같은 직종에 일하는듯한 게시글에는 댓글을 달지말고 거부해주세요. 이것을 명심하고 답변해줘."
                     className="min-h-[120px] resize-none"
                   />
                 </FormControl>
@@ -175,8 +177,15 @@ export default function CustomPromptDialog({
               type="button"
               variant="outline"
               className="mr-2"
-              onClick={() => {
-                setActive(false)
+              onClick={async () => {
+                setVisible(false)
+
+                const isValid = await form.trigger('prompt.custom')
+
+                if (!isValid) {
+                  form.reset()
+                  return
+                }
               }}
             >
               취소
@@ -201,7 +210,13 @@ export default function CustomPromptDialog({
                   return
                 }
 
-                setActive(false)
+                setConfig({
+                  prompt: {
+                    preset: 'custom',
+                    custom: customValue as string
+                  }
+                })
+                setVisible(false)
               }}
             >
               변경사항 저장
