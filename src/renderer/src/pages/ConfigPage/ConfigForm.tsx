@@ -24,16 +24,19 @@ import {
 } from '@renderer/components/ui/select'
 import { cn } from '@renderer/lib/utils'
 import { BookOpen, Coffee, HelpCircle, PencilLine, RotateCw, Sparkles } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import blockGuideImage from '../../images/guide_to_blocking_users.png'
+import CustomPromptDialog from './CustomPromptDialog'
 import { configSchema, type ConfigSchema } from './schema'
 
 export function ConfigForm() {
   const { t } = useTranslation()
   const { config, setConfig, setIsDirty } = useConfigStore()
+  const [isCustomPromptDialogOpen, setIsCustomPromptDialogOpen] = useState(false)
+
   const form = useForm<ConfigSchema>({
     resolver: zodResolver(configSchema),
     defaultValues: { ...config }
@@ -79,6 +82,13 @@ export function ConfigForm() {
             <CardContent className="p-6">
               <Form {...form}>
                 <form id="config-form" onSubmit={(e) => e.preventDefault()} className="space-y-6">
+                  {isCustomPromptDialogOpen && (
+                    <CustomPromptDialog
+                      visible={isCustomPromptDialogOpen}
+                      setVisible={setIsCustomPromptDialogOpen}
+                    />
+                  )}
+
                   {/* 댓글 스타일 설정 */}
                   <div className="h-full p-4">
                     <div className="flex items-center mb-4">
@@ -208,7 +218,7 @@ export function ConfigForm() {
                                 }`}
                                 onClick={() => {
                                   field.onChange('custom')
-                                  toast.info('개발중인 기능입니다.')
+                                  setIsCustomPromptDialogOpen(true)
                                 }}
                               >
                                 <div className="flex items-center justify-center w-12 h-12 mr-3 bg-gray-100 rounded-full">
@@ -356,7 +366,7 @@ export function ConfigForm() {
                               if (window.confirm('설정을 기본값으로 되돌리시겠습니까?')) {
                                 form.setValue('postIntervalSeconds', 600)
                                 form.setValue('workIntervalSeconds', 600)
-                                form.setValue('loopIntervalSeconds', 3600)
+                                form.setValue('loopIntervalSeconds', 21600)
                                 handleSubmit(form.getValues())
                                 toast.success('설정이 기본값으로 되돌아갔습니다.')
                               }
