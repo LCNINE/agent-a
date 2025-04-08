@@ -150,7 +150,7 @@ export function AgentController({ isSubscriptionActive }: AgentControllerProps) 
     return (
       <div className="flex flex-col gap-2">
         <p>{t('AgentController.status.idle')}</p>
-        <Button onClick={validateAndStart} disabled={!selectedAccount || !isSubscriptionActive}>
+        <Button onClick={validateAndStart} disabled={!isSubscriptionActive}>
           {t('AgentController.action.start')}
         </Button>
       </div>

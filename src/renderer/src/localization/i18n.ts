@@ -27,6 +27,9 @@ i18n.use(initReactI18next).init({
         },
         homePage: {},
         AgentController: {
+          error: {
+            noAccountSelected: 'No account selected'
+          },
           status: {
             idle: 'Not currently working',
             working: 'Working in progress'
@@ -201,6 +204,9 @@ i18n.use(initReactI18next).init({
         },
         homePage: {},
         AgentController: {
+          error: {
+            noAccountSelected: '인스타계정을 선택해주세요'
+          },
           status: {
             idle: '작업 중이 아닙니다.',
             working: '작업중입니다.'
