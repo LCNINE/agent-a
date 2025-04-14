@@ -179,7 +179,7 @@ export class AgentManager {
               articleLocator
                 .getByRole('button')
                 .filter({
-                  hasText: new RegExp('^(더\\s*보기|More)$', 'i')
+                  hasText: /^(?:더\s*보기|more)$/
                 })
                 .first(),
               this.page!,
