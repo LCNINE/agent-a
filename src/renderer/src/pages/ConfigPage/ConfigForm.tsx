@@ -619,6 +619,7 @@ export function ConfigForm() {
                                           field.onChange([value])
                                         } else if (!field.value.includes(value)) {
                                           field.onChange([...field.value, value])
+                                          handleSubmit(form.getValues())
                                         }
 
                                         inputEl.value = ''
