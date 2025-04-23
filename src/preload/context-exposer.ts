@@ -36,7 +36,10 @@ function exposeAgentContext() {
   contextBridge.exposeInMainWorld('agent', {
     start: (params: any /*StartAgentParams*/) => ipcRenderer.invoke(AGENT_START_CHANNEL, params),
     stop: () => ipcRenderer.invoke(AGENT_STOP_CHANNEL),
-    getStatus: () => ipcRenderer.invoke(AGENT_STATUS_CHANNEL)
+    getStatus: () => ipcRenderer.invoke(AGENT_STATUS_CHANNEL),
+    onStatusUpdate: (callback: (status: any) => void) => {
+      ipcRenderer.on('agent:status-update', (_, status) => callback(status))
+    }
   })
 }
 

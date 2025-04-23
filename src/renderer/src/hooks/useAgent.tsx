@@ -17,10 +17,16 @@ export function useAgent() {
   })
 
   useEffect(() => {
+    // 1초마다 상태 폴링
     const interval = setInterval(async () => {
       const currentStatus = await window.agent.getStatus()
       setStatus(currentStatus)
     }, 1000)
+
+    // 실시간 상태 업데이트 구독
+    window.agent.onStatusUpdate((newStatus) => {
+      setStatus(newStatus)
+    })
 
     return () => clearInterval(interval)
   }, [])

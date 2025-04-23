@@ -1,5 +1,5 @@
 import { Locator, Page } from 'playwright'
-import { smoothScrollToElement } from '../common/browserUtils'
+import { smoothScrollToElement, navigateToHome } from '../common/browserUtils'
 import { chooseRandomSleep, scrollDelays, wait } from '../common/timeUtils'
 import { AgentConfig } from '../../..'
 
@@ -69,15 +69,32 @@ export class ArticleProcessingService {
       })
     })
 
+    let noArticlesRetryCount = 0
+    const maxRetries = 3
+
     while (!this.shouldStop && this.successCount < this.options.maxArticles) {
       const articleLoc = await this.page.locator('article:not([style*="display: none"])').first()
 
       // 요소가 존재하는지 확인
       const isVisible = await articleLoc.isVisible().catch(() => false)
       if (!isVisible) {
-        console.log('더 이상 처리할 게시물이 없습니다.')
-        break
+        console.log('현재 화면에 표시할 게시물이 없습니다.')
+        
+        // 최대 재시도 횟수에 도달하지 않았다면 홈으로 이동 후 다시 시도
+        if (noArticlesRetryCount < maxRetries) {
+          noArticlesRetryCount++
+          console.log(`홈으로 이동 후 피드를 새로고침합니다. (시도: ${noArticlesRetryCount}/${maxRetries})`)
+          await navigateToHome(this.page)
+          await this.page.waitForTimeout(3000) // 피드 로딩 대기
+          continue
+        } else {
+          console.log(`최대 재시도 횟수(${maxRetries})에 도달했습니다. 피드 처리를 종료합니다.`)
+          break
+        }
       }
+
+      // 피드를 찾았으면 재시도 카운터 초기화
+      noArticlesRetryCount = 0
 
       const articleElementHandle = await articleLoc.elementHandle()
       if (articleElementHandle == null) {

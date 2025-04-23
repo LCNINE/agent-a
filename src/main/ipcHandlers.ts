@@ -52,12 +52,15 @@ function addThemeEventListeners() {
 }
 
 let currentManager: AgentManager | null = null
+let mainWindowRef: BrowserWindow | null = null
 
-export function addAgentEventListeners() {
+function addAgentEventListeners(mainWindow: BrowserWindow) {
+  mainWindowRef = mainWindow;
+  
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
     log.info('Start agent button clicked with params:', params)
     try {
-      currentManager = new AgentManager(params.workList, params.config)
+      currentManager = new AgentManager(params.workList, params.config, mainWindow)
       await currentManager.start(params.config, params.workList)
 
       log.info('Agent started successfully')
@@ -76,7 +79,13 @@ export function addAgentEventListeners() {
 
   ipcMain.handle(AGENT_STATUS_CHANNEL, () => {
     if (!currentManager) {
-      return { status: 'stopped' }
+      return { 
+        isRunning: false,
+        currentWork: null,
+        waiting: null,
+        logs: [],
+        currentAction: '중지됨'
+      }
     }
     return currentManager.getStatus()
   })
@@ -85,5 +94,5 @@ export function addAgentEventListeners() {
 export function registerIpcHandlers(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow)
   addThemeEventListeners()
-  addAgentEventListeners()
+  addAgentEventListeners(mainWindow)
 }

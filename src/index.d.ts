@@ -50,6 +50,13 @@ export type WorkType = {
   hashtagInteractionWork: WorkItem & { hashtags: string[] }
 }
 
+export interface WorkLog {
+  timestamp: number
+  action: string
+  details?: string
+  success?: boolean
+}
+
 export interface BotStatus {
   isRunning: boolean
   currentWork: WorkType | null
@@ -57,6 +64,8 @@ export interface BotStatus {
     for: string
     until: string
   } | null
+  logs?: WorkLog[]
+  currentAction?: string
 }
 
 export type AgentConfig = {
@@ -88,12 +97,7 @@ interface AgentContext {
   start: (params: StartAgentParams) => Promise<void>
   stop: () => Promise<void>
   getStatus: () => Promise<BotStatus>
-}
-
-interface AgentContext {
-  start: (params: StartAgentParams) => Promise<void>
-  stop: () => Promise<void>
-  getStatus: () => Promise<BotStatus>
+  onStatusUpdate: (callback: (status: BotStatus) => void) => void
 }
 
 interface UpdateContext {

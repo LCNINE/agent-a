@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import exposeContexts from './context-exposer'
+import { BotStatus } from '..'
 
 if (process.contextIsolated) {
   try {
@@ -16,6 +17,7 @@ if (process.contextIsolated) {
         }
       }
     })
+    
     contextBridge.exposeInMainWorld('update', {
       onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string }) => void) => {
         ipcRenderer.on('update:available', (_event, info) => callback(info))

@@ -33,7 +33,7 @@ export async function callGenerateComments(params: GenerateCommentReq) {
     AxiosResponse<GenerateCommentRes>,
     GenerateCommentReq
   >('https://xszdgbmgwnaxbyekqons.supabase.co/functions/v1/generate-comment', params)
-
+  
   return response.data
 }
 
