@@ -302,26 +302,25 @@ export class AgentManager {
               this.addLog('AI 댓글 거부', '부적절한 게시물', false)
               return false
             }
-            this.addLog('AI 댓글 생성 완료', commentRes.comment)
 
             this.addLog('댓글 입력 영역 확인 중')
-            const commentTextarea = this.page?.locator(
-              'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
-            ).first()
 
-            if (!(await commentTextarea!.isVisible())) {
+            const commentTextarea = articleLocator.getByRole('textbox')
+            if (!(await commentTextarea.isVisible())) {
               console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
-              this.addLog('댓글 입력란 없음', '게시물 건너뜀', false)
               return false
             }
 
-            this.addLog('댓글 입력 중', commentRes.comment)
+            this.addLog('AI 댓글 생성 완료', commentRes.comment)
             await commentTextarea!.pressSequentially(commentRes.comment, { delay: 100 })
             await this.page!.waitForTimeout(500)
 
             this.addLog('댓글 게시 시도 중')
             isProcessed = await checkedAction(
-              this.page!.getByRole('button', { name: /^(게시|Post)$/, exact: true }),
+              articleLocator
+                .getByRole('button')
+                .filter({ hasText: /^(게시|Post)$/ })
+                .first(),
               this.page!,
               '게시'
             )
@@ -446,6 +445,9 @@ export class AgentManager {
                 const contentLoc = this.page!.locator(
                   'li._a9zj._a9zl._a9z5 h1._ap3a._aaco._aacu._aacx._aad7._aade'
                 )
+
+                
+
                 const content = await contentLoc.textContent()
                 if (content == null) {
                   console.log('[runWork] 내용이 없는 게시글 스킵')
@@ -486,13 +488,12 @@ export class AgentManager {
                   async (locator: Locator) => {
                     await locator.pressSequentially(commentRes.comment, { delay: 100 })
                     await chooseRandomSleep(postInteractionDelays)
-                    
+  
                     await this.page!.waitForSelector(
                       'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
                       { state: 'visible', timeout: 3000 }
                     )
-                    
-                    this.addLog('댓글 게시 시도 중')
+  
                     await checkedAction(
                       this.page!.getByRole('button', { name: /^(게시|Post)$/ }),
                       this.page!,
@@ -500,6 +501,7 @@ export class AgentManager {
                     )
                   }
                 )
+  
                 
                 if (commentTextareaResult) {
                   isProcessed = true
