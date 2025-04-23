@@ -17,6 +17,9 @@ const AGENT_START_CHANNEL = 'agent:start'
 const AGENT_STOP_CHANNEL = 'agent:stop'
 const AGENT_STATUS_CHANNEL = 'agent:status'
 
+
+let lastLogs: any[] = [];
+
 function addWindowEventListeners(mainWindow: BrowserWindow) {
   ipcMain.handle(WIN_MINIMIZE_CHANNEL, () => {
     mainWindow.minimize()
@@ -72,7 +75,9 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
 
   ipcMain.handle(AGENT_STOP_CHANNEL, async () => {
     if (currentManager) {
-      currentManager.stop()
+      // 중지하기 전에 마지막 로그 상태 저장
+      lastLogs = currentManager.getStatus().logs || [];
+      await currentManager.stop()
       currentManager = null
     }
   })
@@ -83,11 +88,16 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
         isRunning: false,
         currentWork: null,
         waiting: null,
-        logs: [],
+        logs: lastLogs, 
         currentAction: '중지됨'
       }
     }
-    return currentManager.getStatus()
+    // 로그를 계속 최신 상태로 유지
+    const status = currentManager.getStatus();
+    if (status.logs && status.logs.length > 0) {
+      lastLogs = status.logs;
+    }
+    return status;
   })
 }
 
