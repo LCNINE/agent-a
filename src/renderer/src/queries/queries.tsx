@@ -6,6 +6,7 @@ export const useWorks = () =>
     queryKey: ['works'],
     queryFn: async () => {
       const supabase = useCreateClient()
+      // @ts-ignore - works table is used locally
       const { data, error } = await supabase.from('works').select('*')
       if (error) {
         throw error
