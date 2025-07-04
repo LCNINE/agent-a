@@ -49,3 +49,20 @@ export function AuthProvider({ unauthenticatedFallback, children }: AuthProvider
   if (!user) return unauthenticatedFallback
   return <AuthContext.Provider value={memoizedValue}>{children}</AuthContext.Provider>
 }
+
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const supabase = useCreateClient()
+
+  useEffect(() => {
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return { user }
+}

@@ -31,11 +31,15 @@ import { toast } from 'sonner'
 import blockGuideImage from '../../images/guide_to_blocking_users.png'
 import CustomPromptDialog from './CustomPromptDialog'
 import { configSchema, type ConfigSchema } from './schema'
+import useCreateClient from '@/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
 
 export function ConfigForm() {
   const { t } = useTranslation()
   const { config, setConfig, setIsDirty } = useConfigStore()
   const [isCustomPromptDialogOpen, setIsCustomPromptDialogOpen] = useState(false)
+  const supabase = useCreateClient()
+  const { user } = useAuth()
 
   const form = useForm<ConfigSchema>({
     resolver: zodResolver(configSchema),
@@ -46,33 +50,115 @@ export function ConfigForm() {
     form.reset(config)
   }, [])
 
-  function handleSubmit(values: Omit<ConfigSchema, 'commentLengthPreset'>) {
-    setConfig({
-      ...values,
-      commentLength: {
-        min:
-          form.watch('commentLengthPreset') === 'short'
-            ? 10
-            : form.watch('commentLengthPreset') === 'normal'
-              ? 30
-              : 50,
-        max:
-          form.watch('commentLengthPreset') === 'short'
-            ? 20
-            : form.watch('commentLengthPreset') === 'normal'
-              ? 50
-              : 100
-      }
-    })
+  useEffect(() => {
+    // 데이터베이스에서 차단된 계정 목록 로드
+    const loadBlockedAccounts = async () => {
+      if (!user) return
 
-    form.reset(values)
+      try {
+        const { data, error } = await supabase
+          .from('block_account')
+          .select('block_ids')
+          .eq('member_id', user.id)
+          .single()
+
+        if (error) {
+          console.error('차단된 계정 로드 실패:', error)
+          return
+        }
+
+        if (data && data.block_ids) {
+          const blockIds =
+            typeof data.block_ids === 'string'
+              ? (JSON.parse(data.block_ids) as string[])
+              : data.block_ids
+
+          form.setValue('excludeUsernames', blockIds)
+          setConfig({ ...config, excludeUsernames: blockIds })
+        }
+      } catch (error) {
+        console.error('차단된 계정 로드 중 오류:', error)
+      }
+    }
+
+    loadBlockedAccounts()
+  }, [user])
+
+  async function handleSubmit(values: Omit<ConfigSchema, 'commentLengthPreset'>) {
+    if (!user) return
+
+    try {
+      const blockIdsJson = JSON.stringify(values.excludeUsernames || [])
+
+      const { data: existingData, error: fetchError } = await supabase
+        .from('block_account')
+        .select('*')
+        .eq('member_id', user.id)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('차단된 계정 조회 실패:', fetchError)
+        return
+      }
+
+      if (existingData) {
+        const { error: updateError } = await supabase
+          .from('block_account')
+          .update({
+            block_ids: blockIdsJson
+          })
+          .eq('id', user.id)
+
+        if (updateError) {
+          console.error('차단된 계정 업데이트 실패:', updateError)
+          toast.error(t('configForm.error.updateBlockedAccounts'))
+          return
+        }
+      } else {
+        const { error: insertError } = await supabase.from('block_account').insert({
+          id: user.id,
+          member_id: user.id,
+          block_ids: blockIdsJson
+        })
+
+        if (insertError) {
+          console.error('차단된 계정 생성 실패:', insertError)
+          toast.error(t('configForm.error.createBlockedAccounts'))
+          return
+        }
+      }
+
+      setConfig({
+        ...values,
+        commentLength: {
+          min:
+            form.watch('commentLengthPreset') === 'short'
+              ? 10
+              : form.watch('commentLengthPreset') === 'normal'
+                ? 30
+                : 50,
+          max:
+            form.watch('commentLengthPreset') === 'short'
+              ? 20
+              : form.watch('commentLengthPreset') === 'normal'
+                ? 50
+                : 100
+        }
+      })
+
+      form.reset(values)
+      toast.success(t('configForm.success.save'))
+    } catch (error) {
+      console.error('설정 저장 중 오류:', error)
+      toast.error(t('configForm.error.save'))
+    }
   }
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="container max-w-3xl p-4 mx-auto">
+      <div className="container mx-auto max-w-3xl p-4">
         <Card className="flex h-[calc(100vh-150px)] flex-col shadow-lg">
-          <CardHeader className="flex-shrink-0 p-2 bg-muted/50">
+          <CardHeader className="flex-shrink-0 bg-muted/50 p-2">
             <div className="flex items-center justify-between px-5">
               <CardTitle className="hidden text-xl font-bold">{t('configPage.title')}</CardTitle>
             </div>
@@ -91,7 +177,7 @@ export function ConfigForm() {
 
                   {/* 댓글 스타일 설정 */}
                   <div className="h-full p-4">
-                    <div className="flex items-center mb-4">
+                    <div className="mb-4 flex items-center">
                       <FormLabel className="m-0 text-base font-semibold">
                         {t('configForm.label.prompt')}
                       </FormLabel>
@@ -103,7 +189,7 @@ export function ConfigForm() {
                         control={form.control}
                         name="prompt.preset"
                         render={({ field }) => (
-                          <FormItem className="p-0 m-0">
+                          <FormItem className="m-0 p-0">
                             <FormControl>
                               <div
                                 className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
@@ -116,8 +202,8 @@ export function ConfigForm() {
                                   handleSubmit(form.getValues())
                                 }}
                               >
-                                <div className="flex items-center justify-center w-12 h-12 mr-3 bg-blue-100 rounded-full">
-                                  <BookOpen className="w-6 h-6 text-blue-600" />
+                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                                  <BookOpen className="h-6 w-6 text-blue-600" />
                                 </div>
                                 <div className="flex-1">
                                   <p className="font-semibold">
@@ -138,7 +224,7 @@ export function ConfigForm() {
                         control={form.control}
                         name="prompt.preset"
                         render={({ field }) => (
-                          <FormItem className="p-0 m-0">
+                          <FormItem className="m-0 p-0">
                             <FormControl>
                               <div
                                 className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
@@ -151,8 +237,8 @@ export function ConfigForm() {
                                   handleSubmit(form.getValues())
                                 }}
                               >
-                                <div className="flex items-center justify-center w-12 h-12 mr-3 rounded-full bg-amber-100">
-                                  <Coffee className="w-6 h-6 text-amber-600" />
+                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                                  <Coffee className="h-6 w-6 text-amber-600" />
                                 </div>
                                 <div className="flex-1">
                                   <p className="font-semibold">
@@ -173,7 +259,7 @@ export function ConfigForm() {
                         control={form.control}
                         name="prompt.preset"
                         render={({ field }) => (
-                          <FormItem className="p-0 m-0">
+                          <FormItem className="m-0 p-0">
                             <FormControl>
                               <div
                                 className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
@@ -186,8 +272,8 @@ export function ConfigForm() {
                                   handleSubmit(form.getValues())
                                 }}
                               >
-                                <div className="flex items-center justify-center w-12 h-12 mr-3 bg-purple-100 rounded-full">
-                                  <Sparkles className="w-6 h-6 text-purple-600" />
+                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+                                  <Sparkles className="h-6 w-6 text-purple-600" />
                                 </div>
                                 <div className="flex-1">
                                   <p className="font-semibold">
@@ -208,7 +294,7 @@ export function ConfigForm() {
                         control={form.control}
                         name="prompt.preset"
                         render={({ field }) => (
-                          <FormItem className="p-0 m-0">
+                          <FormItem className="m-0 p-0">
                             <FormControl>
                               <div
                                 className={`flex min-h-28 cursor-pointer items-center rounded-lg border p-4 transition-all hover:bg-muted/50 ${
@@ -221,8 +307,8 @@ export function ConfigForm() {
                                   setIsCustomPromptDialogOpen(true)
                                 }}
                               >
-                                <div className="flex items-center justify-center w-12 h-12 mr-3 bg-gray-100 rounded-full">
-                                  <PencilLine className="w-6 h-6 text-gray-600" />
+                                <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                                  <PencilLine className="h-6 w-6 text-gray-600" />
                                 </div>
                                 <div className="flex-1">
                                   <p className="font-semibold">
@@ -247,7 +333,7 @@ export function ConfigForm() {
 
                   {/* 댓글 길이 설정 */}
                   <div className="h-full p-4">
-                    <div className="flex items-center mb-4 font-semibold">
+                    <div className="mb-4 flex items-center font-semibold">
                       {t('configForm.label.commentLength')}
                     </div>
                     <div className="flex items-center justify-between">
@@ -353,14 +439,14 @@ export function ConfigForm() {
                   </div>
 
                   {/* 시간 간격 설정 */}
-                  <div className="p-4 bg-card">
-                    <div className="relative py-2 space-y-4">
+                  <div className="bg-card p-4">
+                    <div className="relative space-y-4 py-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="absolute top-0 right-0"
+                            className="absolute right-0 top-0"
                             title="기본 값으로 되돌리기"
                             onClick={() => {
                               if (window.confirm('설정을 기본값으로 되돌리시겠습니까?')) {
@@ -372,7 +458,7 @@ export function ConfigForm() {
                               }
                             }}
                           >
-                            <RotateCw className="w-4 h-4" />
+                            <RotateCw className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -385,13 +471,13 @@ export function ConfigForm() {
                         name="postIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.postIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-sm">
                                   <p>{t('configForm.description.postIntervalSeconds')}</p>
@@ -439,13 +525,13 @@ export function ConfigForm() {
                         name="workIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.workIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-sm space-y-2 leading-relaxed">
                                   <p>{t('configForm.description.workIntervalSeconds')}</p>
@@ -493,13 +579,13 @@ export function ConfigForm() {
                         name="loopIntervalSeconds"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.loopIntervalSeconds')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-sm space-y-2 leading-relaxed">
                                   <p>{t('configForm.description.loopIntervalSeconds')}</p>
@@ -544,13 +630,13 @@ export function ConfigForm() {
                         name="excludeUsernames"
                         render={({ field }) => (
                           <FormItem>
-                            <div className="flex items-center mb-2">
+                            <div className="mb-2 flex items-center">
                               <FormLabel className="m-0 text-sm">
                                 {t('configForm.label.excludeUsernames')}
                               </FormLabel>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+                                  <HelpCircle className="ml-2 h-4 w-4 cursor-help text-muted-foreground" />
                                 </TooltipTrigger>
                                 <TooltipContent className="py-4">
                                   <p className="text-lg">
@@ -560,7 +646,7 @@ export function ConfigForm() {
                                   <img
                                     src={blockGuideImage}
                                     alt="block"
-                                    className="object-contain aspect-video w-96"
+                                    className="aspect-video w-96 object-contain"
                                   />
                                 </TooltipContent>
                               </Tooltip>
@@ -571,7 +657,7 @@ export function ConfigForm() {
                                   {field.value?.map((username, index) => (
                                     <div
                                       key={index}
-                                      className="flex items-center px-2 py-1 rounded-md bg-secondary"
+                                      className="flex items-center rounded-md bg-secondary px-2 py-1"
                                     >
                                       <span className="text-sm">{username}</span>
                                       <button

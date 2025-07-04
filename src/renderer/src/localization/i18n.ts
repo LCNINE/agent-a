@@ -97,6 +97,15 @@ i18n.use(initReactI18next).init({
           toast: {
             submitSuccess: 'Configuration saved successfully!'
           },
+          success: {
+            save: 'Settings have been saved successfully'
+          },
+          error: {
+            save: 'Failed to save settings',
+            updateBlockedAccounts: 'Failed to update blocked accounts',
+            createBlockedAccounts: 'Failed to create blocked accounts',
+            loadBlockedAccounts: 'Failed to load blocked accounts'
+          },
           validation: {
             preset: 'Choose one of the conversational styles',
             workCount: 'The number of works must be at least 1'
@@ -265,18 +274,26 @@ i18n.use(initReactI18next).init({
         },
         configForm: {
           prompt: {
-            formalDesc: '존중하고 격식 있는 어조로 댓글을 작성합니다.',
-            casualDesc: '편안하고 친근한 어조로 댓글을 작성합니다.',
-            hyperDesc: '표현력 있고 활기찬 언어로 댓글을 작성합니다.',
+            formalDesc: '정중하고 예의 바른 톤으로 댓글을 작성합니다.',
+            casualDesc: '편안하고 친근한 톤으로 댓글을 작성합니다.',
+            hyperDesc: '표현력이 풍부하고 활기찬 언어로 댓글을 작성합니다.',
             customDesc: '개인화된 댓글 작성 환경을 제공합니다.'
           },
           toast: {
             submitSuccess: '설정이 저장되었습니다!'
           },
-
+          success: {
+            save: '설정이 성공적으로 저장되었습니다'
+          },
+          error: {
+            save: '설정 저장에 실패했습니다',
+            updateBlockedAccounts: '차단된 계정 업데이트에 실패했습니다',
+            createBlockedAccounts: '차단된 계정 생성에 실패했습니다',
+            loadBlockedAccounts: '차단된 계정 로드에 실패했습니다'
+          },
           validation: {
-            workCount: '작업 갯수는 최소 1개 이상이어야 합니다',
-            preset: '대화체 하나를 선택해주세요'
+            preset: '대화 스타일을 선택해주세요',
+            workCount: '작업 수는 1 이상이어야 합니다'
           },
           label: {
             prompt: '댓글 스타일 설정 ',

@@ -9,6 +9,8 @@ import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
 import { app, BrowserWindow } from 'electron'
+import { createClient } from '@supabase/supabase-js'
+import { Database } from '../../../renderer/src/supabase/database.types'
 
 export interface WorkLog {
   timestamp: number
@@ -42,6 +44,10 @@ export class AgentManager {
   private excludeUsernames = new Set<string>()
   private isLoggedIn: Boolean = false
   private mainWindow: BrowserWindow | null = null
+  private supabase = createClient<Database>(
+    'https://xszdgbmgwnaxbyekqons.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzemRnYm1nd25heGJ5ZWtxb25zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzODAxMDcsImV4cCI6MjA1Mzk1NjEwN30.S4fGG1sv9drG9f04ejWCpmeGyrLkRTdXnxq_UaZzlUg'
+  )
 
   constructor(
     private works: WorkType,
@@ -59,21 +65,92 @@ export class AgentManager {
       details,
       success
     }
-    
+
     if (this._status.logs && this._status.logs.length >= 100) {
       this._status.logs = [...this._status.logs.slice(-99), log]
     } else {
       this._status.logs = [...(this._status.logs || []), log]
     }
-    
+
     this._status.currentAction = action
-    
+
     this.broadcastStatus()
   }
 
   private broadcastStatus() {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       this.mainWindow.webContents.send('agent:status-update', this._status)
+    }
+  }
+
+  private async loadBlockedAccounts() {
+    try {
+      const { data, error } = await this.supabase
+        .from('block_account')
+        .select('block_ids')
+        .eq('member_id', this.config.credentials.username)
+        .single()
+
+      if (error) {
+        console.error('차단된 계정 로드 실패:', error)
+        return
+      }
+
+      if (data && data.block_ids) {
+        // block_ids가 문자열인 경우 JSON 파싱
+        const blockIds =
+          typeof data.block_ids === 'string'
+            ? (JSON.parse(data.block_ids) as string[])
+            : data.block_ids
+        this.excludeUsernames = new Set(blockIds)
+      }
+    } catch (error) {
+      console.error('차단된 계정 로드 중 오류:', error)
+    }
+  }
+
+  private async updateBlockedAccounts(usernames: string[]) {
+    try {
+      const { data: existingData, error: fetchError } = await this.supabase
+        .from('block_account')
+        .select('*')
+        .eq('member_id', this.config.credentials.username)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('차단된 계정 조회 실패:', fetchError)
+        return
+      }
+
+      const uniqueUsernames = Array.from(new Set(usernames))
+      const blockIdsJson = JSON.stringify(uniqueUsernames)
+
+      if (existingData) {
+        const { error: updateError } = await this.supabase
+          .from('block_account')
+          .update({
+            block_ids: blockIdsJson
+          })
+          .eq('id', this.config.credentials.username)
+
+        if (updateError) {
+          console.error('차단된 계정 업데이트 실패:', updateError)
+        }
+      } else {
+        const { error: insertError } = await this.supabase.from('block_account').insert({
+          id: this.config.credentials.username,
+          member_id: this.config.credentials.username,
+          block_ids: blockIdsJson
+        })
+
+        if (insertError) {
+          console.error('차단된 계정 생성 실패:', insertError)
+        }
+      }
+
+      this.excludeUsernames = new Set(uniqueUsernames)
+    } catch (error) {
+      console.error('차단된 계정 업데이트 중 오류:', error)
     }
   }
 
@@ -91,20 +168,27 @@ export class AgentManager {
         logs: [],
         currentAction: '에이전트 시작 준비 중'
       }
-      
+
       this.broadcastStatus()
 
       this.config = config
       this.works = workList
       this.currentWorkIndex = 0
-      
+
+      // 차단된 계정 로드
+      await this.loadBlockedAccounts()
+
       this.addLog('브라우저 시작 중')
       this.browser = await startBrowser(this.config.credentials)
       this.addLog('브라우저 시작 완료', undefined, true)
 
       await this.startWorkLoop()
     } catch (error) {
-      this.addLog('에이전트 시작 실패', error instanceof Error ? error.message : String(error), false)
+      this.addLog(
+        '에이전트 시작 실패',
+        error instanceof Error ? error.message : String(error),
+        false
+      )
       this.stop()
       throw error
     }
@@ -124,27 +208,27 @@ export class AgentManager {
 
         this._status.currentWork = this.works
         this.broadcastStatus()
-        
+
         this.addLog('작업 실행 시작')
         await this.runWork(this.works)
         this.addLog('작업 실행 완료', undefined, true)
 
         const waitSeconds = this.config.loopIntervalSeconds || 300
         console.log(`작업 완료. ${waitSeconds}초 대기 후 다시 시작합니다.`)
-        
+
         const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
         this._status.waiting = {
           for: `다음 작업 루프 대기 중 (${waitSeconds}초)`,
           until
         }
         this.broadcastStatus()
-        
+
         this.addLog('대기 시작', `${waitSeconds}초 대기`)
 
         await new Promise((resolve) =>
           setTimeout(resolve, (this.config?.loopIntervalSeconds ?? 300) * 1000)
         )
-        
+
         this._status.waiting = null
         this.broadcastStatus()
         this.addLog('대기 완료', '다음 작업 시작')
@@ -357,7 +441,7 @@ export class AgentManager {
       if (work.hashtagWork.enabled) {
         this.addLog('해시태그 작업 시작')
         await this.page.waitForTimeout(2000)
-        
+
         for (const hashtag of work.hashtagWork.hashtags) {
           if (!this._status.isRunning) break
 
@@ -366,13 +450,13 @@ export class AgentManager {
             this.page,
             async (articleLocator) => {
               let isProcessed = false
-              
+
               try {
                 await articleLocator.click()
                 await chooseRandomSleep(postInteractionDelays)
-                
+
                 this.addLog('해시태그 게시물 열기')
-                
+
                 let author: string | null = null
                 let retryCount = 0
                 const maxRetries = 2
@@ -386,32 +470,32 @@ export class AgentManager {
                   const authorLoc = this.page!.locator(
                     'a.x1i10hfl.xjbqb8w.x1ejq31n.xd10rxx.x1sy0etr.x17r0tee.x972fbf.xcfux6l.x1qhh985.xm0m39n.x9f619.x1ypdohk.xt0psk2.xe8uvvx.xdj266r.x11i5rnm.xat24cr.x1mh8g0r.xexx8yu.x4uap5.x18d9i69.xkhd6sd.x16tdsg8.x1hl2dhg.xggy1nq.x1a2a7pz._acan._acao._acat._acaw._aj1-._ap30._a6hd'
                   ).first()
-                  
+
                   author = await authorLoc.textContent()
                   retryCount++
                 }
-                
+
                 if (!author) {
                   console.log('[authorLoc] 작성자 요소를 찾을 수 없습니다.')
                   this.addLog('작성자 정보 없음', '게시물 건너뜀')
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
-                
+
                 this.addLog('게시물 확인', `작성자: ${author}`)
-                
+
                 if (this.excludeUsernames.has(author)) {
                   console.log('[runWork] 제외 유저 스킵')
                   this.addLog('제외된 사용자', `${author} - 건너뜀`)
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
-                
+
                 // 내 댓글이 있는지 확인
                 const myUsername = this.config.credentials.username
                 const comments = this.page!.locator('h3.x6s0dn4.x3nfvp2')
                 const commentAuthors = await comments.locator('a').allTextContents()
-                
+
                 if (commentAuthors.includes(myUsername)) {
                   await chooseRandomSleep(postInteractionDelays)
                   console.log('이미 댓글을 작성한 게시물 스킵')
@@ -419,7 +503,7 @@ export class AgentManager {
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
-                
+
                 const adIndicator = this.page!.getByText(/광고|Sponsored/)
                 if (await adIndicator.isVisible()) {
                   await chooseRandomSleep(postInteractionDelays)
@@ -428,7 +512,7 @@ export class AgentManager {
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
-                
+
                 this.addLog('좋아요 시도 중')
                 const likeButtonResult: boolean = await checkedAction(
                   this.page!.locator('[aria-label="좋아요"], [aria-label="Like"]').first(),
@@ -446,20 +530,18 @@ export class AgentManager {
                     })
                   }
                 )
-                
+
                 if (likeButtonResult) {
                   this.addLog('좋아요 성공', author, true)
                   await chooseRandomSleep(postInteractionDelays)
                 } else {
                   this.addLog('좋아요 실패', author, false)
                 }
-                
+
                 this.addLog('게시물 내용 확인 중')
                 const contentLoc = this.page!.locator(
                   'li._a9zj._a9zl._a9z5 h1._ap3a._aaco._aacu._aacx._aad7._aade'
                 )
-
-                
 
                 const content = await contentLoc.textContent()
                 if (content == null) {
@@ -468,12 +550,12 @@ export class AgentManager {
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
-                
+
                 this.addLog('게시물 이미지 확인 중')
                 const mediaLoc = this.page!.locator('div._aatk._aatl')
                 const mediaBase64 = await mediaLoc.screenshot({ type: 'jpeg' })
                 const base64Image = mediaBase64.toString('base64')
-                
+
                 this.addLog('AI 댓글 생성 중')
                 const commentRes = await callGenerateComments({
                   image: base64Image,
@@ -482,7 +564,7 @@ export class AgentManager {
                   maxLength: this.config.commentLength.max,
                   prompt: this.config.prompt
                 })
-                
+
                 if (!commentRes.isAllowed) {
                   console.log('AI가 댓글 작성을 거부한 게시글 스킵')
                   this.addLog('AI 댓글 거부', '부적절한 게시물', false)
@@ -490,7 +572,7 @@ export class AgentManager {
                   return false
                 }
                 this.addLog('AI 댓글 생성 완료', commentRes.comment)
-                
+
                 this.addLog('댓글 입력 영역 확인 중')
                 const commentTextareaResult: boolean = await checkedAction(
                   this.page!.locator(
@@ -501,12 +583,12 @@ export class AgentManager {
                   async (locator: Locator) => {
                     await locator.pressSequentially(commentRes.comment, { delay: 100 })
                     await chooseRandomSleep(postInteractionDelays)
-  
+
                     await this.page!.waitForSelector(
                       'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
                       { state: 'visible', timeout: 3000 }
                     )
-  
+
                     await checkedAction(
                       this.page!.getByRole('button', { name: /^(게시|Post)$/ }),
                       this.page!,
@@ -514,12 +596,11 @@ export class AgentManager {
                     )
                   }
                 )
-  
-                
+
                 if (commentTextareaResult) {
                   isProcessed = true
                   this.addLog('댓글 게시 성공', author, true)
-                  
+
                   const waitSeconds = this.config.postIntervalSeconds || 60
                   const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
                   this._status.waiting = {
@@ -530,17 +611,21 @@ export class AgentManager {
                 } else {
                   this.addLog('댓글 게시 실패', '댓글 입력 영역을 찾을 수 없습니다', false)
                 }
-                
+
                 await chooseRandomSleep(postInteractionDelays)
                 this.addLog('게시물 닫기')
                 await this.page!.getByLabel(/닫기|Close/).click()
                 await chooseRandomSleep(postInteractionDelays)
               } catch (error) {
                 console.error('게시물 처리 중 오류:', error)
-                this.addLog('게시물 처리 오류', error instanceof Error ? error.message : String(error), false)
+                this.addLog(
+                  '게시물 처리 오류',
+                  error instanceof Error ? error.message : String(error),
+                  false
+                )
                 await this.page!.getByLabel(/닫기|Close/).click()
               }
-              
+
               return isProcessed
             },
             {},
@@ -549,7 +634,7 @@ export class AgentManager {
           )
 
           await hashtagService.processHashtag([hashtag])
-          
+
           if (work.hashtagWork.hashtags.indexOf(hashtag) < work.hashtagWork.hashtags.length - 1) {
             const waitSeconds = this.config.workIntervalSeconds || 60
             const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
@@ -559,14 +644,14 @@ export class AgentManager {
             }
             this.broadcastStatus()
             this.addLog('해시태그 작업 간 대기', `${waitSeconds}초`)
-            
+
             await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000))
-            
+
             this._status.waiting = null
             this.broadcastStatus()
           }
         }
-        
+
         this.addLog('해시태그 작업 완료')
       }
 
@@ -599,7 +684,7 @@ export class AgentManager {
                 this.addLog('자신의 댓글', '건너뜀')
                 return false
               }
-              
+
               this.addLog('댓글 확인', `작성자: ${notificationInfo.author}`)
               this.addLog('좋아요 시도 중')
               const likeButtonResult: boolean = await checkedAction(
@@ -686,9 +771,9 @@ export class AgentManager {
 
               // 댓글 입력 영역 찾기
               this.addLog('답글 입력 영역 확인 중')
-              const commentTextarea = this.page?.locator(
-                'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
-              ).first()
+              const commentTextarea = this.page
+                ?.locator('textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]')
+                .first()
 
               if (!(await commentTextarea!.isVisible())) {
                 console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
@@ -711,7 +796,7 @@ export class AgentManager {
               if (isProcessed) {
                 console.log('답글 작성 성공!')
                 this.addLog('답글 게시 성공', notificationInfo.author, true)
-                
+
                 const waitSeconds = this.config.postIntervalSeconds || 60
                 const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
                 this._status.waiting = {
@@ -726,7 +811,11 @@ export class AgentManager {
               await chooseRandomSleep(postInteractionDelays)
             } catch (error) {
               console.error('댓글 처리 중 오류:', error)
-              this.addLog('댓글 처리 오류', error instanceof Error ? error.message : String(error), false)
+              this.addLog(
+                '댓글 처리 오류',
+                error instanceof Error ? error.message : String(error),
+                false
+              )
               return false
             }
 
@@ -773,7 +862,7 @@ export class AgentManager {
 
   async stop(): Promise<void> {
     this.addLog('에이전트 중지 중')
-    
+
     if (this.page) {
       await this.page.close().catch(() => {})
       this.page = null
@@ -791,7 +880,7 @@ export class AgentManager {
       logs: this._status.logs,
       currentAction: '중지됨'
     }
-    
+
     this.broadcastStatus()
     this.addLog('에이전트 중지 완료')
   }
@@ -810,8 +899,12 @@ export class AgentManager {
   getStatus(): BotStatus {
     return this._status
   }
-  
+
   getRecentLogs(count: number = 10): WorkLog[] {
     return (this._status.logs || []).slice(-count)
+  }
+
+  async updateExcludeUsernames(usernames: string[]) {
+    await this.updateBlockedAccounts(usernames)
   }
 }

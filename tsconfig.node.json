@@ -1,10 +1,13 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "src/index.d.ts", "src/helpers", "src/main/agent/services/.ts"],
+  "include": [
+    "electron.vite.config.*",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/renderer/src/supabase/database.types.ts"
+  ],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"],
-    "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "types": ["electron-vite/node"]
   }
 }
