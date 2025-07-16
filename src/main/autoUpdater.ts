@@ -21,6 +21,21 @@ export function initAutoUpdater(): void {
     return
   }
 
+  log.info('GitHub 토큰 설정 중...')
+
+  autoUpdater.requestHeaders = {
+    Authorization: `token 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`
+  }
+
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'LCNINE',
+    repo: 'agent-a',
+    private: true,
+    token:
+      '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'
+  })
+
   // 더 자세한 로깅 추가
   autoUpdater.logger = log
   log.transports.file.level = 'debug'
