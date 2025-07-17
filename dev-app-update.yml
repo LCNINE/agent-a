@@ -1,5 +1,8 @@
 provider: github
 owner: LCNINE
 repo: agent-a
-updaterCacheDirName: agent-a-updater
+private: true
 token: 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
+forceDevUpdateConfig: true
+allowDowngrade: true
+allowPrerelease: true

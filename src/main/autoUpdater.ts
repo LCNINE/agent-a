@@ -14,7 +14,6 @@ export function setMainWindow(window: BrowserWindow): void {
 
 // 자동 업데이트 이벤트 초기화 함수
 export function initAutoUpdater(): void {
-  // 개발 환경에서는 자동 업데이트 기능 비활성화
   if (process.env.NODE_ENV === 'development') {
     autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml')
     log.info('개발 환경에서는 자동 업데이트가 비활성화됩니다.')
@@ -22,10 +21,6 @@ export function initAutoUpdater(): void {
   }
 
   log.info('GitHub 토큰 설정 중...')
-
-  autoUpdater.requestHeaders = {
-    Authorization: `token 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`
-  }
 
   autoUpdater.setFeedURL({
     provider: 'github',
@@ -36,14 +31,12 @@ export function initAutoUpdater(): void {
       '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'
   })
 
-  // 더 자세한 로깅 추가
+  // 로그 레벨 및 경로 설정
   autoUpdater.logger = log
   log.transports.file.level = 'debug'
-  log.info('App version:', app.getVersion())
+  log.transports.file.resolvePath = () => path.join(app.getPath('userData'), 'logs/main.log')
 
-  autoUpdater.on('error', (error) => {
-    log.error('AutoUpdater 에러:', error)
-  })
+  log.info('App version:', app.getVersion())
 
   autoUpdater.on('checking-for-update', () => {
     log.info('업데이트 확인 중...')
@@ -54,12 +47,10 @@ export function initAutoUpdater(): void {
   autoUpdater.on('update-available', (info) => {
     log.info('새 버전 발견:', info.version)
     log.info('현재 버전:', app.getVersion())
-    if (mainWindow) {
-      mainWindow.webContents.send('update:available', {
-        version: info.version,
-        releaseNotes: info.releaseNotes
-      })
-    }
+    mainWindow?.webContents.send('update:available', {
+      version: info.version,
+      releaseNotes: info.releaseNotes
+    })
   })
 
   autoUpdater.on('update-not-available', (info) => {
@@ -67,9 +58,18 @@ export function initAutoUpdater(): void {
     mainWindow?.webContents.send('update:not-available')
   })
 
-  autoUpdater.on('error', (err) => {
-    log.error('업데이트 중 오류:', err)
-    mainWindow?.webContents.send('update:error', err.message)
+  autoUpdater.on('error', (error) => {
+    log.error('업데이트 중 오류:', error)
+
+    if (error instanceof Error) {
+      log.error('에러 메시지:', error.message)
+      log.error('에러 스택:', error.stack)
+    }
+
+    mainWindow?.webContents.send(
+      'update:error',
+      error instanceof Error ? error.message : String(error)
+    )
   })
 
   autoUpdater.on('download-progress', (progressObj) => {
@@ -102,7 +102,6 @@ export function initAutoUpdater(): void {
     autoUpdater.quitAndInstall()
   })
 
-  // 디버깅을 위한 로그 추가
   log.info('autoUpdater 초기화 완료')
   log.info('현재 앱 버전:', app.getVersion())
   log.info('업데이트 피드 URL:', autoUpdater.getFeedURL())
@@ -110,7 +109,6 @@ export function initAutoUpdater(): void {
 
 // 업데이트 확인 함수
 export async function checkForUpdates(): Promise<void> {
-  // 개발 환경에서는 업데이트 확인 중단
   if (process.env.NODE_ENV === 'development') {
     log.info('개발 환경에서는 업데이트 확인이 비활성화됩니다.')
     return

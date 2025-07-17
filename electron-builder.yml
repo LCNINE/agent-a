@@ -47,3 +47,8 @@ publish:
   repo: agent-a
   private: true
   token: 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
+forceCodeSigning: false
+detectUpdateChannel: true
+releaseType: release
+allowDowngrade: true
+allowPrerelease: true
