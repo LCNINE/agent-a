@@ -1,0 +1,7 @@
+provider: github
+owner: LCNINE
+repo: unknown
+private: false
+forceDevUpdateConfig: true
+allowDowngrade: true
+allowPrerelease: true
