@@ -126,7 +126,8 @@
       "provider": "github",
       "owner": "LCNINE",
       "repo": "agent-a",
-      "private": false
+      "private": false,
+      "token": "${env.GH_TOKEN}"
     },
     "win": {
       "target": [
