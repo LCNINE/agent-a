@@ -121,11 +121,11 @@
   },
   "build": {
     "appId": "com.lucide.agentApp",
-    "productName": "unknown",
+    "productName": "agent-a",
     "publish": {
       "provider": "github",
       "owner": "LCNINE",
-      "repo": "unknown",
+      "repo": "agent-a",
       "private": false
     },
     "win": {

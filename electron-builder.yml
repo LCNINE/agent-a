@@ -44,7 +44,7 @@ npmRebuild: false
 publish:
   provider: github
   owner: LCNINE
-  repo: unknown
+  repo: agent-a
   private: false
 forceCodeSigning: false
 detectUpdateChannel: true
