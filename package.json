@@ -1,9 +1,9 @@
 {
   "name": "unknown",
-  "version": "1.0.36",
+  "version": "1.0.35",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "LCNINE",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

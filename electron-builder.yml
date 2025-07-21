@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: unknown
+productName: agent-a
 directories:
   buildResources: build
 files:
@@ -15,7 +15,7 @@ asarUnpack:
   - 'resources/**'
   - '.cache/puppeteer/**/*'
 win:
-  executableName: unknown
+  executableName: agent-a
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
