@@ -25,7 +25,7 @@ export function initAutoUpdater(): void {
   autoUpdater.setFeedURL({
     provider: 'github',
     owner: 'LCNINE',
-    repo: 'unknown',
+    repo: 'agent-a',
     private: false
   })
 

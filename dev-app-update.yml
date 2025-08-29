@@ -1,6 +1,6 @@
 provider: github
 owner: LCNINE
-repo: unknown
+repo: agent-a
 private: false
 forceDevUpdateConfig: true
 allowDowngrade: true
