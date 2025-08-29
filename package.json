@@ -23,7 +23,7 @@
     "version:patch": "npm version patch && git push && git push --tags",
     "version:minor": "npm version minor && git push && git push --tags",
     "version:major": "npm version major && git push && git push --tags",
-    "release": "npm run version:patch && cross-env-shell GH_TOKEN=$GH_TOKEN npm run publish",
+    "release": "npm run version:patch && dotenv cross-env GH_TOKEN=%GH_TOKEN% npm run publish",
     "gen:types": "npx supabase gen types typescript --project-id xszdgbmgwnaxbyekqons --schema public > src/renderer/src/supabase/database.types.ts"
   },
   "dependencies": {
@@ -105,6 +105,7 @@
     "autoprefixer": "^10.4.20",
     "cross-env": "^7.0.3",
     "dotenv": "^17.2.0",
+    "dotenv-cli": "^10.0.0",
     "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
     "electron-vite": "^2.3.0",
