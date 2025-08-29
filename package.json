@@ -1,5 +1,5 @@
 {
-  "name": "unknown",
+  "name": "agent-a",
   "version": "1.0.36",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
@@ -137,7 +137,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "artifactName": "agent-a-Setup-${version}.${ext}",
       "signAndEditExecutable": false
     },
     "nsis": {
