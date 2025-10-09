@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
 import { StartAgentParams } from '..'
 import { AgentManager } from './agent/managers/AgentManager'
+import { startPowerSaveBlocker, stopPowerSaveBlocker } from './index'
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
 const WIN_MAXIMIZE_CHANNEL = 'window:maximize'
@@ -62,12 +63,17 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
     log.info('Start agent button clicked with params:', params)
     try {
+      // 화면 보호기 및 절전 모드 방지 시작
+      startPowerSaveBlocker()
+
       currentManager = new AgentManager(params.workList, params.config, mainWindow)
       await currentManager.start(params.config, params.workList)
 
       log.info('Agent started successfully')
     } catch (error) {
       log.error('Failed to start agent:', error)
+      // 에러 발생 시 powerSaveBlocker 중지
+      stopPowerSaveBlocker()
       throw error
     }
   })
@@ -78,6 +84,9 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
       lastLogs = currentManager.getStatus().logs || []
       await currentManager.stop()
       currentManager = null
+
+      // 화면 보호기 및 절전 모드 방지 중지
+      stopPowerSaveBlocker()
     }
   })
 

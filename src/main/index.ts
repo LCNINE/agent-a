@@ -1,11 +1,28 @@
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { app, BrowserWindow, dialog, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell, powerSaveBlocker } from 'electron'
 import ProgressBar from 'electron-progressbar'
 import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { setMainWindow } from './autoUpdater'
 import { registerIpcHandlers } from './ipcHandlers'
+
+let powerSaveBlockerId: number | null = null
+
+export function startPowerSaveBlocker(): void {
+  if (powerSaveBlockerId === null) {
+    powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep')
+    console.log('화면 보호기 및 절전 모드 방지 시작됨')
+  }
+}
+
+export function stopPowerSaveBlocker(): void {
+  if (powerSaveBlockerId !== null) {
+    powerSaveBlocker.stop(powerSaveBlockerId)
+    powerSaveBlockerId = null
+    console.log('화면 보호기 및 절전 모드 방지 중지됨')
+  }
+}
 
 let progressBar: any = null
 

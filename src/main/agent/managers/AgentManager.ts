@@ -11,6 +11,7 @@ import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
 import { app, BrowserWindow } from 'electron'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../../../renderer/src/supabase/database.types'
+import { stopPowerSaveBlocker } from '../../index'
 
 export interface WorkLog {
   timestamp: number
@@ -881,6 +882,9 @@ export class AgentManager {
       logs: this._status.logs,
       currentAction: '중지됨'
     }
+
+    // 화면 보호기 및 절전 모드 방지 중지
+    stopPowerSaveBlocker()
 
     this.broadcastStatus()
     this.addLog('에이전트 중지 완료')
