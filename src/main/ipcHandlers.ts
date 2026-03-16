@@ -16,9 +16,12 @@ const THEME_MODE_SYSTEM_CHANNEL = 'theme-mode:system'
 
 const AGENT_START_CHANNEL = 'agent:start'
 const AGENT_STOP_CHANNEL = 'agent:stop'
+const AGENT_STOP_ALL_CHANNEL = 'agent:stop-all'
 const AGENT_STATUS_CHANNEL = 'agent:status'
+const AGENT_ALL_STATUSES_CHANNEL = 'agent:all-statuses'
 
-let lastLogs: any[] = []
+const managers = new Map<string, AgentManager>()
+const lastLogsMap = new Map<string, any[]>()
 
 function addWindowEventListeners(mainWindow: BrowserWindow) {
   ipcMain.handle(WIN_MINIMIZE_CHANNEL, () => {
@@ -54,58 +57,109 @@ function addThemeEventListeners() {
   })
 }
 
-let currentManager: AgentManager | null = null
 let mainWindowRef: BrowserWindow | null = null
 
 function addAgentEventListeners(mainWindow: BrowserWindow) {
   mainWindowRef = mainWindow
 
   ipcMain.handle(AGENT_START_CHANNEL, async (_, params: StartAgentParams) => {
-    log.info('Start agent button clicked with params:', params)
+    const agentId = params.config.credentials.username
+    log.info(`Start agent for ${agentId}`)
+
+    if (managers.has(agentId)) {
+      const existing = managers.get(agentId)!
+      if (existing.getStatus().isRunning) {
+        log.info(`Agent ${agentId} is already running`)
+        return
+      }
+    }
+
     try {
-      // 화면 보호기 및 절전 모드 방지 시작
-      startPowerSaveBlocker()
+      if (managers.size === 0) {
+        startPowerSaveBlocker()
+      }
 
-      currentManager = new AgentManager(params.workList, params.config, mainWindow)
-      await currentManager.start(params.config, params.workList)
+      const manager = new AgentManager(params.workList, params.config, mainWindow, agentId)
+      managers.set(agentId, manager)
+      await manager.start(params.config, params.workList)
 
-      log.info('Agent started successfully')
+      log.info(`Agent ${agentId} started successfully`)
     } catch (error) {
-      log.error('Failed to start agent:', error)
-      // 에러 발생 시 powerSaveBlocker 중지
-      stopPowerSaveBlocker()
+      log.error(`Failed to start agent ${agentId}:`, error)
+      managers.delete(agentId)
+      if (managers.size === 0) {
+        stopPowerSaveBlocker()
+      }
       throw error
     }
   })
 
-  ipcMain.handle(AGENT_STOP_CHANNEL, async () => {
-    if (currentManager) {
-      // 중지하기 전에 마지막 로그 상태 저장
-      lastLogs = currentManager.getStatus().logs || []
-      await currentManager.stop()
-      currentManager = null
+  ipcMain.handle(AGENT_STOP_CHANNEL, async (_, agentId: string) => {
+    const manager = managers.get(agentId)
+    if (manager) {
+      lastLogsMap.set(agentId, manager.getStatus().logs || [])
+      await manager.stop()
+      managers.delete(agentId)
 
-      // 화면 보호기 및 절전 모드 방지 중지
-      stopPowerSaveBlocker()
+      if (managers.size === 0) {
+        stopPowerSaveBlocker()
+      }
     }
   })
 
-  ipcMain.handle(AGENT_STATUS_CHANNEL, () => {
-    if (!currentManager) {
+  ipcMain.handle(AGENT_STOP_ALL_CHANNEL, async () => {
+    for (const [agentId, manager] of managers) {
+      lastLogsMap.set(agentId, manager.getStatus().logs || [])
+      await manager.stop()
+    }
+    managers.clear()
+    stopPowerSaveBlocker()
+  })
+
+  ipcMain.handle(AGENT_STATUS_CHANNEL, (_, agentId: string) => {
+    const manager = managers.get(agentId)
+    if (!manager) {
       return {
         isRunning: false,
         currentWork: null,
         waiting: null,
-        logs: lastLogs,
+        logs: lastLogsMap.get(agentId) || [],
         currentAction: '중지됨'
       }
     }
-    // 로그를 계속 최신 상태로 유지
-    const status = currentManager.getStatus()
+    const status = manager.getStatus()
     if (status.logs && status.logs.length > 0) {
-      lastLogs = status.logs
+      lastLogsMap.set(agentId, status.logs)
     }
     return status
+  })
+
+  ipcMain.handle(AGENT_ALL_STATUSES_CHANNEL, () => {
+    const result: Record<string, any> = {}
+
+    // 실행 중인 에이전트
+    for (const [agentId, manager] of managers) {
+      const status = manager.getStatus()
+      if (status.logs && status.logs.length > 0) {
+        lastLogsMap.set(agentId, status.logs)
+      }
+      result[agentId] = status
+    }
+
+    // 마지막 로그가 있는 중지된 에이전트
+    for (const [agentId, logs] of lastLogsMap) {
+      if (!result[agentId]) {
+        result[agentId] = {
+          isRunning: false,
+          currentWork: null,
+          waiting: null,
+          logs,
+          currentAction: '중지됨'
+        }
+      }
+    }
+
+    return result
   })
 }
 

@@ -95,9 +95,11 @@ export interface StartAgentParams {
 
 interface AgentContext {
   start: (params: StartAgentParams) => Promise<void>
-  stop: () => Promise<void>
-  getStatus: () => Promise<BotStatus>
-  onStatusUpdate: (callback: (status: BotStatus) => void) => void
+  stop: (agentId: string) => Promise<void>
+  stopAll: () => Promise<void>
+  getStatus: (agentId: string) => Promise<BotStatus>
+  getAllStatuses: () => Promise<Record<string, BotStatus>>
+  onStatusUpdate: (callback: (agentId: string, status: BotStatus) => void) => void
 }
 
 interface UpdateContext {

@@ -53,7 +53,8 @@ export class AgentManager {
   constructor(
     private works: WorkType,
     private config: AgentConfig,
-    mainWindow?: BrowserWindow
+    mainWindow?: BrowserWindow,
+    private agentId?: string
   ) {
     this.excludeUsernames = new Set(this.config.excludeUsernames)
     this.mainWindow = mainWindow || BrowserWindow.getAllWindows()[0]
@@ -80,7 +81,7 @@ export class AgentManager {
 
   private broadcastStatus() {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send('agent:status-update', this._status)
+      this.mainWindow.webContents.send('agent:status-update', this.agentId || this.config.credentials.username, this._status)
     }
   }
 

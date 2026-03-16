@@ -10,22 +10,18 @@ export function useAgent() {
   const workList = useWorkStore((state) => state.workList)
   const { clearAllErrors } = useErrorStore()
 
-  const [status, setStatus] = useState<BotStatus>({
-    isRunning: false,
-    currentWork: null,
-    waiting: null
-  })
+  const [statuses, setStatuses] = useState<Record<string, BotStatus>>({})
 
   useEffect(() => {
-    // 1초마다 상태 폴링
+    // 1초마다 전체 상태 폴링
     const interval = setInterval(async () => {
-      const currentStatus = await window.agent.getStatus()
-      setStatus(currentStatus)
+      const allStatuses = await window.agent.getAllStatuses()
+      setStatuses(allStatuses)
     }, 1000)
 
     // 실시간 상태 업데이트 구독
-    window.agent.onStatusUpdate((newStatus) => {
-      setStatus(newStatus)
+    window.agent.onStatusUpdate((agentId, newStatus) => {
+      setStatuses((prev) => ({ ...prev, [agentId]: newStatus }))
     })
 
     return () => clearInterval(interval)
@@ -43,7 +39,6 @@ export function useAgent() {
     }
 
     try {
-      // config에 credentials 포함
       const agentConfig = {
         ...config,
         credentials: {
@@ -76,9 +71,9 @@ export function useAgent() {
     }
   }
 
-  const stopAgent = async () => {
+  const stopAgent = async (agentId: string) => {
     try {
-      await window.agent.stop()
+      await window.agent.stop(agentId)
     } catch (error) {
       console.error('Agent stop error:', error)
       CustomToast({
@@ -91,9 +86,32 @@ export function useAgent() {
     }
   }
 
+  const stopAllAgents = async () => {
+    try {
+      await window.agent.stopAll()
+    } catch (error) {
+      console.error('Agent stop all error:', error)
+    }
+  }
+
+  // 하나라도 실행 중인지 확인
+  const isAnyRunning = Object.values(statuses).some((s) => s.isRunning)
+
+  // 특정 에이전트 상태 가져오기
+  const getAgentStatus = (agentId: string): BotStatus => {
+    return statuses[agentId] || {
+      isRunning: false,
+      currentWork: null,
+      waiting: null
+    }
+  }
+
   return {
-    status,
+    statuses,
+    isAnyRunning,
+    getAgentStatus,
     startAgent,
-    stopAgent
+    stopAgent,
+    stopAllAgents
   }
 }

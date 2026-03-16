@@ -35,10 +35,12 @@ const AGENT_STATUS_CHANNEL = 'agent:status'
 function exposeAgentContext() {
   contextBridge.exposeInMainWorld('agent', {
     start: (params: any /*StartAgentParams*/) => ipcRenderer.invoke(AGENT_START_CHANNEL, params),
-    stop: () => ipcRenderer.invoke(AGENT_STOP_CHANNEL),
-    getStatus: () => ipcRenderer.invoke(AGENT_STATUS_CHANNEL),
-    onStatusUpdate: (callback: (status: any) => void) => {
-      ipcRenderer.on('agent:status-update', (_, status) => callback(status))
+    stop: (agentId: string) => ipcRenderer.invoke(AGENT_STOP_CHANNEL, agentId),
+    stopAll: () => ipcRenderer.invoke('agent:stop-all'),
+    getStatus: (agentId: string) => ipcRenderer.invoke(AGENT_STATUS_CHANNEL, agentId),
+    getAllStatuses: () => ipcRenderer.invoke('agent:all-statuses'),
+    onStatusUpdate: (callback: (agentId: string, status: any) => void) => {
+      ipcRenderer.on('agent:status-update', (_, agentId, status) => callback(agentId, status))
     }
   })
 }
