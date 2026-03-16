@@ -316,13 +316,34 @@ export class AgentManager {
               return false
             }
 
+            // 1. 댓글 달기 버튼 클릭 → 모달 오픈
+            this.addLog('댓글 달기 버튼 클릭 시도')
+            const commentTrigger = articleLocator.getByText(/^댓글 달기$|^Add a comment$/i).first()
+            const commentIcon = articleLocator.locator(
+              '[aria-label*="댓글" i], [aria-label*="comment" i]'
+            ).first()
+
+            if (await commentTrigger.isVisible().catch(() => false)) {
+              await commentTrigger.click()
+            } else if (await commentIcon.isVisible().catch(() => false)) {
+              await commentIcon.click()
+            } else {
+              console.log('[runWork] 댓글 달기 버튼을 찾을 수 없습니다')
+              this.addLog('댓글 달기 버튼 없음', '게시물 건너뜀', false)
+              return false
+            }
+            await this.page!.waitForTimeout(1500)
+
+            // 모달(dialog) 확인
+            const commentModal = this.page!.locator('[role="dialog"]').first()
+            const modalVisible = await commentModal.isVisible().catch(() => false)
+            const commentScope = modalVisible ? commentModal : this.page!
+
+            // 2. 모달 안에서 좋아요
             this.addLog('좋아요 시도 중')
             const likeResult: boolean = await checkedAction(
-              articleLocator
-                .getByRole('button')
-                .filter({
-                  hasText: /^(좋아요|Like)$/
-                })
+              commentScope
+                .locator('[aria-label="좋아요"], [aria-label="Like"]')
                 .first(),
               this.page!,
               '좋아요 버튼',
@@ -337,42 +358,28 @@ export class AgentManager {
               await chooseRandomSleep(postInteractionDelays)
             } else {
               this.addLog('좋아요 실패', author, false)
-              return likeResult
             }
 
-            this.addLog('더 보기 클릭 시도')
-            const moreButtonResult: boolean = await checkedAction(
-              articleLocator
-                .getByRole('button')
-                .filter({
-                  hasText: /^(?:더\s*보기|more)$/
-                })
-                .first(),
-              this.page!,
-              '더 보기'
-            )
-            if (moreButtonResult) {
-              this.addLog('더 보기 클릭 성공')
-              await chooseRandomSleep(postInteractionDelays)
-            } else {
-              this.addLog('더 보기 클릭 실패 또는 필요 없음')
-              return moreButtonResult
-            }
-
-            const articleScreenshot = await articleLocator.screenshot({ type: 'jpeg' })
+            // 3. 모달 안에서 스냅샷
+            this.addLog('게시물 스냅샷 캡처 중')
+            const screenshotTarget = modalVisible ? commentModal : articleLocator
+            const articleScreenshot = await screenshotTarget.screenshot({ type: 'jpeg' })
             const base64Image = articleScreenshot.toString('base64')
 
-            const contentLoc = articleLocator
-              .locator('._ap3a._aaco._aacu._aacx._aad7._aade')
+            // 게시물 내용 가져오기
+            const contentLoc = commentScope
+              .locator('h1, span[dir="auto"]')
               .first()
             const content = await contentLoc.textContent()
 
             if (content == null) {
               console.log('[runWork] 내용이 없는 게시글 스킵')
               this.addLog('내용 없음', '게시물 건너뜀')
+              if (modalVisible) await this.page!.getByLabel(/닫기|Close/).first().click().catch(() => {})
               return false
             }
 
+            // 4. AI 댓글 생성 및 작성
             this.addLog('AI 댓글 생성 중')
             const commentRes = await callGenerateComments({
               image: base64Image,
@@ -385,30 +392,41 @@ export class AgentManager {
             if (!commentRes.isAllowed) {
               console.log('[runWork] AI가 댓글 작성을 거부한 게시글 스킵')
               this.addLog('AI 댓글 거부', '부적절한 게시물', false)
+              if (modalVisible) await this.page!.getByLabel(/닫기|Close/).first().click().catch(() => {})
               return false
             }
 
             this.addLog('댓글 입력 영역 확인 중')
-
-            const commentTextarea = articleLocator.getByRole('textbox')
-            if (!(await commentTextarea.isVisible())) {
+            const commentTextarea = commentScope.locator(
+              '[role="textbox"][contenteditable="true"], textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+            ).first()
+            if (!(await commentTextarea.isVisible().catch(() => false))) {
               console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
+              if (modalVisible) await this.page!.getByLabel(/닫기|Close/).first().click().catch(() => {})
               return false
             }
 
             this.addLog('AI 댓글 생성 완료', commentRes.comment)
-            await commentTextarea!.pressSequentially(commentRes.comment, { delay: 100 })
+            await commentTextarea.click()
+            await this.page!.waitForTimeout(300)
+            await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
             await this.page!.waitForTimeout(500)
 
             this.addLog('댓글 게시 시도 중')
             isProcessed = await checkedAction(
-              articleLocator
+              commentScope
                 .getByRole('button')
                 .filter({ hasText: /^(게시|Post)$/ })
                 .first(),
               this.page!,
               '게시'
             )
+
+            // 모달 닫기
+            if (modalVisible && isProcessed) {
+              await this.page!.waitForTimeout(1000)
+              await this.page!.getByLabel(/닫기|Close/).first().click().catch(() => {})
+            }
 
             if (isProcessed) {
               console.log('댓글 작성 성공!')
@@ -576,23 +594,38 @@ export class AgentManager {
                 this.addLog('AI 댓글 생성 완료', commentRes.comment)
 
                 this.addLog('댓글 입력 영역 확인 중')
+
+                // 해시태그 모달 안에서 "댓글 달기" 또는 댓글 아이콘 클릭
+                const hashtagDialog = this.page!.locator('[role="dialog"]').first()
+                const hashtagCommentTrigger = hashtagDialog.getByText(/^댓글 달기$|^Add a comment$/i).first()
+                const hashtagCommentIcon = hashtagDialog.locator(
+                  '[aria-label*="댓글" i], [aria-label*="comment" i]'
+                ).first()
+
+                if (await hashtagCommentTrigger.isVisible().catch(() => false)) {
+                  await hashtagCommentTrigger.click()
+                  await this.page!.waitForTimeout(1500)
+                } else if (await hashtagCommentIcon.isVisible().catch(() => false)) {
+                  await hashtagCommentIcon.click()
+                  await this.page!.waitForTimeout(1500)
+                }
+
+                // 댓글 모달이 새로 열렸을 수 있으므로 가장 위의 dialog에서 찾기
+                const commentDialog = this.page!.locator('[role="dialog"]').last()
                 const commentTextareaResult: boolean = await checkedAction(
-                  this.page!.locator(
-                    'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
-                  ),
+                  commentDialog.locator(
+                    '[role="textbox"][contenteditable="true"], textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+                  ).first(),
                   this.page!,
                   '댓글 입력 영역',
                   async (locator: Locator) => {
+                    await locator.click()
+                    await this.page!.waitForTimeout(300)
                     await locator.pressSequentially(commentRes.comment, { delay: 100 })
                     await chooseRandomSleep(postInteractionDelays)
 
-                    await this.page!.waitForSelector(
-                      'div[role="button"]:has-text("게시"), div[role="button"]:has-text("Post")',
-                      { state: 'visible', timeout: 3000 }
-                    )
-
                     await checkedAction(
-                      this.page!.getByRole('button', { name: /^(게시|Post)$/ }),
+                      commentDialog.getByRole('button', { name: /^(게시|Post)$/i }),
                       this.page!,
                       '게시'
                     )
@@ -774,16 +807,20 @@ export class AgentManager {
               // 댓글 입력 영역 찾기
               this.addLog('답글 입력 영역 확인 중')
               const commentTextarea = this.page
-                ?.locator('textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]')
+                ?.locator(
+                  '[role="textbox"][contenteditable="true"], textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i]'
+                )
                 .first()
 
-              if (!(await commentTextarea!.isVisible())) {
+              if (!(await commentTextarea!.isVisible().catch(() => false))) {
                 console.log('[runWork] 댓글 작성이 불가능한 게시글 스킵')
                 this.addLog('답글 입력란 없음', '건너뜀', false)
                 return false
               }
 
               this.addLog('답글 입력 중', commentRes.comment)
+              await commentTextarea!.click()
+              await this.page!.waitForTimeout(300)
               await commentTextarea!.pressSequentially(commentRes.comment, { delay: 100 })
               await this.page!.waitForTimeout(500)
 

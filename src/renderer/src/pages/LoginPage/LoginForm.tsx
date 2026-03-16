@@ -131,7 +131,7 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
               <div className="mt-4 text-center text-sm">
                 {t('loginForm.noAccount')}
                 <a
-                  href={process.env.LOGIN_LINK}
+                  href={import.meta.env.VITE_LOGIN_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline underline-offset-4"

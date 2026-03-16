@@ -179,23 +179,33 @@ export async function loginWithCredentials(page: Page, credentials: LoginCredent
     await page.goto('https://www.instagram.com/accounts/login/')
     await page.waitForTimeout(2000) // 페이지 로딩 대기
 
-    const loginForm = page.locator('form[id="loginForm"]')
-    if (!(await loginForm.isVisible())) {
+    // 이미 로그인되어 있는지 확인 (로그인 폼 id="login_form"이 보이면 로그인 필요)
+    const loginForm = page.locator('form#login_form')
+    const needsLogin = await loginForm.isVisible().catch(() => false)
+    if (!needsLogin) {
       console.log('이미 로그인되어 있습니다')
       return true
     }
 
-    const usernameInput = page.getByLabel(
-      /전화번호, 사용자 이름 또는 이메일|phone number, username, or email/i
-    )
+    // 아이디 입력 (폼 내 input name="email" 또는 name="username")
+    const usernameInput = loginForm
+      .locator('input[name="email"], input[name="username"]')
+      .first()
+    await usernameInput.waitFor({ state: 'visible', timeout: 15000 })
     await usernameInput.click()
     await usernameInput.pressSequentially(username, { delay: 50 })
 
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(800)
 
-    const passwordInput = page.getByLabel(/비밀번호|password/i)
+    // 비밀번호 입력 (폼 내 type="password" 또는 name="pass", fill 사용)
+    const passwordInput = loginForm
+      .locator('input[type="password"], input[name="pass"], input[name="password"]')
+      .first()
+    await passwordInput.waitFor({ state: 'visible', timeout: 15000 })
+    await passwordInput.scrollIntoViewIfNeeded()
+    await page.waitForTimeout(300)
     await passwordInput.click()
-    await passwordInput.pressSequentially(password, { delay: 50 })
+    await passwordInput.fill(password)
 
     await page.waitForTimeout(1000)
 
@@ -222,7 +232,7 @@ export async function navigateToHome(page: Page): Promise<void> {
 
     console.log('홈 버튼 찾는중...')
     await page.waitForSelector('a:has(span:text-matches("홈|home", "i"))', {
-      timeout: 5000
+      timeout: 15000
     })
 
     const homeMenu = page.locator('a', {
