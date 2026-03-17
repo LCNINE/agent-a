@@ -12,6 +12,7 @@ import { EditAccountDialog } from './EditAccountDialog'
 import { useAccountStore } from '@/store/accountStore'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Circle, Edit2, Key, Lock, Trash2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/utils/tailwind'
 import {
   AlertDialog,
@@ -28,20 +29,19 @@ import { toast } from 'sonner'
 
 interface AccountTableProps {
   accounts: { username: string; password: string }[]
+  maxInstances: number
 }
 
-export function AccountTable({ accounts }: AccountTableProps) {
+export function AccountTable({ accounts, maxInstances }: AccountTableProps) {
   const { t } = useTranslation()
-  const { deleteAccount, selectAccount, selectedAccount } = useAccountStore()
+  const { deleteAccount, selectAccount, selectedAccount, activeAccounts, toggleAccountActive } =
+    useAccountStore()
 
-  const handleAccountSelect = (e: React.MouseEvent<HTMLTableRowElement>, username: string) => {
+  const handleToggleActive = (e: React.MouseEvent, username: string) => {
     e.stopPropagation()
-
-    const account = accounts.find((acc) => acc.username === username)
-
-    if (account && account.password) {
-      selectAccount(account)
-      toast.success(`${account.username} ${t('accountTable.accountSelected')}`)
+    const success = toggleAccountActive(username, maxInstances)
+    if (!success) {
+      toast.error(`현재 플랜은 최대 ${maxInstances}개까지 활성화할 수 있습니다.`)
     }
   }
 
@@ -55,7 +55,7 @@ export function AccountTable({ accounts }: AccountTableProps) {
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
-            <TableHead className="w-[40px]"></TableHead>
+            <TableHead className="w-[60px] text-center">활성화</TableHead>
             <TableHead className="w-[120px] md:w-[200px]">username</TableHead>
             <TableHead>password</TableHead>
             <TableHead className="w-[180px]"></TableHead>
@@ -65,19 +65,17 @@ export function AccountTable({ accounts }: AccountTableProps) {
           {accounts.map((account) => (
             <TableRow
               key={account.username}
-              className={cn(
-                'group cursor-pointer transition-colors hover:bg-muted/50',
-                selectedAccount?.username === account.username && 'bg-muted/30'
-              )}
-              onClick={(e) => handleAccountSelect(e, account.username)}
+              className="group transition-colors hover:bg-muted/50"
             >
               <TableCell className="px-2">
-                <div className="flex items-center justify-center">
-                  {selectedAccount?.username === account.username ? (
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground" />
-                  )}
+                <div
+                  className="flex items-center justify-center"
+                  onClick={(e) => handleToggleActive(e, account.username)}
+                >
+                  <Switch
+                    checked={activeAccounts.includes(account.username)}
+                    onCheckedChange={() => {}}
+                  />
                 </div>
               </TableCell>
               <TableCell className="font-medium">

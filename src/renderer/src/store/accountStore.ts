@@ -6,6 +6,7 @@ import { persist } from 'zustand/middleware'
 
 interface AccountState {
   accountList: LoginCredentials[]
+  activeAccounts: string[] // 활성화된 계정 username 목록
   selectedAccount: LoginCredentials | null
   isAuthenticated: boolean
   lastLoginTime: number | null
@@ -15,6 +16,7 @@ interface AccountState {
   deleteAccount(username: string): void
   updateAccount(params: { oldUsername: string; newUsername: string; password: string }): void
   selectAccount(credentials: LoginCredentials): void
+  toggleAccountActive(username: string, maxInstances: number): boolean
   login(credentials: LoginCredentials): void
   logout(): void
   checkSession(): boolean
@@ -24,6 +26,7 @@ export const useAccountStore = create<AccountState>()(
   persist(
     (set, get) => ({
       accountList: [],
+      activeAccounts: [],
       selectedAccount: null,
       isAuthenticated: false,
       lastLoginTime: null,
@@ -58,7 +61,8 @@ export const useAccountStore = create<AccountState>()(
 
           return {
             accountList: newList,
-            selectedAccount: newSelectedAccount
+            selectedAccount: newSelectedAccount,
+            activeAccounts: state.activeAccounts.filter((u) => u !== username)
           }
         })
       },
@@ -84,12 +88,30 @@ export const useAccountStore = create<AccountState>()(
 
           return {
             accountList: newList,
-            selectedAccount: newSelectedAccount
+            selectedAccount: newSelectedAccount,
+            activeAccounts: state.activeAccounts.map((u) => (u === oldUsername ? newUsername : u))
           }
         })
       },
       selectAccount(credentials) {
         set({ selectedAccount: credentials })
+      },
+
+      toggleAccountActive(username, maxInstances) {
+        const state = get()
+        const isActive = state.activeAccounts.includes(username)
+        if (isActive) {
+          // 비활성화
+          set({ activeAccounts: state.activeAccounts.filter((u) => u !== username) })
+          return true
+        } else {
+          // 활성화 - 플랜 제한 확인
+          if (state.activeAccounts.length >= maxInstances) {
+            return false
+          }
+          set({ activeAccounts: [...state.activeAccounts, username] })
+          return true
+        }
       },
 
       login(credentials) {

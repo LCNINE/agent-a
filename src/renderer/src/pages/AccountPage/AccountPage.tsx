@@ -6,10 +6,15 @@ import { useAccountStore } from '@/store/accountStore'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { AddAccountDialog } from './AddAccountDialog'
+import { useAuthContext } from '@/hooks/useAuth'
+import { useCurrentSubscriptionQuery } from '@/service/subscription/queries'
 
 export default function AccountPage() {
   const { t } = useTranslation()
   const accountList = useAccountStore((state) => state.accountList)
+  const { user } = useAuthContext()
+  const { data: subscription } = useCurrentSubscriptionQuery(user?.id ?? '')
+  const maxInstances = subscription?.maxInstances ?? 1
 
   return (
     <div className="flex h-full flex-col">
@@ -26,7 +31,7 @@ export default function AccountPage() {
           />
         </div>
         <div className="rounded-lg border bg-card">
-          <AccountTable accounts={accountList} />
+          <AccountTable accounts={accountList} maxInstances={maxInstances} />
         </div>
       </div>
       <Footer />

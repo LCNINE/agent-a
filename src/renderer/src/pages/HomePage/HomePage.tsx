@@ -86,19 +86,27 @@ export default function HomePage() {
           </div>
         )}
         {isSubscriptionActive && subscription?.remainingDays !== undefined && (
-          <div className="flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-sm font-medium text-green-600">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-            {subscription.formattedEndDate}까지
-            <span className="text-gray-500">
-              ({subscription.remainingDays}일 {subscription.remainingHours}시간)
-            </span>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2 rounded-full bg-green-50 px-4 py-2 text-sm font-medium text-green-600">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+              {subscription.formattedEndDate}까지
+              <span className="text-gray-500">
+                ({subscription.remainingDays}일 {subscription.remainingHours}시간)
+              </span>
+            </div>
+            <div className="text-xs text-gray-500 px-2">
+              {subscription.planDisplayName} · 최대 {subscription.maxInstances}개 동시 실행
+            </div>
           </div>
         )}
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4 mt-16 lg:mt-0">
         <h1 className="text-4xl font-bold">{t('appName')}</h1>
-        <AgentController isSubscriptionActive={isSubscriptionActive} />
+        <AgentController
+          isSubscriptionActive={isSubscriptionActive}
+          maxInstances={subscription?.maxInstances ?? 1}
+        />
 
         {/* 작업 상태 표시 영역 */}
         <Card className="w-[500px] mt-4">

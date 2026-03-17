@@ -7,15 +7,23 @@ interface Subscription {
   end_date: Date
   is_active: boolean
   start_date: Date
+  plan_id: number | null
+  plan_name: string
+  plan_display_name: string
+  max_instances: number
 }
 
-interface SubscriptionResponse {
+export interface SubscriptionResponse {
   subscriptionId: number
   endDate: Date
   isActive: boolean
   remainingDays: number
   remainingHours: number
   formattedEndDate: string
+  planId: number | null
+  planName: string
+  planDisplayName: string
+  maxInstances: number
 }
 
 class SubscriptionService extends Service {
@@ -45,7 +53,11 @@ class SubscriptionService extends Service {
       isActive: data.is_active,
       remainingDays,
       remainingHours,
-      formattedEndDate
+      formattedEndDate,
+      planId: data.plan_id,
+      planName: data.plan_name ?? 'basic',
+      planDisplayName: data.plan_display_name ?? '베이직',
+      maxInstances: data.max_instances ?? 1
     }
   }
 }
