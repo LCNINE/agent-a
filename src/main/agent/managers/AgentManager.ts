@@ -317,17 +317,22 @@ export class AgentManager {
               return false
             }
 
-            // 1. 댓글 달기 버튼 클릭 → 모달 오픈
+            // 1. 댓글 달기 버튼 클릭 → 모달 오픈 또는 textarea 직접 포커스
             this.addLog('댓글 달기 버튼 클릭 시도')
             const commentTrigger = articleLocator.getByText(/^댓글 달기$|^Add a comment$/i).first()
             const commentIcon = articleLocator.locator(
-              '[aria-label*="댓글" i], [aria-label*="comment" i]'
+              'svg[aria-label*="댓글" i], svg[aria-label*="comment" i]'
+            ).first()
+            const commentTextareaInArticle = articleLocator.locator(
+              'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i], [role="textbox"][contenteditable="true"]'
             ).first()
 
             if (await commentTrigger.isVisible().catch(() => false)) {
-              await commentTrigger.click()
+              await commentTrigger.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
             } else if (await commentIcon.isVisible().catch(() => false)) {
-              await commentIcon.click()
+              await commentIcon.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+            } else if (await commentTextareaInArticle.isVisible().catch(() => false)) {
+              await commentTextareaInArticle.evaluate((el) => (el as HTMLElement).focus())
             } else {
               console.log('[runWork] 댓글 달기 버튼을 찾을 수 없습니다')
               this.addLog('댓글 달기 버튼 없음', '게시물 건너뜀', false)
@@ -349,8 +354,10 @@ export class AgentManager {
               this.page!,
               '좋아요 버튼',
               async (locator: Locator) => {
-                await locator.evaluate((button) => {
-                  ;(button as HTMLButtonElement).click()
+                await locator.evaluate((el) => {
+                  // SVG일 수 있으므로 가장 가까운 클릭 가능한 부모를 찾아 클릭
+                  const clickable = el.closest('[role="button"], button') || el
+                  clickable.dispatchEvent(new MouseEvent('click', { bubbles: true }))
                 })
               }
             )
@@ -408,7 +415,7 @@ export class AgentManager {
             }
 
             this.addLog('AI 댓글 생성 완료', commentRes.comment)
-            await commentTextarea.click()
+            await commentTextarea.click({ force: true })
             await this.page!.waitForTimeout(300)
             await commentTextarea.pressSequentially(commentRes.comment, { delay: 100 })
             await this.page!.waitForTimeout(500)
@@ -423,8 +430,8 @@ export class AgentManager {
               '게시'
             )
 
-            // 모달 닫기
-            if (modalVisible && isProcessed) {
+            // 모달 닫기 (성공/실패 무관하게 모달이 열려있으면 닫기)
+            if (modalVisible) {
               await this.page!.waitForTimeout(1000)
               await this.page!.getByLabel(/닫기|Close/).first().click().catch(() => {})
             }
@@ -540,8 +547,9 @@ export class AgentManager {
                   this.page!,
                   '좋아요',
                   async (locator: Locator) => {
-                    await locator.evaluate((element) => {
-                      element.dispatchEvent(
+                    await locator.evaluate((el) => {
+                      const clickable = el.closest('[role="button"], button') || el
+                      clickable.dispatchEvent(
                         new MouseEvent('click', {
                           bubbles: true,
                           cancelable: true,
@@ -600,15 +608,21 @@ export class AgentManager {
                 const hashtagDialog = this.page!.locator('[role="dialog"]').first()
                 const hashtagCommentTrigger = hashtagDialog.getByText(/^댓글 달기$|^Add a comment$/i).first()
                 const hashtagCommentIcon = hashtagDialog.locator(
-                  '[aria-label*="댓글" i], [aria-label*="comment" i]'
+                  'svg[aria-label*="댓글" i], svg[aria-label*="comment" i]'
+                ).first()
+                const hashtagCommentTextarea = hashtagDialog.locator(
+                  'textarea[aria-label*="댓글" i], textarea[aria-label*="comment" i], [role="textbox"][contenteditable="true"]'
                 ).first()
 
                 if (await hashtagCommentTrigger.isVisible().catch(() => false)) {
-                  await hashtagCommentTrigger.click()
+                  await hashtagCommentTrigger.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
                   await this.page!.waitForTimeout(1500)
                 } else if (await hashtagCommentIcon.isVisible().catch(() => false)) {
-                  await hashtagCommentIcon.click()
+                  await hashtagCommentIcon.evaluate((el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })))
                   await this.page!.waitForTimeout(1500)
+                } else if (await hashtagCommentTextarea.isVisible().catch(() => false)) {
+                  await hashtagCommentTextarea.evaluate((el) => (el as HTMLElement).focus())
+                  await this.page!.waitForTimeout(500)
                 }
 
                 // 댓글 모달이 새로 열렸을 수 있으므로 가장 위의 dialog에서 찾기

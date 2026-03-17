@@ -28,7 +28,7 @@ export async function checkedAction(
     if (action) {
       await action(locator)
     } else {
-      await locator.click()
+      await locator.click({ force: true })
     }
 
     await page.waitForTimeout(1000)

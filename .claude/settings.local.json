@@ -3,7 +3,17 @@
     "allow": [
       "Bash(git log:*)",
       "Bash(grep:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npm version:*)",
+      "Bash(git tag:*)",
+      "Bash(npx supabase:*)",
+      "WebFetch(domain:supabase.com)",
+      "Bash(node:*)",
+      "Bash(find:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
