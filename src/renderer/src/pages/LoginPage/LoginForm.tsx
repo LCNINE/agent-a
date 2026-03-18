@@ -69,72 +69,71 @@ export default function LoginForm({ className, ...props }: React.ComponentPropsW
   }
 
   return (
-    <div className={cn('flex flex-col gap-6', className)} {...props}>
+    <div className={cn('flex flex-col items-center justify-center min-h-screen gap-8 p-6', className)} {...props}>
       <LangToggle />
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">{t('loginForm.title')}</CardTitle>
+      <Card className="w-full max-w-md shadow-apple-lg">
+        <CardHeader className="space-y-2 pb-6">
+          <CardTitle className="text-2xl font-bold text-center">{t('loginForm.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('loginForm.email.label')}</FormLabel>
-                        <FormControl>
-                          <Input placeholder="m@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+              <div className="flex flex-col gap-5">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">{t('loginForm.email.label')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="m@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="grid gap-2">
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t('loginForm.password.label')}</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium">{t('loginForm.password.label')}</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <Checkbox
                     id="remember"
                     checked={rememberEmail}
                     onCheckedChange={handleRememberEmailChange}
                   />
-                  <Label htmlFor="remember">email 저장하기</Label>
+                  <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                    email 저장하기
+                  </Label>
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full mt-2"
+                  size="lg"
                   disabled={form.formState.isSubmitSuccessful}
                 >
                   {form.formState.isSubmitting ? <Spinner /> : t('loginForm.submit')}
                 </Button>
               </div>
-              <div className="mt-4 text-center text-sm">
+              <div className="mt-6 text-center text-sm text-muted-foreground">
                 {t('loginForm.noAccount')}
                 <a
                   href={import.meta.env.VITE_LOGIN_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline underline-offset-4"
+                  className="ml-1 text-primary font-medium underline-offset-4 hover:underline transition-colors duration-200"
                 >
                   {t('loginForm.applyForAccount')}
                 </a>

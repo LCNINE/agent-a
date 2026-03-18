@@ -7,10 +7,10 @@ interface DragWindowRegionProps {
 
 export default function DragWindowRegion({ title }: DragWindowRegionProps) {
   return (
-    <div className="flex w-screen items-stretch justify-between">
+    <div className="flex w-screen items-stretch justify-between bg-background/60 backdrop-blur-xl border-b border-border/50">
       <div className="draglayer w-full">
         {title && (
-          <div className="flex flex-1 select-none whitespace-nowrap p-2 text-xs text-gray-400">
+          <div className="flex flex-1 select-none whitespace-nowrap p-2.5 text-xs font-medium text-muted-foreground/70">
             {title}
           </div>
         )}
@@ -22,29 +22,34 @@ export default function DragWindowRegion({ title }: DragWindowRegionProps) {
 
 function WindowButtons() {
   return (
-    <div className="flex">
+    <div className="flex items-center">
       <button
         title="Minimize"
         type="button"
-        className="p-2 hover:bg-slate-300"
+        className="flex items-center justify-center w-12 h-9 text-muted-foreground/60 hover:bg-muted/80 hover:text-foreground transition-all duration-150 ease-apple"
         onClick={minimizeWindow}
       >
-        <svg aria-hidden="true" role="img" width="12" height="12" viewBox="0 0 12 12">
+        <svg aria-hidden="true" role="img" width="10" height="10" viewBox="0 0 12 12">
           <rect fill="currentColor" width="10" height="1" x="1" y="6"></rect>
         </svg>
       </button>
       <button
         title="Maximize"
         type="button"
-        className="p-2 hover:bg-slate-300"
+        className="flex items-center justify-center w-12 h-9 text-muted-foreground/60 hover:bg-muted/80 hover:text-foreground transition-all duration-150 ease-apple"
         onClick={maximizeWindow}
       >
-        <svg aria-hidden="true" role="img" width="12" height="12" viewBox="0 0 12 12">
-          <rect width="9" height="9" x="1.5" y="1.5" fill="none" stroke="currentColor"></rect>
+        <svg aria-hidden="true" role="img" width="10" height="10" viewBox="0 0 12 12">
+          <rect width="9" height="9" x="1.5" y="1.5" fill="none" stroke="currentColor" strokeWidth="1.2" rx="1"></rect>
         </svg>
       </button>
-      <button type="button" title="Close" className="p-2 hover:bg-red-300" onClick={closeWindow}>
-        <svg aria-hidden="true" role="img" width="12" height="12" viewBox="0 0 12 12">
+      <button
+        type="button"
+        title="Close"
+        className="flex items-center justify-center w-12 h-9 text-muted-foreground/60 hover:bg-destructive hover:text-destructive-foreground transition-all duration-150 ease-apple"
+        onClick={closeWindow}
+      >
+        <svg aria-hidden="true" role="img" width="10" height="10" viewBox="0 0 12 12">
           <polygon
             fill="currentColor"
             fillRule="evenodd"

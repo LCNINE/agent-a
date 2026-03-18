@@ -151,19 +151,18 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
 
   if (accountList.length === 0) {
     return (
-      <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-500">등록된 계정이 없습니다.</p>
+      <div className="flex flex-col items-center gap-3 py-8">
+        <p className="text-sm text-muted-foreground">등록된 계정이 없습니다.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-[500px]">
-      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-        <span>활성화 계정: {activeAccounts.length}/{maxInstances}개</span>
+    <div className="flex flex-col gap-4 w-full max-w-[520px]">
+      <div className="flex items-center justify-between text-xs text-muted-foreground px-2">
+        <span className="font-medium">활성화 계정: {activeAccounts.length}/{maxInstances}개</span>
       </div>
 
-      {/* 계정별 토글 + 시작/중지 */}
       {accountList.map((account) => {
         const status = getAgentStatus(account.username)
         const isActive = activeAccounts.includes(account.username)
@@ -171,22 +170,25 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
           <div
             key={account.username}
             className={cn(
-              'flex items-center justify-between rounded-lg border p-3',
-              !isActive && 'opacity-50'
+              'flex items-center justify-between rounded-2xl border p-4 transition-all duration-200 ease-apple',
+              isActive
+                ? 'bg-card/80 backdrop-blur-sm shadow-apple-sm hover:shadow-apple-md'
+                : 'bg-muted/30 opacity-60',
+              status.isRunning && 'ring-2 ring-apple-green/30 border-apple-green/50'
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <Switch
                 checked={isActive}
                 onCheckedChange={() => handleToggleActive(account.username)}
                 disabled={status.isRunning}
               />
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 {status.isRunning && (
-                  <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+                  <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-apple-green shadow-[0_0_8px_rgba(52,199,89,0.5)]" />
                 )}
                 {!status.isRunning && isActive && (
-                  <div className="h-2 w-2 rounded-full bg-gray-300" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
                 )}
                 <span className="text-sm font-medium">{account.username}</span>
               </div>
@@ -198,6 +200,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
                     variant="destructive"
                     size="sm"
                     onClick={() => stopAgent(account.username)}
+                    className="min-w-[72px]"
                   >
                     {t('AgentController.action.stop')}
                   </Button>
@@ -206,6 +209,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
                     size="sm"
                     onClick={() => handleStart(account)}
                     disabled={!isSubscriptionActive || !account.password || runningCount >= maxInstances}
+                    className="min-w-[72px]"
                   >
                     {t('AgentController.action.start')}
                   </Button>
@@ -216,9 +220,8 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
         )
       })}
 
-      {/* 전체 시작/중지 (활성 계정 2개 이상일 때만) */}
       {activeAccountList.length >= 2 && (
-        <div className="flex gap-2">
+        <div className="flex gap-3 mt-2">
           <Button
             className="flex-1"
             onClick={handleStartAll}

@@ -8,6 +8,7 @@ import { useRef, useState } from 'react'
 import { WorkCountField } from './WorkCountField'
 import { WorkType } from 'src'
 import { useErrorStore } from '@renderer/store/errorStore'
+import { cn } from '@renderer/lib/utils'
 
 interface WorkSectionProps {
   title: string
@@ -50,46 +51,52 @@ export default function WorkSection({
 
   return (
     <div
-      className={`${error && 'border-2 border-blue-500'} relative space-y-4 rounded-md border p-4`}
+      className={cn(
+        'relative space-y-4 rounded-2xl border-2 p-5 transition-all duration-200 ease-apple',
+        enabled
+          ? 'bg-card/80 backdrop-blur-sm shadow-apple-sm hover:shadow-apple-md'
+          : 'bg-muted/30',
+        error && 'ring-2 ring-apple-blue/50 border-apple-blue'
+      )}
     >
       {error && (
         <div className="absolute -right-2 -top-2 animate-pulse">
-          <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+          <Star className="h-5 w-5 fill-apple-orange text-apple-orange" />
         </div>
       )}
 
       <div className="flex justify-between">
-        <div className="flex flex-col space-y-1">
-          <div className="flex items-center gap-1">
-            {icon}
-            <Label className="font-medium">{title}</Label>
+        <div className="flex flex-col space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted/60">
+              {icon}
+            </div>
+            <Label className="font-semibold text-base">{title}</Label>
           </div>
 
-          <p className="text-sm text-gray-600">{description}</p>
+          <p className="text-sm text-muted-foreground pl-11">{description}</p>
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex flex-col space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-gray-500">
+          <div className="flex flex-col space-y-4 items-end">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-medium text-muted-foreground">
                 {enabled ? '활성화됨' : '비활성화됨'}
               </span>
               <Switch
                 checked={enabled}
                 onCheckedChange={onToggle}
-                className="data-[state=checked]:bg-blue-600"
               />
             </div>
 
-            {/* 작업 개수 설정 필드 */}
             {enabled && <WorkCountField type={type as keyof WorkType} />}
           </div>
         </div>
       </div>
 
       {hashtags && enabled && onAddHashtag && (
-        <div>
-          <div className="mb-2 flex items-center space-x-2">
+        <div className="pl-11 space-y-3">
+          <div className="flex items-center gap-3">
             <Input
               type="text"
               placeholder="해시태그 입력 (# 제외)"
@@ -101,7 +108,10 @@ export default function WorkSection({
                 }
               }}
               ref={hashtagInputRef}
-              className={`${error && 'animate-pulse border-2 border-blue-500'} flex-grow`}
+              className={cn(
+                'flex-grow',
+                error && 'ring-2 ring-apple-blue/50 border-apple-blue'
+              )}
             />
             <Button onClick={handleAddHashtag} size="sm">
               추가
@@ -111,7 +121,7 @@ export default function WorkSection({
             <Button
               variant="outline"
               size="sm"
-              className="w-full justify-between"
+              className="w-full justify-between rounded-xl"
               onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
             >
               해시태그 목록 ({hashtags.length || 0})
@@ -123,31 +133,31 @@ export default function WorkSection({
             </Button>
 
             {isHashtagListOpen && (
-              <ScrollArea className="relative h-[120px] rounded-md bg-gray-50 p-2 dark:bg-gray-800">
+              <ScrollArea className="relative h-[120px] rounded-xl bg-muted/50 p-3 scrollbar-apple">
                 <div className="space-y-2">
                   {hashtags.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {hashtags.map((tag, index) => (
                         <div
                           key={index}
-                          className="relative flex items-center rounded-full border bg-white px-3 py-1 shadow-sm"
+                          className="relative flex items-center rounded-full border bg-background px-3 py-1.5 shadow-apple-sm transition-all duration-150 hover:shadow-apple-md"
                         >
-                          <span className="mr-2 text-sm dark:text-input">#{tag}</span>
+                          <span className="mr-2 text-sm">#{tag}</span>
 
                           {onRemoveHashtag && (
                             <button
                               onClick={() => onRemoveHashtag(tag)}
-                              className="text-gray-500 hover:text-gray-700"
+                              className="text-muted-foreground hover:text-destructive transition-colors"
                               aria-label={`${tag} 태그 삭제`}
                             >
-                              <X className="h-3 w-3" />
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">추가된 해시태그가 없습니다.</p>
+                    <p className="text-sm text-muted-foreground text-center py-4">추가된 해시태그가 없습니다.</p>
                   )}
                 </div>
               </ScrollArea>

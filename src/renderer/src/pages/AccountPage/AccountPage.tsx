@@ -18,19 +18,19 @@ export default function AccountPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+      <div className="flex flex-1 flex-col gap-6 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold md:text-3xl">{t('accountTable.title')}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('accountTable.title')}</h1>
           <AddAccountDialog
             trigger={
-              <Button>
+              <Button size="lg">
                 <Plus className="mr-2 h-4 w-4" />
                 {t('accountTable.addAccount')}
               </Button>
             }
           />
         </div>
-        <div className="rounded-lg border bg-card">
+        <div className="rounded-2xl border bg-card/80 backdrop-blur-sm shadow-apple-md overflow-hidden">
           <AccountTable accounts={accountList} maxInstances={maxInstances} />
         </div>
       </div>
