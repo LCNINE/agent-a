@@ -1,3 +1,39 @@
+declare module 'electron-progressbar' {
+  import { BrowserWindow, BrowserWindowConstructorOptions } from 'electron'
+
+  interface ProgressBarOptions {
+    indeterminate?: boolean
+    initialValue?: number
+    maxValue?: number
+    closeOnComplete?: boolean
+    title?: string
+    text?: string
+    detail?: string
+    style?: {
+      text?: object
+      detail?: object
+      bar?: object
+      value?: object
+    }
+    browserWindow?: BrowserWindowConstructorOptions
+  }
+
+  class ProgressBar {
+    constructor(options?: ProgressBarOptions)
+    value: number
+    text: string
+    detail: string
+    on(event: 'completed' | 'aborted' | 'progress', listener: () => void): this
+    setCompleted(): void
+    close(): void
+    isCompleted(): boolean
+    isInProgress(): boolean
+    getOptions(): ProgressBarOptions
+  }
+
+  export = ProgressBar
+}
+
 interface ThemeModeContext {
   toggle: () => Promise<boolean>
   dark: () => Promise<void>
