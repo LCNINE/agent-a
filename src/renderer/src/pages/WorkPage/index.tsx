@@ -102,7 +102,7 @@ export default function WorkPage() {
                   error={hasError('feedWorkCount')}
                 />
 
-                <WorkSection
+{/* <WorkSection
                   title="해시태그 검색 작업"
                   type="hashtagWork"
                   icon={<Hash className="h-5 w-5 text-apple-purple" />}
@@ -135,7 +135,7 @@ export default function WorkPage() {
                     removeError('noHashtags')
                   }}
                   error={hasError('noHashtags')}
-                />
+                /> */}
 
 {/* <WorkSection
                   title="내 피드 댓글에 좋아요 및 대댓글 달기 작업"
