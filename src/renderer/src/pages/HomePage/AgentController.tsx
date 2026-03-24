@@ -10,6 +10,7 @@ import { useWorkStore } from '@renderer/store/workStore'
 import { useErrorStore } from '@renderer/store/errorStore'
 import { LoginCredentials } from 'src'
 import { cn } from '@/utils/tailwind'
+import { useAuthContext } from '@renderer/hooks/useAuth'
 
 interface AgentControllerProps {
   isSubscriptionActive: boolean
@@ -18,6 +19,7 @@ interface AgentControllerProps {
 
 export function AgentController({ isSubscriptionActive, maxInstances }: AgentControllerProps) {
   const { t } = useTranslation()
+  const { user } = useAuthContext()
   const accountList = useAccountStore((state) => state.accountList)
   const activeAccounts = useAccountStore((state) => state.activeAccounts)
   const toggleAccountActive = useAccountStore((state) => state.toggleAccountActive)
@@ -119,7 +121,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       })
       return
     }
-    startAgent({ username: account.username, password: account.password })
+    startAgent({ username: account.username, password: account.password }, user?.id || '')
   }
 
   const activeAccountList = accountList.filter((a) => activeAccounts.includes(a.username))
@@ -143,7 +145,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       if (started >= maxInstances) break
       const status = getAgentStatus(account.username)
       if (!status.isRunning && account.password) {
-        startAgent({ username: account.username, password: account.password })
+        startAgent({ username: account.username, password: account.password }, user?.id || '')
         started++
       }
     }

@@ -54,7 +54,8 @@ export class AgentManager {
     private works: WorkType,
     private config: AgentConfig,
     mainWindow?: BrowserWindow,
-    private agentId?: string
+    private agentId?: string,
+    private userId?: string
   ) {
     this.excludeUsernames = new Set(this.config.excludeUsernames)
     this.mainWindow = mainWindow || BrowserWindow.getAllWindows()[0]
@@ -86,11 +87,16 @@ export class AgentManager {
   }
 
   private async loadBlockedAccounts() {
+    if (!this.userId) {
+      console.warn('userId가 없어서 차단된 계정을 로드할 수 없습니다.')
+      return
+    }
+
     try {
       const { data, error } = await this.supabase
         .from('block_account')
         .select('block_ids')
-        .eq('member_id', this.config.credentials.username)
+        .eq('member_id', this.userId)
         .single()
 
       if (error) {
@@ -112,11 +118,16 @@ export class AgentManager {
   }
 
   private async updateBlockedAccounts(usernames: string[]) {
+    if (!this.userId) {
+      console.warn('userId가 없어서 차단된 계정을 업데이트할 수 없습니다.')
+      return
+    }
+
     try {
       const { data: existingData, error: fetchError } = await this.supabase
         .from('block_account')
         .select('*')
-        .eq('member_id', this.config.credentials.username)
+        .eq('member_id', this.userId)
         .single()
 
       if (fetchError && fetchError.code !== 'PGRST116') {
@@ -133,15 +144,15 @@ export class AgentManager {
           .update({
             block_ids: blockIdsJson
           })
-          .eq('id', this.config.credentials.username)
+          .eq('member_id', this.userId)
 
         if (updateError) {
           console.error('차단된 계정 업데이트 실패:', updateError)
         }
       } else {
         const { error: insertError } = await this.supabase.from('block_account').insert({
-          id: this.config.credentials.username,
-          member_id: this.config.credentials.username,
+          id: this.userId,
+          member_id: this.userId,
           block_ids: blockIdsJson
         })
 

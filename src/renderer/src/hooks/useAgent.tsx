@@ -1,7 +1,7 @@
 import { CustomToast } from '@renderer/components/CustomToast'
 import { useErrorStore } from '@renderer/store/errorStore'
 import { useEffect, useState } from 'react'
-import { BotStatus, LoginCredentials } from 'src'
+import { BotStatus, LoginCredentials, StartAgentParams } from 'src'
 import { useConfigStore } from '../store/configStore'
 import { useWorkStore } from '../store/workStore'
 
@@ -27,7 +27,7 @@ export function useAgent() {
     return () => clearInterval(interval)
   }, [])
 
-  const startAgent = async (credentials: LoginCredentials) => {
+  const startAgent = async (credentials: LoginCredentials, userId: string) => {
     if (!credentials.username || !credentials.password) {
       CustomToast({
         status: 'error',
@@ -54,7 +54,8 @@ export function useAgent() {
 
       await window.agent.start({
         config: agentConfig,
-        workList
+        workList,
+        userId
       })
 
       clearAllErrors()

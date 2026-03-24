@@ -127,6 +127,7 @@ export type AgentConfig = {
 export interface StartAgentParams {
   config: AgentConfig
   workList: WorkType
+  userId: string
 }
 
 interface AgentContext {
