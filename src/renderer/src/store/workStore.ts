@@ -26,6 +26,14 @@ const defaultWorkList: WorkType = {
     count: 1,
     enabled: false,
     hashtags: []
+  },
+  targetUserWork: {
+    count: 10,
+    enabled: false,
+    targetUsers: [],
+    likeEnabled: true,
+    commentEnabled: true,
+    postsPerUser: 3
   }
 }
 export const useWorkStore = create<WorkState>()(
@@ -48,7 +56,17 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 3
+      version: 4,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as WorkState
+        if (version < 4) {
+          // targetUserWork가 없으면 기본값 추가
+          if (!state.workList.targetUserWork) {
+            state.workList.targetUserWork = defaultWorkList.targetUserWork
+          }
+        }
+        return state
+      }
     }
   )
 )

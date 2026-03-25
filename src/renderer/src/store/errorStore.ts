@@ -6,12 +6,14 @@ export type ErrorSectionType =
   | 'hashtagWork'
   | 'myFeedInteractionWork'
   | 'hashtagInteractionWork'
+  | 'targetUserWork'
   | 'feedWorkCount'
   | 'hashtagWorkCount'
   | 'myFeedInteractionWorkCount'
   | 'hashtagInteractionWorkCount'
   | 'noHashtags'
   | 'noHashtagInteractions'
+  | 'noTargetUsers'
 
 interface ErrorState {
   errorTypes: ErrorSectionType[]

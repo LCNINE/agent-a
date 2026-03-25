@@ -7,12 +7,18 @@ import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle } from 'lucide-react'
 import { useRef, useState } from 'react'
-import { WorkType } from 'src'
+import { WorkType, TargetUser } from 'src'
 import { workSchema, WorkSchema } from './schema'
 import WorkSection from './WorkSection'
 import { useForm } from 'react-hook-form'
+import { Button } from '@renderer/components/ui/button'
+import { Switch } from '@renderer/components/ui/switch'
+import { Label } from '@renderer/components/ui/label'
+import { Input } from '@renderer/components/ui/input'
+import TargetUserImportDialog from '@renderer/components/TargetUserImportDialog'
+import TargetUserList from '@renderer/components/TargetUserList'
 
 export default function WorkPage() {
   const { workList, upsert } = useWorkStore()
@@ -24,6 +30,7 @@ export default function WorkPage() {
   const [isHashtagInteractionListOpen, setIsHashtagInteractionListOpen] = useState(false)
   const hashtagInputRef = useRef<HTMLInputElement>(null)
   const hashtagInteractionInputRef = useRef<HTMLInputElement>(null)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
 
   const form = useForm<WorkSchema>({
     defaultValues: {
@@ -77,6 +84,63 @@ export default function WorkPage() {
     })
   }
 
+  const handleImportTargetUsers = (users: TargetUser[]) => {
+    const existingUsernames = new Set(workList.targetUserWork.targetUsers.map(u => u.username))
+    const newUsers = users.filter(u => !existingUsernames.has(u.username))
+
+    upsert({
+      targetUserWork: {
+        ...workList.targetUserWork,
+        targetUsers: [...workList.targetUserWork.targetUsers, ...newUsers]
+      }
+    })
+  }
+
+  const handleAddTargetUser = (username: string) => {
+    if (workList.targetUserWork.targetUsers.some(u => u.username === username)) {
+      return
+    }
+    upsert({
+      targetUserWork: {
+        ...workList.targetUserWork,
+        targetUsers: [
+          ...workList.targetUserWork.targetUsers,
+          { username, status: 'pending' as const }
+        ]
+      }
+    })
+  }
+
+  const handleRemoveTargetUser = (username: string) => {
+    upsert({
+      targetUserWork: {
+        ...workList.targetUserWork,
+        targetUsers: workList.targetUserWork.targetUsers.filter(u => u.username !== username)
+      }
+    })
+  }
+
+  const handleClearAllTargetUsers = () => {
+    upsert({
+      targetUserWork: {
+        ...workList.targetUserWork,
+        targetUsers: []
+      }
+    })
+  }
+
+  const handleTargetUserSettingChange = (
+    key: 'likeEnabled' | 'commentEnabled' | 'postsPerUser',
+    value: boolean | number
+  ) => {
+    upsert({
+      targetUserWork: {
+        ...workList.targetUserWork,
+        [key]: value
+      }
+    })
+  }
+
   return (
     <TooltipProvider delayDuration={100}>
       <Form {...form}>
@@ -100,6 +164,89 @@ export default function WorkPage() {
                     removeError('feedWorkCount')
                   }}
                   error={hasError('feedWorkCount')}
+                />
+
+                <WorkSection
+                  title="타겟 유저 프로필 방문"
+                  type="targetUserWork"
+                  icon={<Users className="h-5 w-5 text-apple-purple" />}
+                  description="지정한 유저의 프로필을 방문하여 게시물에 좋아요/댓글을 작성합니다."
+                  enabled={workList.targetUserWork.enabled}
+                  onToggle={() => {
+                    handleSwitchChange('targetUserWork', workList.targetUserWork.enabled)
+                  }}
+                  showCount={false}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsImportDialogOpen(true)}
+                        className="flex-1"
+                      >
+                        <FileUp className="h-4 w-4 mr-2" />
+                        엑셀에서 불러오기
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-2">
+                          <Heart className="h-4 w-4 text-apple-red" />
+                          <Label className="text-sm">좋아요</Label>
+                        </div>
+                        <Switch
+                          checked={workList.targetUserWork.likeEnabled}
+                          onCheckedChange={(checked) =>
+                            handleTargetUserSettingChange('likeEnabled', checked)
+                          }
+                        />
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4 text-apple-blue" />
+                          <Label className="text-sm">댓글</Label>
+                        </div>
+                        <Switch
+                          checked={workList.targetUserWork.commentEnabled}
+                          onCheckedChange={(checked) =>
+                            handleTargetUserSettingChange('commentEnabled', checked)
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Label className="text-sm whitespace-nowrap">유저당 게시물 수</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={workList.targetUserWork.postsPerUser}
+                        onChange={(e) =>
+                          handleTargetUserSettingChange(
+                            'postsPerUser',
+                            Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                          )
+                        }
+                        className="w-20"
+                      />
+                    </div>
+
+                    <TargetUserList
+                      users={workList.targetUserWork.targetUsers}
+                      onAddUser={handleAddTargetUser}
+                      onRemoveUser={handleRemoveTargetUser}
+                      onClearAll={handleClearAllTargetUsers}
+                    />
+                  </div>
+                </WorkSection>
+
+                <TargetUserImportDialog
+                  open={isImportDialogOpen}
+                  onOpenChange={setIsImportDialogOpen}
+                  onImport={handleImportTargetUsers}
                 />
 
 {/* <WorkSection
@@ -137,7 +284,7 @@ export default function WorkPage() {
                   error={hasError('noHashtags')}
                 /> */}
 
-{/* <WorkSection
+                {/* <WorkSection
                   title="내 피드 댓글에 좋아요 및 대댓글 달기 작업"
                   type="myFeedInteractionWork"
                   icon={<MessageSquare className="h-5 w-5 text-apple-green" />}

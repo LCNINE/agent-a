@@ -21,6 +21,8 @@ interface WorkSectionProps {
   onAddHashtag?: (tag: string) => void
   onRemoveHashtag?: (tag: string) => void
   error?: boolean
+  children?: React.ReactNode
+  showCount?: boolean
 }
 
 export default function WorkSection({
@@ -33,7 +35,9 @@ export default function WorkSection({
   hashtags,
   onAddHashtag,
   onRemoveHashtag,
-  error
+  error,
+  children,
+  showCount = true
 }: WorkSectionProps) {
   const [newHashtag, setNewHashtag] = useState('')
   const [isHashtagListOpen, setIsHashtagListOpen] = useState(false)
@@ -89,7 +93,7 @@ export default function WorkSection({
               />
             </div>
 
-            {enabled && <WorkCountField type={type as keyof WorkType} />}
+            {enabled && showCount && <WorkCountField type={type as keyof WorkType} />}
           </div>
         </div>
       </div>
@@ -163,6 +167,12 @@ export default function WorkSection({
               </ScrollArea>
             )}
           </div>
+        </div>
+      )}
+
+      {children && enabled && (
+        <div className="pl-11 space-y-3">
+          {children}
         </div>
       )}
     </div>

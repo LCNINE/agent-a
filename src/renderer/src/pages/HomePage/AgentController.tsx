@@ -90,11 +90,24 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       return false
     }
 
+    if (workList.targetUserWork?.enabled && workList.targetUserWork.targetUsers.length === 0) {
+      addError('noTargetUsers')
+      CustomToast({
+        status: 'error',
+        message: '타겟 유저가 설정되지 않았습니다.',
+        position: 'top-center',
+        duration: 2000,
+        action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
+      })
+      return false
+    }
+
     if (
       !workList.feedWork.enabled &&
       !workList.hashtagWork.enabled &&
       !workList.hashtagInteractionWork.enabled &&
-      !workList.myFeedInteractionWork.enabled
+      !workList.myFeedInteractionWork.enabled &&
+      !workList.targetUserWork?.enabled
     ) {
       addError('all')
       CustomToast({

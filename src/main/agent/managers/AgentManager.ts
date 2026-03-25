@@ -8,6 +8,7 @@ import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
+import { TargetUserProcessingService } from '../services/TargetUserProcessingService'
 import { app, BrowserWindow } from 'electron'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../../../renderer/src/supabase/database.types'
@@ -902,11 +903,74 @@ export class AgentManager {
         console.log('hashtagInteractionWork 기능은 아직 구현되지 않았습니다.')
       }
 
+      if (work.targetUserWork?.enabled) {
+        this.addLog('타겟 유저 작업 시작')
+        await this.page.waitForTimeout(2000)
+
+        const pendingUsers = work.targetUserWork.targetUsers.filter(u => u.status === 'pending')
+        if (pendingUsers.length === 0) {
+          this.addLog('타겟 유저 작업', '대기 중인 유저가 없습니다')
+        } else {
+          const targetUserService = new TargetUserProcessingService(
+            this.page,
+            this.config,
+            {
+              likeEnabled: work.targetUserWork.likeEnabled,
+              commentEnabled: work.targetUserWork.commentEnabled,
+              postsPerUser: work.targetUserWork.postsPerUser,
+              onLike: async (username: string, postIndex: number) => {
+                this.addLog('좋아요 완료', `${username} 게시물 ${postIndex + 1}`, true)
+              },
+              onComment: async (username: string, postIndex: number, imageBase64: string, content: string) => {
+                this.addLog('AI 댓글 생성 중', `${username} 게시물 ${postIndex + 1}`)
+                const commentRes = await callGenerateComments({
+                  image: imageBase64,
+                  content: content,
+                  minLength: this.config.commentLength.min,
+                  maxLength: this.config.commentLength.max,
+                  prompt: this.config.prompt
+                })
+
+                if (!commentRes.isAllowed) {
+                  this.addLog('AI 댓글 거부', '부적절한 게시물', false)
+                  return null
+                }
+                this.addLog('AI 댓글 생성 완료', commentRes.comment)
+                return commentRes.comment
+              },
+              onUserStatusUpdate: (username: string, status, error?: string) => {
+                // 유저 상태 업데이트 (UI로 전송)
+                const userIndex = work.targetUserWork.targetUsers.findIndex(u => u.username === username)
+                if (userIndex !== -1) {
+                  work.targetUserWork.targetUsers[userIndex].status = status
+                  work.targetUserWork.targetUsers[userIndex].processedAt = Date.now()
+                  if (error) {
+                    work.targetUserWork.targetUsers[userIndex].error = error
+                  }
+                  this.broadcastStatus()
+                }
+                this.addLog('유저 상태 업데이트', `${username}: ${status}${error ? ` - ${error}` : ''}`)
+              },
+              onLog: (action: string, details?: string, success?: boolean) => {
+                this.addLog(action, details, success)
+              }
+            }
+          )
+
+          await targetUserService.processTargetUsers(work.targetUserWork.targetUsers)
+        }
+
+        this._status.waiting = null
+        this.broadcastStatus()
+        this.addLog('타겟 유저 작업 완료')
+      }
+
       if (
         !work.myFeedInteractionWork.enabled &&
         !work.feedWork.enabled &&
         !work.hashtagWork.enabled &&
-        !work.hashtagInteractionWork.enabled
+        !work.hashtagInteractionWork.enabled &&
+        !work.targetUserWork?.enabled
       ) {
         this.addLog('지원하지 않는 작업', '활성화된 작업이 없습니다', false)
         throw Error('지원하지 않는 작업')

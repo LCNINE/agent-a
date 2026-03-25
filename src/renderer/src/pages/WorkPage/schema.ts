@@ -1,5 +1,12 @@
 import { z } from 'zod'
 
+const targetUserSchema = z.object({
+  username: z.string().min(1),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  processedAt: z.number().optional(),
+  error: z.string().optional()
+})
+
 export const workSchema = z.object({
   feedWork: z.object({
     count: z.coerce.number().min(1, { message: '최소 1개 이상 입력해주세요.' }),
@@ -17,6 +24,14 @@ export const workSchema = z.object({
   hashtagInteractionWork: z.object({
     count: z.coerce.number().min(1, { message: '최소 1개 이상 입력해주세요.' }),
     enabled: z.boolean()
+  }),
+  targetUserWork: z.object({
+    count: z.coerce.number().min(1, { message: '최소 1개 이상 입력해주세요.' }),
+    enabled: z.boolean(),
+    targetUsers: z.array(targetUserSchema),
+    likeEnabled: z.boolean(),
+    commentEnabled: z.boolean(),
+    postsPerUser: z.coerce.number().min(1).max(10)
   })
 })
 

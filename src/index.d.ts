@@ -79,11 +79,24 @@ type WorkItem = {
   enabled: boolean
 }
 
+export interface TargetUser {
+  username: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  processedAt?: number
+  error?: string
+}
+
 export type WorkType = {
   feedWork: WorkItem
   hashtagWork: WorkItem & { hashtags: string[] }
   myFeedInteractionWork: WorkItem
   hashtagInteractionWork: WorkItem & { hashtags: string[] }
+  targetUserWork: WorkItem & {
+    targetUsers: TargetUser[]
+    likeEnabled: boolean
+    commentEnabled: boolean
+    postsPerUser: number
+  }
 }
 
 export interface WorkLog {
