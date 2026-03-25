@@ -21,7 +21,11 @@
       "Bash(source:*)",
       "Bash(export GH_TOKEN:*)",
       "Bash(electron-builder:*)",
-      "Bash(npx electron-builder:*)"
+      "Bash(npx electron-builder:*)",
+      "Bash(brew install:*)",
+      "Bash(rsvg-convert:*)",
+      "Bash(npx electron-icon-builder:*)",
+      "Bash(git stash:*)"
     ]
   }
 }
