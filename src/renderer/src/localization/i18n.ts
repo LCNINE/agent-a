@@ -126,13 +126,13 @@ i18n.use(initReactI18next).init({
               label: 'Long',
               description: '(100 characters or less)'
             },
-            postIntervalSeconds: 'Post Interval (Seconds)',
+            postIntervalSeconds: 'Post Action Interval',
             workIntervalSeconds: 'Work Interval (Seconds)',
             loopIntervalSeconds: 'Loop Interval (Seconds)',
             excludeUsernames: 'Blocked Accounts'
           },
           description: {
-            postIntervalSeconds: 'This means the time interval for writing comments on each post.',
+            postIntervalSeconds: 'Time to wait after liking or commenting on each post.',
             workIntervalSeconds:
               'After one task is completed, the system will wait this amount of time before starting the next task. A task refers to a hashtag task, feed task, or my feed comment task.',
             loopIntervalSeconds:
@@ -311,13 +311,13 @@ i18n.use(initReactI18next).init({
               label: '길게',
               description: '(100자 이내)'
             },
-            postIntervalSeconds: '댓글 작성후 쉬는 시간',
+            postIntervalSeconds: '게시물 작업 후 쉬는 시간',
             workIntervalSeconds: '작업 사이 대기 시간',
             loopIntervalSeconds: '일일 총 작업 제한',
             excludeUsernames: '차단할 계정'
           },
           description: {
-            postIntervalSeconds: '각 게시글에 댓글을 쓰는 시간 간격을 의미합니다.',
+            postIntervalSeconds: '각 게시글에 좋아요 또는 댓글 후 대기하는 시간입니다.',
             workIntervalSeconds:
               '한 작업이 끝나면 이 시간만큼 대기하고 다음 작업을 시작합니다. 한 작업이란 해시태그 작업 또는 피드 작업 또는 내 피드 댓글작업을 의미합니다.',
             loopIntervalSeconds:

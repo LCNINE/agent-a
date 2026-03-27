@@ -40,7 +40,10 @@ function exposeAgentContext() {
     getStatus: (agentId: string) => ipcRenderer.invoke(AGENT_STATUS_CHANNEL, agentId),
     getAllStatuses: () => ipcRenderer.invoke('agent:all-statuses'),
     onStatusUpdate: (callback: (agentId: string, status: any) => void) => {
-      ipcRenderer.on('agent:status-update', (_, agentId, status) => callback(agentId, status))
+      const handler = (_: any, agentId: string, status: any) => callback(agentId, status)
+      ipcRenderer.on('agent:status-update', handler)
+      // 리스너 제거 함수 반환
+      return () => ipcRenderer.removeListener('agent:status-update', handler)
     }
   })
 }

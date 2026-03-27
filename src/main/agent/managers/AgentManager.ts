@@ -98,12 +98,15 @@ export class AgentManager {
         .from('block_account')
         .select('block_ids')
         .eq('member_id', this.userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
         console.error('차단된 계정 로드 실패:', error)
         return
       }
+
+      // 차단 목록이 없으면 빈 Set 유지
+      if (!data) return
 
       if (data && data.block_ids) {
         // block_ids가 문자열인 경우 JSON 파싱

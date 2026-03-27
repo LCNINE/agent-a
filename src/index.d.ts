@@ -149,7 +149,7 @@ interface AgentContext {
   stopAll: () => Promise<void>
   getStatus: (agentId: string) => Promise<BotStatus>
   getAllStatuses: () => Promise<Record<string, BotStatus>>
-  onStatusUpdate: (callback: (agentId: string, status: BotStatus) => void) => void
+  onStatusUpdate: (callback: (agentId: string, status: BotStatus) => void) => () => void
 }
 
 interface UpdateContext {

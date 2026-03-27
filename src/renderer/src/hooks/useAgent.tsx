@@ -20,11 +20,14 @@ export function useAgent() {
     }, 1000)
 
     // 실시간 상태 업데이트 구독
-    window.agent.onStatusUpdate((agentId, newStatus) => {
+    const unsubscribe = window.agent.onStatusUpdate((agentId, newStatus) => {
       setStatuses((prev) => ({ ...prev, [agentId]: newStatus }))
     })
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      unsubscribe()
+    }
   }, [])
 
   const startAgent = async (credentials: LoginCredentials, userId: string) => {

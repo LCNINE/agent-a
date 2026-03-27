@@ -341,10 +341,17 @@ export class TargetUserProcessingService {
       if (this.options.onLike) {
         await this.options.onLike(username, postIndex)
       }
-      // 좋아요 후 대기 - 설정된 postIntervalSeconds 사용
-      const waitSeconds = this.config.postIntervalSeconds || 60
-      this.log('좋아요 후 대기', `${waitSeconds}초`)
-      await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000))
+      // 좋아요 후 대기 - 댓글이 비활성화된 경우에만 설정값 사용
+      // 댓글이 활성화된 경우 댓글 후에 대기하므로 여기서는 짧게 대기
+      if (!this.options.commentEnabled) {
+        const waitSeconds = this.config.postIntervalSeconds || 60
+        this.log('좋아요 후 대기', `${waitSeconds}초`)
+        await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000))
+      } else {
+        // 댓글 전 짧은 대기 (2-4초)
+        const shortWait = Math.floor(Math.random() * 3) + 2
+        await new Promise(resolve => setTimeout(resolve, shortWait * 1000))
+      }
       return true
     } else {
       this.log('좋아요 실패', `${username} 게시물 ${postIndex + 1}`)

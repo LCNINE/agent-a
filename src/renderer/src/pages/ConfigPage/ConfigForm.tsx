@@ -52,12 +52,15 @@ export function ConfigForm() {
           .from('block_account')
           .select('block_ids')
           .eq('member_id', user.id)
-          .single()
+          .maybeSingle()
 
         if (error) {
           console.error('차단된 계정 로드 실패:', error)
           return
         }
+
+        // 차단 목록이 없으면 스킵
+        if (!data) return
 
         if (data && data.block_ids) {
           const blockIds =
@@ -301,7 +304,7 @@ export function ConfigForm() {
                   <p className="text-xs text-muted-foreground mt-1">자연스러운 활동을 위한 시간 설정</p>
                 </div>
                 <CardContent className="p-0">
-                  {/* 댓글 작성 후 쉬는 시간 */}
+                  {/* 게시물 작업 후 쉬는 시간 */}
                   <FormField
                     control={form.control}
                     name="postIntervalSeconds"
@@ -309,13 +312,13 @@ export function ConfigForm() {
                       <div className="p-4 border-b border-border/30">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">댓글 작성 후 쉬는 시간</span>
+                            <span className="text-sm font-medium">게시물 작업 후 쉬는 시간</span>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p className="max-w-xs">각 댓글을 작성한 후 다음 댓글까지 대기하는 시간입니다</p>
+                                <p className="max-w-xs">각 게시물에 좋아요 또는 댓글 후 대기하는 시간입니다</p>
                               </TooltipContent>
                             </Tooltip>
                           </div>
