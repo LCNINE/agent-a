@@ -509,11 +509,31 @@ export class AgentManager {
                     await this.page!.waitForTimeout(2000)
                   }
 
-                  const authorLoc = this.page!.locator(
-                    'a.x1i10hfl.xjbqb8w.x1ejq31n.x18oe1m7.x1sy0etr.xstzfhl.x972fbf.x10w94by.x1qhh985.x14e42zd.x9f619.x1ypdohk.xt0psk2.xe8uvvx.xdj266r.x14z9mp.xat24cr.x1lziwak.xexx8yu.xyri2b.x18d9i69.x1c1uobl.x16tdsg8.x1hl2dhg.xggy1nq.x1a2a7pz._aswp._aswq._asws._aswv._aswz._asw_._asx2._a6hd'
-                  ).first()
+                  // 모달 헤더에서 작성자 찾기 (여러 선택자 시도)
+                  const dialog = this.page!.locator('[role="dialog"]').first()
 
-                  author = await authorLoc.textContent()
+                  // 선택자 배열 - 우선순위 순서
+                  const authorSelectors = [
+                    'header a[role="link"]',
+                    'header a[href^="/"]',
+                    'header span a',
+                    'a[href^="/"][role="link"]:not([href="/explore/"])',
+                    'span._ap3a._aaco._aacw._aacx._aad7._aade a',
+                    'div._aaqt a'
+                  ]
+
+                  for (const selector of authorSelectors) {
+                    try {
+                      const authorLoc = dialog.locator(selector).first()
+                      const text = await authorLoc.textContent({ timeout: 2000 })
+                      if (text && text.trim() && !text.includes('#') && !text.includes('...')) {
+                        author = text.trim()
+                        break
+                      }
+                    } catch {
+                      // 다음 선택자 시도
+                    }
+                  }
 
                   retryCount++
                 }
@@ -536,8 +556,8 @@ export class AgentManager {
 
                 // 내 댓글이 있는지 확인
                 const myUsername = this.config.credentials.username
-                const comments = this.page!.locator('h3.x6s0dn4.x3nfvp2')
-                const commentAuthors = await comments.locator('a').allTextContents()
+                const commentSection = this.page!.locator('[role="dialog"] ul')
+                const commentAuthors = await commentSection.locator('a[role="link"]').allTextContents().catch(() => [] as string[])
 
                 if (commentAuthors.includes(myUsername)) {
                   await chooseRandomSleep(postInteractionDelays)
