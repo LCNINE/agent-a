@@ -16,8 +16,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useConfigStore } from '@/store/configStore'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@renderer/lib/utils'
-import { Check, Clock, HelpCircle, MessageSquare, PencilLine, Timer, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Check, Clock, HelpCircle, MessageSquare, PencilLine, Timer, X, Pencil } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -33,6 +33,28 @@ export function ConfigForm() {
   const [isCustomPromptDialogOpen, setIsCustomPromptDialogOpen] = useState(false)
   const supabase = useCreateClient()
   const { user } = useAuth()
+
+  // 직접 입력 모드 상태
+  const [customInputMode, setCustomInputMode] = useState<{
+    postInterval: boolean
+    workInterval: boolean
+    loopInterval: boolean
+  }>({
+    postInterval: false,
+    workInterval: false,
+    loopInterval: false
+  })
+
+  // 직접 입력 값 (분, 초)
+  const [customInputValues, setCustomInputValues] = useState<{
+    postInterval: { minutes: number; seconds: number }
+    workInterval: { minutes: number; seconds: number }
+    loopInterval: { minutes: number; seconds: number }
+  }>({
+    postInterval: { minutes: 3, seconds: 20 },
+    workInterval: { minutes: 3, seconds: 20 },
+    loopInterval: { minutes: 30, seconds: 0 }
+  })
 
   const form = useForm<ConfigSchema>({
     resolver: zodResolver(configSchema),
@@ -195,6 +217,39 @@ export function ConfigForm() {
     { value: 21600, label: '6시간' }
   ]
 
+  // 미리 정의된 옵션에 해당하는 값인지 확인
+  const isPresetValue = (value: number, options: { value: number }[]) => {
+    return options.some((opt) => opt.value === value)
+  }
+
+  // 직접 입력 확인 핸들러
+  const handleCustomInputConfirm = (
+    type: 'postInterval' | 'workInterval' | 'loopInterval',
+    fieldOnChange: (value: number) => void
+  ) => {
+    const { minutes, seconds } = customInputValues[type]
+    const totalSeconds = minutes * 60 + seconds
+    if (totalSeconds >= 1) {
+      fieldOnChange(totalSeconds)
+      handleSubmit(form.getValues())
+    }
+    setCustomInputMode((prev) => ({ ...prev, [type]: false }))
+  }
+
+  // 직접 입력 모드 활성화 시 현재 값으로 초기화
+  const initCustomInput = (
+    type: 'postInterval' | 'workInterval' | 'loopInterval',
+    currentValue: number
+  ) => {
+    const minutes = Math.floor(currentValue / 60)
+    const seconds = currentValue % 60
+    setCustomInputValues((prev) => ({
+      ...prev,
+      [type]: { minutes, seconds }
+    }))
+    setCustomInputMode((prev) => ({ ...prev, [type]: true }))
+  }
+
   return (
     <TooltipProvider delayDuration={100}>
       <div className="container mx-auto max-w-2xl p-4">
@@ -326,26 +381,95 @@ export function ConfigForm() {
                             {formatTime(field.value || 600)}
                           </span>
                         </div>
-                        <div className="flex gap-2">
-                          {restTimeOptions.map((option) => (
-                            <button
-                              key={option.value}
+                        {customInputMode.postInterval ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 flex-1">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={customInputValues.postInterval.minutes}
+                                onChange={(e) =>
+                                  setCustomInputValues((prev) => ({
+                                    ...prev,
+                                    postInterval: {
+                                      ...prev.postInterval,
+                                      minutes: Math.max(0, parseInt(e.target.value) || 0)
+                                    }
+                                  }))
+                                }
+                                className="w-16 text-center"
+                              />
+                              <span className="text-sm text-muted-foreground">분</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={customInputValues.postInterval.seconds}
+                                onChange={(e) =>
+                                  setCustomInputValues((prev) => ({
+                                    ...prev,
+                                    postInterval: {
+                                      ...prev.postInterval,
+                                      seconds: Math.min(59, Math.max(0, parseInt(e.target.value) || 0))
+                                    }
+                                  }))
+                                }
+                                className="w-16 text-center"
+                              />
+                              <span className="text-sm text-muted-foreground">초</span>
+                            </div>
+                            <Button
                               type="button"
-                              onClick={() => {
-                                field.onChange(option.value)
-                                handleSubmit(form.getValues())
-                              }}
+                              size="sm"
+                              onClick={() => handleCustomInputConfirm('postInterval', field.onChange)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setCustomInputMode((prev) => ({ ...prev, postInterval: false }))}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            {restTimeOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(option.value)
+                                  handleSubmit(form.getValues())
+                                }}
+                                className={cn(
+                                  'flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200',
+                                  field.value === option.value
+                                    ? 'bg-primary text-primary-foreground shadow-apple-sm'
+                                    : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => initCustomInput('postInterval', field.value || 200)}
                               className={cn(
-                                'flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200',
-                                field.value === option.value
+                                'py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1',
+                                !isPresetValue(field.value, restTimeOptions)
                                   ? 'bg-primary text-primary-foreground shadow-apple-sm'
                                   : 'bg-muted/50 hover:bg-muted text-muted-foreground'
                               )}
                             >
-                              {option.label}
+                              <Pencil className="h-3 w-3" />
+                              직접입력
                             </button>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   />
@@ -372,26 +496,95 @@ export function ConfigForm() {
                             {formatTime(field.value || 600)}
                           </span>
                         </div>
-                        <div className="flex gap-2">
-                          {workIntervalOptions.map((option) => (
-                            <button
-                              key={option.value}
+                        {customInputMode.workInterval ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 flex-1">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={customInputValues.workInterval.minutes}
+                                onChange={(e) =>
+                                  setCustomInputValues((prev) => ({
+                                    ...prev,
+                                    workInterval: {
+                                      ...prev.workInterval,
+                                      minutes: Math.max(0, parseInt(e.target.value) || 0)
+                                    }
+                                  }))
+                                }
+                                className="w-16 text-center"
+                              />
+                              <span className="text-sm text-muted-foreground">분</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={customInputValues.workInterval.seconds}
+                                onChange={(e) =>
+                                  setCustomInputValues((prev) => ({
+                                    ...prev,
+                                    workInterval: {
+                                      ...prev.workInterval,
+                                      seconds: Math.min(59, Math.max(0, parseInt(e.target.value) || 0))
+                                    }
+                                  }))
+                                }
+                                className="w-16 text-center"
+                              />
+                              <span className="text-sm text-muted-foreground">초</span>
+                            </div>
+                            <Button
                               type="button"
-                              onClick={() => {
-                                field.onChange(option.value)
-                                handleSubmit(form.getValues())
-                              }}
+                              size="sm"
+                              onClick={() => handleCustomInputConfirm('workInterval', field.onChange)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setCustomInputMode((prev) => ({ ...prev, workInterval: false }))}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            {workIntervalOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(option.value)
+                                  handleSubmit(form.getValues())
+                                }}
+                                className={cn(
+                                  'flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200',
+                                  field.value === option.value
+                                    ? 'bg-primary text-primary-foreground shadow-apple-sm'
+                                    : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => initCustomInput('workInterval', field.value || 200)}
                               className={cn(
-                                'flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200',
-                                field.value === option.value
+                                'py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1',
+                                !isPresetValue(field.value, workIntervalOptions)
                                   ? 'bg-primary text-primary-foreground shadow-apple-sm'
                                   : 'bg-muted/50 hover:bg-muted text-muted-foreground'
                               )}
                             >
-                              {option.label}
+                              <Pencil className="h-3 w-3" />
+                              직접입력
                             </button>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   />
@@ -418,26 +611,106 @@ export function ConfigForm() {
                             {formatTime(field.value || 21600)}
                           </span>
                         </div>
-                        <div className="flex gap-2">
-                          {loopIntervalOptions.map((option) => (
+                        {customInputMode.loopInterval ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 flex-1">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={23}
+                                value={Math.floor(customInputValues.loopInterval.minutes / 60)}
+                                onChange={(e) => {
+                                  const hours = Math.max(0, parseInt(e.target.value) || 0)
+                                  const currentMinutes = customInputValues.loopInterval.minutes % 60
+                                  setCustomInputValues((prev) => ({
+                                    ...prev,
+                                    loopInterval: {
+                                      ...prev.loopInterval,
+                                      minutes: hours * 60 + currentMinutes
+                                    }
+                                  }))
+                                }}
+                                className="w-16 text-center"
+                              />
+                              <span className="text-sm text-muted-foreground">시간</span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={59}
+                                value={customInputValues.loopInterval.minutes % 60}
+                                onChange={(e) => {
+                                  const minutes = Math.min(59, Math.max(0, parseInt(e.target.value) || 0))
+                                  const currentHours = Math.floor(customInputValues.loopInterval.minutes / 60)
+                                  setCustomInputValues((prev) => ({
+                                    ...prev,
+                                    loopInterval: {
+                                      ...prev.loopInterval,
+                                      minutes: currentHours * 60 + minutes
+                                    }
+                                  }))
+                                }}
+                                className="w-16 text-center"
+                              />
+                              <span className="text-sm text-muted-foreground">분</span>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleCustomInputConfirm('loopInterval', field.onChange)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setCustomInputMode((prev) => ({ ...prev, loopInterval: false }))}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            {loopIntervalOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                  field.onChange(option.value)
+                                  handleSubmit(form.getValues())
+                                }}
+                                className={cn(
+                                  'flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200',
+                                  field.value === option.value
+                                    ? 'bg-primary text-primary-foreground shadow-apple-sm'
+                                    : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
                             <button
-                              key={option.value}
                               type="button"
                               onClick={() => {
-                                field.onChange(option.value)
-                                handleSubmit(form.getValues())
+                                const totalMinutes = Math.floor((field.value || 1800) / 60)
+                                setCustomInputValues((prev) => ({
+                                  ...prev,
+                                  loopInterval: { minutes: totalMinutes, seconds: 0 }
+                                }))
+                                setCustomInputMode((prev) => ({ ...prev, loopInterval: true }))
                               }}
                               className={cn(
-                                'flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200',
-                                field.value === option.value
+                                'py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200 flex items-center gap-1',
+                                !isPresetValue(field.value, loopIntervalOptions)
                                   ? 'bg-primary text-primary-foreground shadow-apple-sm'
                                   : 'bg-muted/50 hover:bg-muted text-muted-foreground'
                               )}
                             >
-                              {option.label}
+                              <Pencil className="h-3 w-3" />
+                              직접입력
                             </button>
-                          ))}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   />
