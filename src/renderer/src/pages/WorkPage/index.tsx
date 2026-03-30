@@ -7,7 +7,7 @@ import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { WorkType, TargetUser } from 'src'
 import { workSchema, WorkSchema } from './schema'
@@ -137,6 +137,15 @@ export default function WorkPage() {
       targetUserWork: {
         ...workList.targetUserWork,
         [key]: value
+      }
+    })
+  }
+
+  const handleHashtagFollowChange = (enabled: boolean) => {
+    upsert({
+      hashtagWork: {
+        ...workList.hashtagWork,
+        followEnabled: enabled
       }
     })
   }
@@ -282,7 +291,20 @@ export default function WorkPage() {
                     removeError('noHashtags')
                   }}
                   error={hasError('noHashtags')}
-                />
+                >
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex items-center gap-2">
+                        <UserPlus className="h-4 w-4 text-apple-green" />
+                        <Label className="text-sm">게시물 작성자 팔로우</Label>
+                      </div>
+                      <Switch
+                        checked={workList.hashtagWork.followEnabled}
+                        onCheckedChange={handleHashtagFollowChange}
+                      />
+                    </div>
+                  </div>
+                </WorkSection>
 
                 {/* <WorkSection
                   title="내 피드 댓글에 좋아요 및 대댓글 달기 작업"

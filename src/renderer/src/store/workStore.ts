@@ -16,7 +16,8 @@ const defaultWorkList: WorkType = {
   hashtagWork: {
     count: 1,
     enabled: false,
-    hashtags: []
+    hashtags: [],
+    followEnabled: false
   },
   myFeedInteractionWork: {
     count: 1,
@@ -56,13 +57,21 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 4,
+      version: 5,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as WorkState
         if (version < 4) {
           // targetUserWork가 없으면 기본값 추가
           if (!state.workList.targetUserWork) {
             state.workList.targetUserWork = defaultWorkList.targetUserWork
+          }
+        }
+        if (version < 5) {
+          // hashtagWork에 followEnabled 추가
+          if (state.workList.hashtagWork) {
+            if (state.workList.hashtagWork.followEnabled === undefined) {
+              state.workList.hashtagWork.followEnabled = false
+            }
           }
         }
         return state
