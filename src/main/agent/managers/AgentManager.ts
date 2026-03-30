@@ -358,7 +358,20 @@ export class AgentManager {
             // 모달(dialog) 확인
             const commentModal = this.page!.locator('[role="dialog"]').first()
             const modalVisible = await commentModal.isVisible().catch(() => false)
-            const commentScope = modalVisible ? commentModal : this.page!
+            const commentScope = modalVisible ? commentModal : articleLocator
+
+            // 내 댓글이 있는지 확인
+            const myUsername = this.config.credentials.username
+            const commentSection = commentScope.locator('ul')
+            const commentAuthors = await commentSection.locator('a[role="link"]').allTextContents().catch(() => [] as string[])
+
+            if (commentAuthors.includes(myUsername)) {
+              await chooseRandomSleep(postInteractionDelays)
+              console.log('이미 댓글을 작성한 게시물 스킵')
+              this.addLog('이미 댓글 작성한 게시물', '건너뜀')
+              if (modalVisible) await this.page!.getByLabel(/닫기|Close/).first().click().catch(() => {})
+              return false
+            }
 
             // 2. 모달 안에서 좋아요
             this.addLog('좋아요 시도 중')

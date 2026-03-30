@@ -26,7 +26,10 @@
       "Bash(rsvg-convert:*)",
       "Bash(npx electron-icon-builder:*)",
       "Bash(git stash:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(gh release create:*)",
+      "Bash(gh auth:*)",
+      "Bash(GH_TOKEN=$GH_TOKEN npm run publish:*)"
     ]
   }
 }
