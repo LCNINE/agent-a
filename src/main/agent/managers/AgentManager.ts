@@ -742,7 +742,8 @@ export class AgentManager {
             },
             {},
             work.hashtagWork.count,
-            this.config
+            this.config,
+            (action, details, success) => this.addLog(action, details, success)
           )
 
           await hashtagService.processHashtag([hashtag])
