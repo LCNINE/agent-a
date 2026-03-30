@@ -497,6 +497,10 @@ export class AgentManager {
         this.addLog('해시태그 작업 시작')
         await this.page.waitForTimeout(2000)
 
+        // 팔로우 카운터 초기화 (게시물 수만큼 팔로우 가능)
+        let followCount = 0
+        const maxFollowCount = work.hashtagWork.followEnabled ? work.hashtagWork.count : 0
+
         for (const hashtag of work.hashtagWork.hashtags) {
           if (!this._status.isRunning) break
 
@@ -698,6 +702,16 @@ export class AgentManager {
                 if (commentTextareaResult) {
                   isProcessed = true
                   this.addLog('댓글 게시 성공', author, true)
+
+                  // 팔로우 시도 (활성화되어 있고 최대 횟수 미만인 경우)
+                  if (work.hashtagWork.followEnabled && followCount < maxFollowCount) {
+                    const hashtagDialog = this.page!.locator('[role="dialog"]').first()
+                    const followResult = await this.performHashtagFollow(hashtagDialog, author!)
+                    if (followResult) {
+                      followCount++
+                      this.addLog('팔로우 성공', `${author} (${followCount}/${maxFollowCount})`, true)
+                    }
+                  }
 
                   const waitSeconds = this.config.postIntervalSeconds || 60
                   const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
@@ -1022,6 +1036,43 @@ export class AgentManager {
       }
 
       throw error
+    }
+  }
+
+  private async checkIsFollowing(dialog: Locator): Promise<boolean> {
+    // "팔로잉", "Following", "요청됨", "Requested" 버튼 확인
+    const followingButton = dialog
+      .locator('header button, header div[role="button"]')
+      .filter({ hasText: /^(팔로잉|Following|요청됨|Requested)$/i })
+      .first()
+    return await followingButton.isVisible().catch(() => false)
+  }
+
+  private async performHashtagFollow(dialog: Locator, author: string): Promise<boolean> {
+    try {
+      // 이미 팔로우 중인지 확인
+      if (await this.checkIsFollowing(dialog)) {
+        this.addLog('이미 팔로우 중', author)
+        return false
+      }
+
+      // 팔로우 버튼 찾기 (header 내에서)
+      const followButton = dialog
+        .locator('header button, header div[role="button"]')
+        .filter({ hasText: /^팔로우$/i })
+        .first()
+
+      if (!(await followButton.isVisible().catch(() => false))) {
+        this.addLog('팔로우 버튼 없음', author, false)
+        return false
+      }
+
+      await followButton.click()
+      await this.page!.waitForTimeout(1500)
+      return true
+    } catch (error) {
+      this.addLog('팔로우 실패', `${author}: ${error instanceof Error ? error.message : String(error)}`, false)
+      return false
     }
   }
 

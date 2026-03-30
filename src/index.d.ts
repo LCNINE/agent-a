@@ -88,7 +88,10 @@ export interface TargetUser {
 
 export type WorkType = {
   feedWork: WorkItem
-  hashtagWork: WorkItem & { hashtags: string[] }
+  hashtagWork: WorkItem & {
+    hashtags: string[]
+    followEnabled: boolean
+  }
   myFeedInteractionWork: WorkItem
   hashtagInteractionWork: WorkItem & { hashtags: string[] }
   targetUserWork: WorkItem & {
