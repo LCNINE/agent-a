@@ -8,7 +8,7 @@ import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
 import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WorkType, TargetUser } from 'src'
 import { workSchema, WorkSchema } from './schema'
 import WorkSection from './WorkSection'
@@ -19,10 +19,12 @@ import { Label } from '@renderer/components/ui/label'
 import { Input } from '@renderer/components/ui/input'
 import TargetUserImportDialog from '@renderer/components/TargetUserImportDialog'
 import TargetUserList from '@renderer/components/TargetUserList'
+import { cn } from '@renderer/lib/utils'
+import { CustomToast } from '@renderer/components/CustomToast'
 
 export default function WorkPage() {
   const { workList, upsert } = useWorkStore()
-  const { hasError, removeError } = useErrorStore()
+  const { hasError, removeError, addError } = useErrorStore()
 
   const [newHashtag, setNewHashtag] = useState('')
   const [newHashtagInteraction, setNewHashtagInteraction] = useState('')
@@ -39,6 +41,25 @@ export default function WorkPage() {
     resolver: zodResolver(workSchema),
     mode: 'all'
   })
+
+  // 피드 작업 유효성 검사 - 실시간 경고
+  useEffect(() => {
+    const { feedWork } = workList
+
+    // 피드 활성화 + count 0 → 경고
+    if (feedWork.enabled && feedWork.count === 0) {
+      addError('feedWorkCount')
+      CustomToast({
+        status: 'error',
+        message: '피드 작업 개수가 0입니다. 작업 개수를 설정해주세요.',
+        position: 'top-center',
+        duration: 3000
+      })
+    }
+  }, [
+    workList.feedWork.enabled,
+    workList.feedWork.count
+  ])
 
   const handleAddHashtag = () => {
     const trimmedHashtag = newHashtag.replace(/\s+/g, '')
@@ -166,6 +187,7 @@ export default function WorkPage() {
         suggestedFollowCount: Math.min(20, Math.max(1, count))
       }
     })
+    removeError('suggestedFollowCount')
   }
 
   return (
@@ -192,6 +214,7 @@ export default function WorkPage() {
                   }}
                   error={hasError('feedWorkCount')}
                 >
+                  {/* 추천 유저 팔로우 - 임시 비활성화
                   <div className="mt-4 space-y-3">
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div className="flex items-center gap-2">
@@ -212,11 +235,19 @@ export default function WorkPage() {
                           max={20}
                           value={workList.feedWork.suggestedFollowCount}
                           onChange={(e) => handleSuggestedFollowCountChange(parseInt(e.target.value) || 5)}
-                          className="w-20"
+                          className={cn(
+                            "w-20",
+                            (!workList.feedWork.suggestedFollowCount || workList.feedWork.suggestedFollowCount === 0) &&
+                            "ring-2 ring-apple-blue/50 border-apple-blue"
+                          )}
                         />
+                        {(!workList.feedWork.suggestedFollowCount || workList.feedWork.suggestedFollowCount === 0) && (
+                          <span className="text-xs text-apple-orange">팔로우 수를 설정해주세요</span>
+                        )}
                       </div>
                     )}
                   </div>
+                  */}
                 </WorkSection>
 
                 <WorkSection

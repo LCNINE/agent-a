@@ -9,7 +9,7 @@ const targetUserSchema = z.object({
 
 export const workSchema = z.object({
   feedWork: z.object({
-    count: z.coerce.number().min(1, { message: '최소 1개 이상 입력해주세요.' }),
+    count: z.coerce.number().min(0),
     enabled: z.boolean()
   }),
   hashtagWork: z.object({

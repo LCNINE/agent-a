@@ -30,7 +30,11 @@
       "Bash(gh release create:*)",
       "Bash(gh auth:*)",
       "Bash(GH_TOKEN=$GH_TOKEN npm run publish:*)",
-      "Bash(uninstall_oh_my_zsh)"
+      "Bash(uninstall_oh_my_zsh)",
+      "Bash(git -C /Users/jeongjungsig/github/agent-a log --oneline -20)",
+      "Bash(git -C /Users/jeongjungsig/github/agent-a show de3efd0 --stat)",
+      "Bash(git -C /Users/jeongjungsig/github/agent-a show de3efd0 -- src/main/agent/managers/AgentManager.ts)",
+      "Bash(git -C /Users/jeongjungsig/github/agent-a show de3efd0 -- src/renderer/src/store/workStore.ts)"
     ]
   }
 }

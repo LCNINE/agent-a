@@ -302,9 +302,11 @@ export class AgentManager {
         await navigateToHome(this.page)
         await this.page.waitForTimeout(2000)
 
-        const articleService = new ArticleProcessingService(
-          this.page,
-          async (articleLocator: Locator) => {
+        // count > 0일 때만 좋아요/댓글 작업 실행
+        if (work.feedWork.count > 0) {
+          const articleService = new ArticleProcessingService(
+            this.page,
+            async (articleLocator: Locator) => {
             let isProcessed = false
 
             const authorLoc = await articleLocator
@@ -490,13 +492,16 @@ export class AgentManager {
 
             await chooseRandomSleep(postInteractionDelays)
             return isProcessed
-          },
-          {},
-          work.feedWork.count,
-          this.config
-        )
+            },
+            {},
+            work.feedWork.count,
+            this.config
+          )
 
-        await articleService.processArticles()
+          await articleService.processArticles()
+        } else {
+          this.addLog('피드 좋아요/댓글 작업', '개수가 0이므로 건너뜀')
+        }
 
         // 추천 유저 팔로우
         if (work.feedWork.suggestedFollowEnabled && work.feedWork.suggestedFollowCount > 0) {

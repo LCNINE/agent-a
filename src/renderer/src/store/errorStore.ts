@@ -14,6 +14,7 @@ export type ErrorSectionType =
   | 'noHashtags'
   | 'noHashtagInteractions'
   | 'noTargetUsers'
+  | 'suggestedFollowCount'
 
 interface ErrorState {
   errorTypes: ErrorSectionType[]
