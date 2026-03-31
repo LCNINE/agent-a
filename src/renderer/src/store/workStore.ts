@@ -11,7 +11,9 @@ interface WorkState {
 const defaultWorkList: WorkType = {
   feedWork: {
     count: 3,
-    enabled: true
+    enabled: true,
+    suggestedFollowEnabled: false,
+    suggestedFollowCount: 5
   },
   hashtagWork: {
     count: 1,
@@ -57,7 +59,7 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 5,
+      version: 6,
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as WorkState
         if (version < 4) {
@@ -71,6 +73,17 @@ export const useWorkStore = create<WorkState>()(
           if (state.workList.hashtagWork) {
             if (state.workList.hashtagWork.followEnabled === undefined) {
               state.workList.hashtagWork.followEnabled = false
+            }
+          }
+        }
+        if (version < 6) {
+          // feedWork에 suggestedFollowEnabled, suggestedFollowCount 추가
+          if (state.workList.feedWork) {
+            if (state.workList.feedWork.suggestedFollowEnabled === undefined) {
+              state.workList.feedWork.suggestedFollowEnabled = false
+            }
+            if (state.workList.feedWork.suggestedFollowCount === undefined) {
+              state.workList.feedWork.suggestedFollowCount = 5
             }
           }
         }

@@ -150,6 +150,24 @@ export default function WorkPage() {
     })
   }
 
+  const handleSuggestedFollowChange = (enabled: boolean) => {
+    upsert({
+      feedWork: {
+        ...workList.feedWork,
+        suggestedFollowEnabled: enabled
+      }
+    })
+  }
+
+  const handleSuggestedFollowCountChange = (count: number) => {
+    upsert({
+      feedWork: {
+        ...workList.feedWork,
+        suggestedFollowCount: Math.min(20, Math.max(1, count))
+      }
+    })
+  }
+
   return (
     <TooltipProvider delayDuration={100}>
       <Form {...form}>
@@ -173,7 +191,33 @@ export default function WorkPage() {
                     removeError('feedWorkCount')
                   }}
                   error={hasError('feedWorkCount')}
-                />
+                >
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex items-center gap-2">
+                        <UserPlus className="h-4 w-4 text-apple-green" />
+                        <Label className="text-sm">추천 유저 팔로우</Label>
+                      </div>
+                      <Switch
+                        checked={workList.feedWork.suggestedFollowEnabled}
+                        onCheckedChange={handleSuggestedFollowChange}
+                      />
+                    </div>
+                    {workList.feedWork.suggestedFollowEnabled && (
+                      <div className="flex items-center gap-3 pl-2">
+                        <Label className="text-sm whitespace-nowrap">팔로우 수</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={20}
+                          value={workList.feedWork.suggestedFollowCount}
+                          onChange={(e) => handleSuggestedFollowCountChange(parseInt(e.target.value) || 5)}
+                          className="w-20"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </WorkSection>
 
                 <WorkSection
                   title="타겟 유저 프로필 방문"

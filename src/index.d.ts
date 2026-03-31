@@ -87,7 +87,10 @@ export interface TargetUser {
 }
 
 export type WorkType = {
-  feedWork: WorkItem
+  feedWork: WorkItem & {
+    suggestedFollowEnabled: boolean
+    suggestedFollowCount: number
+  }
   hashtagWork: WorkItem & {
     hashtags: string[]
     followEnabled: boolean

@@ -76,7 +76,9 @@ export class HashtagService {
     const MAX_CONSECUTIVE_SKIPS = 10
 
     for (const tag of tags) {
+      this.log('홈으로 이동 시작', `#${tag}`)
       await navigateToHome(this.page)
+      this.log('홈으로 이동 완료', `#${tag}`)
       await this.page.waitForTimeout(2000)
 
       // 해시태그 검색 및 페이지 이동 (실패 시 다음 해시태그로)

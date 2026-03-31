@@ -9,6 +9,7 @@ import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
 import { TargetUserProcessingService } from '../services/TargetUserProcessingService'
+import { SuggestedUsersService } from '../services/SuggestedUsersService'
 import { app, BrowserWindow } from 'electron'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../../../renderer/src/supabase/database.types'
@@ -360,12 +361,20 @@ export class AgentManager {
             const modalVisible = await commentModal.isVisible().catch(() => false)
             const commentScope = modalVisible ? commentModal : articleLocator
 
-            // 내 댓글이 있는지 확인
+            // 내 댓글이 있는지 확인 (대소문자 무시)
             const myUsername = this.config.credentials.username
-            const commentSection = commentScope.locator('ul')
-            const commentAuthors = await commentSection.locator('a[role="link"]').allTextContents().catch(() => [] as string[])
+            const myUsernameLower = myUsername.toLowerCase()
 
-            if (commentAuthors.includes(myUsername)) {
+            // 댓글 로드 대기
+            await this.page!.waitForTimeout(1500)
+
+            // 모든 댓글 작성자 가져오기
+            const commentAuthors = await commentScope.locator('ul h3 a[href^="/"], ul span a[href^="/"][role="link"]').allTextContents().catch(() => [] as string[])
+
+            // 대소문자 무시하고 본인 댓글 확인
+            const hasMyComment = commentAuthors.some(author => author.toLowerCase().trim() === myUsernameLower)
+
+            if (hasMyComment) {
               await chooseRandomSleep(postInteractionDelays)
               console.log('이미 댓글을 작성한 게시물 스킵')
               this.addLog('이미 댓글 작성한 게시물', '건너뜀')
@@ -488,6 +497,22 @@ export class AgentManager {
         )
 
         await articleService.processArticles()
+
+        // 추천 유저 팔로우
+        if (work.feedWork.suggestedFollowEnabled && work.feedWork.suggestedFollowCount > 0) {
+          this.addLog('추천 유저 팔로우 시작')
+
+          const suggestedService = new SuggestedUsersService(
+            this.page!,
+            this.excludeUsernames,
+            work.feedWork.suggestedFollowCount,
+            (action, details, success) => this.addLog(action, details, success)
+          )
+
+          const followedCount = await suggestedService.processSuggestedUsers()
+          this.addLog('추천 유저 팔로우 완료', `${followedCount}명 팔로우`, true)
+        }
+
         this._status.waiting = null
         this.broadcastStatus()
         this.addLog('피드 작업 완료')
@@ -501,8 +526,14 @@ export class AgentManager {
         let followCount = 0
         const maxFollowCount = work.hashtagWork.followEnabled ? work.hashtagWork.count : 0
 
-        for (const hashtag of work.hashtagWork.hashtags) {
-          if (!this._status.isRunning) break
+        for (let i = 0; i < work.hashtagWork.hashtags.length; i++) {
+          const hashtag = work.hashtagWork.hashtags[i]
+          this.addLog('해시태그 루프 시작', `[${i + 1}/${work.hashtagWork.hashtags.length}] #${hashtag}`)
+
+          if (!this._status.isRunning) {
+            this.addLog('isRunning이 false로 인해 중단')
+            break
+          }
 
           this.addLog('해시태그 검색 시작', `#${hashtag}`)
           const hashtagService = new HashtagService(
@@ -571,12 +602,21 @@ export class AgentManager {
                   return false
                 }
 
-                // 내 댓글이 있는지 확인
+                // 내 댓글이 있는지 확인 (대소문자 무시)
                 const myUsername = this.config.credentials.username
-                const commentSection = this.page!.locator('[role="dialog"] ul')
-                const commentAuthors = await commentSection.locator('a[role="link"]').allTextContents().catch(() => [] as string[])
+                const myUsernameLower = myUsername.toLowerCase()
 
-                if (commentAuthors.includes(myUsername)) {
+                // 댓글 로드 대기
+                await this.page!.waitForTimeout(1500)
+
+                // 모든 댓글 작성자 가져오기
+                const commentSection = this.page!.locator('[role="dialog"] ul')
+                const commentAuthors = await commentSection.locator('h3 a[href^="/"], span a[href^="/"][role="link"]').allTextContents().catch(() => [] as string[])
+
+                // 대소문자 무시하고 본인 댓글 확인
+                const hasMyComment = commentAuthors.some(author => author.toLowerCase().trim() === myUsernameLower)
+
+                if (hasMyComment) {
                   await chooseRandomSleep(postInteractionDelays)
                   console.log('이미 댓글을 작성한 게시물 스킵')
                   this.addLog('이미 댓글 작성한 게시물', '건너뜀')
@@ -746,9 +786,22 @@ export class AgentManager {
             (action, details, success) => this.addLog(action, details, success)
           )
 
-          await hashtagService.processHashtag([hashtag])
+          try {
+            this.addLog('해시태그 처리 시작', `#${hashtag}`)
+            await hashtagService.processHashtag([hashtag])
+            this.addLog('해시태그 처리 완료', `#${hashtag}`, true)
+          } catch (error) {
+            this.addLog(
+              '해시태그 처리 실패',
+              `#${hashtag} - ${error instanceof Error ? error.message : String(error)}`,
+              false
+            )
+            // 에러가 발생해도 다음 해시태그로 진행
+            continue
+          }
 
-          if (work.hashtagWork.hashtags.indexOf(hashtag) < work.hashtagWork.hashtags.length - 1) {
+          // 마지막 해시태그가 아니면 대기
+          if (i < work.hashtagWork.hashtags.length - 1) {
             const waitSeconds = this.config.workIntervalSeconds || 60
             const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
             this._status.waiting = {
@@ -762,7 +815,17 @@ export class AgentManager {
 
             this._status.waiting = null
             this.broadcastStatus()
+
+            // 대기 중 중단 여부 확인
+            if (!this._status.isRunning) {
+              this.addLog('해시태그 대기 중 중단됨')
+              break
+            }
+
+            this.addLog('다음 해시태그로 이동', `#${work.hashtagWork.hashtags[i + 1]}`)
           }
+
+          this.addLog('해시태그 루프 종료', `[${i + 1}/${work.hashtagWork.hashtags.length}] #${hashtag}`)
         }
 
         this.addLog('해시태그 작업 완료')
