@@ -6,6 +6,7 @@ out
 .env
 accountData
 .cache
+.claude/settings.local.json
 
 # Playwright
 /test-results/

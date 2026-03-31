@@ -1,6 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { HomeIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import AnnouncementButton from '../AnnouncementButton'
 import LangMenu from '../LangMenu'
 import ToggleTheme from '../ToggleTheme'
 import {
@@ -70,6 +71,7 @@ export default function NavigationMenu() {
       </div>
 
       <div className="flex items-center gap-2">
+        <AnnouncementButton />
         <ToggleTheme />
         <LangMenu />
         <UserMenu />
