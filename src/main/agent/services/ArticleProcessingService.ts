@@ -123,7 +123,7 @@ export class ArticleProcessingService {
           this.successCount++
 
           // 댓글 작성 성공 후 대기
-          console.log(`댓글 작성 완료. ${this.config.postIntervalSeconds * 1000}초 대기 중...`)
+          console.log(`댓글 작성 완료. ${this.config.postIntervalSeconds}초 대기 중...`)
           await wait(this.config.postIntervalSeconds * 1000)
         }
       }

@@ -32,3 +32,34 @@ $ npm run build:mac
 # For Linux
 $ npm run build:linux
 ```
+
+## Local Data Storage
+
+앱 데이터는 아래 경로에 저장됩니다.
+
+### Mac
+
+```
+~/Library/Application Support/agent-a/
+```
+
+터미널에서 확인:
+
+```bash
+open ~/Library/Application\ Support/agent-a/
+```
+
+### Windows
+
+```
+%APPDATA%/agent-a/
+```
+
+### 저장되는 데이터
+
+| 폴더/파일                        | 설명                              |
+| -------------------------------- | --------------------------------- |
+| `commentHistory/`                | 댓글 작성 기록 (중복 댓글 방지용) |
+| `commentHistory/{username}.json` | 계정별 댓글 기록 파일             |
+
+댓글 기록은 30일 후 자동 삭제됩니다.

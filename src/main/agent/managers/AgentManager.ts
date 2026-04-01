@@ -5,6 +5,13 @@ import { loginWithCredentials, navigateToHome } from '../common/browserUtils'
 import { checkedAction } from '../common/checkedAction'
 import { callGenerateComments, callGenerateReply } from '../common/fetchers'
 import { chooseRandomSleep, postInteractionDelays } from '../common/timeUtils'
+import {
+  loadCommentHistory,
+  saveCommentHistory,
+  hasCommentedOnPost,
+  addCommentedPost,
+  CommentHistory
+} from '../common/commentHistory'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
@@ -45,6 +52,7 @@ export class AgentManager {
   }
   private currentWorkIndex = 0
   private excludeUsernames = new Set<string>()
+  private commentHistory: CommentHistory = { commentedPosts: [], lastCleanup: Date.now() }
   private isLoggedIn: Boolean = false
   private mainWindow: BrowserWindow | null = null
   private supabase = createClient<Database>(
@@ -91,6 +99,8 @@ export class AgentManager {
   private async loadBlockedAccounts() {
     if (!this.userId) {
       console.warn('userId가 없어서 차단된 계정을 로드할 수 없습니다.')
+      // userId가 없어도 본인 계정은 제외
+      this.excludeUsernames.add(this.config.credentials.username)
       return
     }
 
@@ -117,8 +127,13 @@ export class AgentManager {
             : data.block_ids
         this.excludeUsernames = new Set(blockIds)
       }
+
+      // 본인 계정도 제외 목록에 추가 (본인 게시물에 댓글 방지)
+      this.excludeUsernames.add(this.config.credentials.username)
     } catch (error) {
       console.error('차단된 계정 로드 중 오류:', error)
+      // 에러 발생시에도 본인 계정은 제외
+      this.excludeUsernames.add(this.config.credentials.username)
     }
   }
 
@@ -195,6 +210,10 @@ export class AgentManager {
 
       // 차단된 계정 로드
       await this.loadBlockedAccounts()
+
+      // 댓글 기록 로드
+      this.commentHistory = loadCommentHistory(this.config.credentials.username)
+      this.addLog('댓글 기록 로드 완료', `${this.commentHistory.commentedPosts.length}개 기록`)
 
       this.addLog('브라우저 시작 중')
       this.browser = await startBrowser(this.config.credentials)
@@ -325,6 +344,18 @@ export class AgentManager {
             if (this.excludeUsernames.has(author)) {
               console.log(`[runWork] ${author} 제외 유저 스킵`)
               this.addLog('제외된 사용자', `${author} - 건너뜀`)
+              return false
+            }
+
+            // 게시물 고유 링크 추출 (피드에서는 page.url()이 항상 홈이므로 article 내 링크 사용)
+            const postLinkLoc = articleLocator.locator('a[href*="/p/"], a[href*="/reel/"]').first()
+            const postHref = await postLinkLoc.getAttribute('href').catch(() => null)
+            const currentPostUrl = postHref ? `https://www.instagram.com${postHref}` : `feed-${author}-${Date.now()}`
+
+            // 로컬 기록에서 중복 체크
+            if (hasCommentedOnPost(this.commentHistory, currentPostUrl)) {
+              console.log('이미 댓글을 작성한 게시물 스킵 (로컬 기록)')
+              this.addLog('이미 댓글 작성한 게시물', '로컬 기록 - 건너뜀')
               return false
             }
 
@@ -479,6 +510,10 @@ export class AgentManager {
               console.log('댓글 작성 성공!')
               this.addLog('댓글 게시 성공', author, true)
 
+              // 댓글 기록 저장
+              addCommentedPost(this.commentHistory, currentPostUrl, author)
+              saveCommentHistory(this.config.credentials.username, this.commentHistory)
+
               const waitSeconds = this.config.postIntervalSeconds || 60
               const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
               this._status.waiting = {
@@ -603,6 +638,15 @@ export class AgentManager {
                 if (this.excludeUsernames.has(author)) {
                   console.log('[runWork] 제외 유저 스킵')
                   this.addLog('제외된 사용자', `${author} - 건너뜀`)
+                  await this.page!.getByLabel(/닫기|Close/).click()
+                  return false
+                }
+
+                // 로컬 기록에서 중복 체크 (현재 페이지 URL 기준)
+                const hashtagPostUrl = this.page!.url()
+                if (hasCommentedOnPost(this.commentHistory, hashtagPostUrl)) {
+                  console.log('이미 댓글을 작성한 게시물 스킵 (로컬 기록)')
+                  this.addLog('이미 댓글 작성한 게시물', '로컬 기록 - 건너뜀')
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
@@ -747,6 +791,10 @@ export class AgentManager {
                 if (commentTextareaResult) {
                   isProcessed = true
                   this.addLog('댓글 게시 성공', author, true)
+
+                  // 댓글 기록 저장
+                  addCommentedPost(this.commentHistory, hashtagPostUrl, author)
+                  saveCommentHistory(this.config.credentials.username, this.commentHistory)
 
                   // 팔로우 시도 (활성화되어 있고 최대 횟수 미만인 경우)
                   if (work.hashtagWork.followEnabled && followCount < maxFollowCount) {
