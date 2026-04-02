@@ -33,6 +33,15 @@ $ npm run build:mac
 $ npm run build:linux
 ```
 
+### Release
+
+태그 푸시 시 GitHub Actions가 자동으로 빌드 및 릴리스합니다.
+
+```bash
+$ npm version patch   # 버전 업 (예: 1.0.51 → 1.0.52)
+$ git push origin main --tags
+```
+
 ## Local Data Storage
 
 앱 데이터는 아래 경로에 저장됩니다.

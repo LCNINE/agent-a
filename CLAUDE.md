@@ -100,3 +100,18 @@ SELECT cancel_subscription('유저UUID')
 - `src/main/agent/managers/AgentManager.ts` - 에이전트 매니저
 - `src/main/ipcHandlers.ts` - IPC 핸들러 (멀티 에이전트 Map)
 - `supabase/migrations/` - DB 마이그레이션 SQL 파일
+
+---
+
+## 릴리스 방법
+
+태그 푸시 시 GitHub Actions가 자동으로 Windows 빌드 + 릴리스 업로드합니다.
+
+```bash
+npm version patch   # 버전 업 (1.0.51 → 1.0.52)
+git push origin main --tags
+```
+
+- `patch`: 1.0.51 → 1.0.52 (버그 수정)
+- `minor`: 1.0.51 → 1.1.0 (기능 추가)
+- `major`: 1.0.51 → 2.0.0 (대규모 변경)
