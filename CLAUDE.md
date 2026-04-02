@@ -115,3 +115,33 @@ git push origin main --tags
 - `patch`: 1.0.51 → 1.0.52 (버그 수정)
 - `minor`: 1.0.51 → 1.1.0 (기능 추가)
 - `major`: 1.0.51 → 2.0.0 (대규모 변경)
+
+---
+
+## 공지사항 관리
+
+### 테이블 구조: `announcements`
+| 컬럼 | 타입 | 설명 |
+|------|------|------|
+| id | integer | 자동 증가 PK |
+| title | text | 공지 제목 |
+| content | text | 공지 내용 |
+| is_active | boolean | 활성화 여부 |
+| created_at | timestamp | 생성일 |
+| updated_at | timestamp | 수정일 |
+
+### 공지사항 추가
+```sql
+INSERT INTO announcements (title, content, is_active, created_at, updated_at)
+VALUES ('v1.0.53 업데이트', '업데이트 내용 설명', true, now(), now())
+```
+
+### 공지사항 조회
+```sql
+SELECT * FROM announcements WHERE is_active = true ORDER BY created_at DESC
+```
+
+### 공지사항 비활성화
+```sql
+UPDATE announcements SET is_active = false, updated_at = now() WHERE id = 공지ID
+```
