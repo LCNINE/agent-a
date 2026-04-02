@@ -7,7 +7,7 @@ import { useWorkStore } from '../store/workStore'
 
 export function useAgent() {
   const config = useConfigStore((state) => state.config)
-  const workList = useWorkStore((state) => state.workList)
+  const getWorkForAccount = useWorkStore((state) => state.getWorkForAccount)
   const { clearAllErrors } = useErrorStore()
 
   const [statuses, setStatuses] = useState<Record<string, BotStatus>>({})
@@ -50,9 +50,17 @@ export function useAgent() {
         }
       }
 
+      // 해당 계정의 work 설정 가져오기
+      const workList = getWorkForAccount(credentials.username)
+
       console.log('Starting agent with config:', {
         username: credentials.username,
-        hasPassword: !!credentials.password
+        hasPassword: !!credentials.password,
+        workEnabled: {
+          feedWork: workList.feedWork.enabled,
+          hashtagWork: workList.hashtagWork.enabled,
+          targetUserWork: workList.targetUserWork.enabled
+        }
       })
 
       await window.agent.start({

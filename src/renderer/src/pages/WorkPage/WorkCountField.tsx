@@ -1,82 +1,65 @@
-import { useEffect } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { CustomToast } from '@renderer/components/CustomToast'
-import { FormControl, FormField, FormItem, FormLabel } from '@renderer/components/ui/form'
 import { Input } from '@renderer/components/ui/input'
+import { Label } from '@renderer/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip'
-import { useErrorStore } from '@renderer/store/errorStore'
 import { useWorkStore } from '@renderer/store/workStore'
-import { useNavigate, useRouter } from '@tanstack/react-router'
 import { HelpCircle } from 'lucide-react'
-import { useFormContext } from 'react-hook-form'
-import { WorkSchema } from './schema'
+import { WorkType } from 'src'
 
-export function WorkCountField({ type }: { type: keyof WorkSchema }) {
+export function WorkCountField({ type }: { type: keyof WorkType }) {
   const { t } = useTranslation()
-  const { workList, upsert } = useWorkStore()
-  const { hasError, errorTypes, removeError, addError, clearAllErrors } = useErrorStore()
 
-  const router = useRouter()
-  const navigate = useNavigate()
+  // 계정별 work를 직접 구독
+  const workByAccount = useWorkStore((state) => state.workByAccount)
+  const defaultWork = useWorkStore((state) => state.defaultWork)
+  const selectedAccountForWork = useWorkStore((state) => state.selectedAccountForWork)
+  const upsert = useWorkStore((state) => state.upsert)
 
-  const form = useFormContext<WorkSchema>()
-
-  useEffect(() => {
-    if (form.formState.errors[type]?.count) {
-      CustomToast({
-        message: t('configForm.validation.workCount'),
-        status: 'error',
-        position: 'top-center'
-      })
+  // 현재 계정의 workList 계산
+  const workList = useMemo(() => {
+    if (selectedAccountForWork && workByAccount[selectedAccountForWork]) {
+      return workByAccount[selectedAccountForWork]
     }
-  }, [form.formState.errors[type]?.count, t])
+    return defaultWork
+  }, [selectedAccountForWork, workByAccount, defaultWork])
 
-  useEffect(() => {
-    form.trigger()
-  }, [])
+  // 현재 count 값
+  const currentCount = workList[type]?.count ?? 0
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value === '' ? 0 : Number(e.target.value)
+
+    upsert({
+      [type]: {
+        ...workList[type],
+        count: newValue
+      }
+    })
+  }
 
   return (
-    <FormField
-      control={form.control}
-      name={`${type}.count`}
-      render={({ field }) => (
-        <FormItem>
-          <div className="flex items-center mb-2">
-            <FormLabel className={`m-0 text-xs`}>{t('configForm.label.workCount')}</FormLabel>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('configForm.tooltip.workCount')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <FormControl>
-            <Input
-              type="number"
-              {...field}
-              onChange={(e) => {
-                const newValue = e.target.value === '' ? null : Number(e.target.value)
-                field.onChange(newValue)
-
-                upsert({
-                  ...workList,
-                  [type]: {
-                    ...workList[type],
-                    count: newValue
-                  }
-                })
-              }}
-              className={`w-20`}
-              min={0}
-              aria-label="작업 횟수 설정"
-            />
-          </FormControl>
-        </FormItem>
-      )}
-    />
+    <div>
+      <div className="flex items-center mb-2">
+        <Label className="m-0 text-xs">{t('configForm.label.workCount')}</Label>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <HelpCircle className="w-4 h-4 ml-2 cursor-help text-muted-foreground" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('configForm.tooltip.workCount')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      <Input
+        type="number"
+        value={currentCount}
+        onChange={handleChange}
+        className="w-20"
+        min={0}
+        aria-label="작업 횟수 설정"
+      />
+    </div>
   )
 }

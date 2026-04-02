@@ -8,7 +8,7 @@ import { useRouter } from '@tanstack/react-router'
 import { CustomToast } from '@renderer/components/CustomToast'
 import { useWorkStore } from '@renderer/store/workStore'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { LoginCredentials } from 'src'
+import { LoginCredentials, WorkType } from 'src'
 import { cn } from '@/utils/tailwind'
 import { useAuthContext } from '@renderer/hooks/useAuth'
 
@@ -25,13 +25,14 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
   const toggleAccountActive = useAccountStore((state) => state.toggleAccountActive)
   const { getAgentStatus, isAnyRunning, startAgent, stopAgent, stopAllAgents, statuses } =
     useAgent()
-  const workList = useWorkStore((state) => state.workList)
+  const getWorkForAccount = useWorkStore((state) => state.getWorkForAccount)
   const { addError } = useErrorStore()
   const router = useRouter()
 
   const runningCount = Object.values(statuses).filter((s) => s.isRunning).length
 
-  const validateWork = (): boolean => {
+  // 계정별 work 검증
+  const validateWorkForAccount = (username: string): boolean => {
     if (!isSubscriptionActive) {
       CustomToast({
         status: 'error',
@@ -42,11 +43,13 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       return false
     }
 
+    const workList = getWorkForAccount(username)
+
     if (workList.feedWork.enabled && workList.feedWork.count === 0) {
       addError('feedWorkCount')
       CustomToast({
         status: 'error',
-        message: '피드 작업의 개수가 설정되지 않았습니다.',
+        message: `[${username}] 피드 작업의 개수가 설정되지 않았습니다.`,
         position: 'top-center',
         duration: 2000,
         action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
@@ -58,7 +61,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       addError('noHashtags')
       CustomToast({
         status: 'error',
-        message: '해시태그 검색 작업 개수가 설정되지 않았습니다',
+        message: `[${username}] 해시태그 검색 작업 개수가 설정되지 않았습니다`,
         position: 'top-center',
         duration: 2000,
         action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
@@ -70,7 +73,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       addError('noHashtags')
       CustomToast({
         status: 'error',
-        message: '해시태그가 설정되지 않았습니다',
+        message: `[${username}] 해시태그가 설정되지 않았습니다`,
         position: 'top-center',
         duration: 2000,
         action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
@@ -82,7 +85,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       addError('myFeedInteractionWorkCount')
       CustomToast({
         status: 'error',
-        message: '내 피드에 댓글 작업 개수가 설정되지 않았습니다.',
+        message: `[${username}] 내 피드에 댓글 작업 개수가 설정되지 않았습니다.`,
         position: 'top-center',
         duration: 2000,
         action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
@@ -94,7 +97,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       addError('noTargetUsers')
       CustomToast({
         status: 'error',
-        message: '타겟 유저가 설정되지 않았습니다.',
+        message: `[${username}] 타겟 유저가 설정되지 않았습니다.`,
         position: 'top-center',
         duration: 2000,
         action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
@@ -112,7 +115,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       addError('all')
       CustomToast({
         status: 'error',
-        message: '작업 목록이 없어서 작업을 시작할 수 없습니다. 작업을 추가해주세요.',
+        message: `[${username}] 작업 목록이 없어서 작업을 시작할 수 없습니다. 작업을 추가해주세요.`,
         position: 'top-center',
         duration: 2000,
         action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
@@ -124,7 +127,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
   }
 
   const handleStart = (account: LoginCredentials) => {
-    if (!validateWork()) return
+    if (!validateWorkForAccount(account.username)) return
     if (runningCount >= maxInstances) {
       CustomToast({
         status: 'error',
@@ -152,12 +155,13 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
   }
 
   const handleStartAll = () => {
-    if (!validateWork()) return
     let started = runningCount
     for (const account of activeAccountList) {
       if (started >= maxInstances) break
       const status = getAgentStatus(account.username)
       if (!status.isRunning && account.password) {
+        // 각 계정별로 work 검증
+        if (!validateWorkForAccount(account.username)) continue
         startAgent({ username: account.username, password: account.password }, user?.id || '')
         started++
       }

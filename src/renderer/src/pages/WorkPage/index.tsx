@@ -1,14 +1,15 @@
 'use client'
 
 import { useWorkStore } from '@/store/workStore'
+import { useAccountStore } from '@/store/accountStore'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Footer from '@renderer/components/template/Footer'
 import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { WorkType, TargetUser } from 'src'
 import { workSchema, WorkSchema } from './schema'
 import WorkSection from './WorkSection'
@@ -21,10 +22,41 @@ import TargetUserImportDialog from '@renderer/components/TargetUserImportDialog'
 import TargetUserList from '@renderer/components/TargetUserList'
 import { cn } from '@renderer/lib/utils'
 import { CustomToast } from '@renderer/components/CustomToast'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/components/ui/select"
 
 export default function WorkPage() {
-  const { workList, upsert } = useWorkStore()
+  const workByAccount = useWorkStore((state) => state.workByAccount)
+  const defaultWork = useWorkStore((state) => state.defaultWork)
+  const upsert = useWorkStore((state) => state.upsert)
+  const selectedAccountForWork = useWorkStore((state) => state.selectedAccountForWork)
+  const setSelectedAccount = useWorkStore((state) => state.setSelectedAccount)
+
+  const { accountList, activeAccounts } = useAccountStore()
   const { hasError, removeError, addError } = useErrorStore()
+
+  // 계정 목록 (활성화된 계정만)
+  const availableAccounts = accountList.filter(a => activeAccounts.includes(a.username))
+
+  // 첫 로드 시 첫 번째 활성 계정 선택
+  useEffect(() => {
+    if (!selectedAccountForWork && availableAccounts.length > 0) {
+      setSelectedAccount(availableAccounts[0].username)
+    }
+  }, [availableAccounts, selectedAccountForWork, setSelectedAccount])
+
+  // 현재 선택된 계정의 workList (계정 변경 시 다시 계산)
+  const workList = useMemo(() => {
+    if (selectedAccountForWork && workByAccount[selectedAccountForWork]) {
+      return workByAccount[selectedAccountForWork]
+    }
+    return defaultWork
+  }, [selectedAccountForWork, workByAccount, defaultWork])
 
   const [newHashtag, setNewHashtag] = useState('')
   const [newHashtagInteraction, setNewHashtagInteraction] = useState('')
@@ -190,6 +222,24 @@ export default function WorkPage() {
     removeError('suggestedFollowCount')
   }
 
+  // 선택된 계정이 없거나 유효하지 않으면 안내 메시지
+  if (availableAccounts.length === 0) {
+    return (
+      <TooltipProvider delayDuration={100}>
+        <div className="flex h-[calc(100vh-90px)] flex-col">
+          <div className="flex flex-col items-center justify-center h-full gap-4">
+            <User className="h-12 w-12 text-muted-foreground/50" />
+            <p className="text-muted-foreground text-center">
+              활성화된 계정이 없습니다.<br />
+              계정 페이지에서 계정을 활성화해주세요.
+            </p>
+          </div>
+          <Footer />
+        </div>
+      </TooltipProvider>
+    )
+  }
+
   return (
     <TooltipProvider delayDuration={100}>
       <Form {...form}>
@@ -201,6 +251,27 @@ export default function WorkPage() {
           <div className="flex h-[calc(100vh-90px)] flex-col">
             <ScrollArea className="h-full scrollbar-apple">
               <div className="mx-auto max-w-2xl space-y-5 p-6">
+                {/* 계정 선택 드롭다운 */}
+                <div className="flex items-center gap-3 p-4 rounded-2xl border bg-card/50 backdrop-blur-sm">
+                  <User className="h-5 w-5 text-apple-blue" />
+                  <Label className="text-sm font-medium whitespace-nowrap">작업 설정 계정</Label>
+                  <Select
+                    value={selectedAccountForWork || ''}
+                    onValueChange={(value) => setSelectedAccount(value)}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="계정을 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableAccounts.map((account) => (
+                        <SelectItem key={account.username} value={account.username}>
+                          @{account.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <WorkSection
                   title="피드 작업"
                   type="feedWork"
