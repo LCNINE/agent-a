@@ -48,6 +48,14 @@ function exposeAgentContext() {
   })
 }
 
+function exposeStoreContext() {
+  contextBridge.exposeInMainWorld('electronStore', {
+    get: (key: string) => ipcRenderer.invoke('store:get', key),
+    set: (key: string, value: any) => ipcRenderer.invoke('store:set', key, value),
+    delete: (key: string) => ipcRenderer.invoke('store:delete', key)
+  })
+}
+
 function exposeUpdateContext() {
   contextBridge.exposeInMainWorld('update', {
     onUpdateAvailable: (callback: (info: any) => void) => {
@@ -79,4 +87,5 @@ export default function exposeContexts() {
   exposeThemeContext()
   exposeAgentContext()
   exposeUpdateContext()
+  exposeStoreContext()
 }

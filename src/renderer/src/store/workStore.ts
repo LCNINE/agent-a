@@ -1,6 +1,7 @@
 import { WorkType } from 'src'
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { electronStorage } from '@/lib/electronStorage'
 
 interface WorkState {
   // 계정별 work 설정 (username -> WorkType)
@@ -148,6 +149,12 @@ export const useWorkStore = create<WorkState>()(
     {
       name: 'work',
       version: 7,
+      storage: createJSONStorage(() => electronStorage),
+      partialize: (state) => ({
+        workByAccount: state.workByAccount,
+        selectedAccountForWork: state.selectedAccountForWork,
+        defaultWork: state.defaultWork
+      }),
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as any
 

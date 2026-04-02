@@ -1,8 +1,12 @@
 import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import log from 'electron-log'
+import Store from 'electron-store'
 import { StartAgentParams } from '..'
 import { AgentManager } from './agent/managers/AgentManager'
 import { startPowerSaveBlocker, stopPowerSaveBlocker } from './index'
+
+// electron-store 인스턴스 (앱 데이터 폴더에 저장됨)
+const store = new Store<Record<string, any>>({ name: 'app-data' })
 
 const WIN_MINIMIZE_CHANNEL = 'window:minimize'
 const WIN_MAXIMIZE_CHANNEL = 'window:maximize'
@@ -163,8 +167,28 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
   })
 }
 
+function addStoreEventListeners() {
+  // store에서 값 가져오기
+  ipcMain.handle('store:get', (_, key: string) => {
+    return store.get(key)
+  })
+
+  // store에 값 저장하기
+  ipcMain.handle('store:set', (_, key: string, value: any) => {
+    store.set(key, value)
+    return true
+  })
+
+  // store에서 값 삭제하기
+  ipcMain.handle('store:delete', (_, key: string) => {
+    store.delete(key)
+    return true
+  })
+}
+
 export function registerIpcHandlers(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow)
   addThemeEventListeners()
   addAgentEventListeners(mainWindow)
+  addStoreEventListeners()
 }

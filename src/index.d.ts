@@ -172,6 +172,12 @@ interface DialogContext {
   showConfirmation: () => Promise<boolean>
 }
 
+interface ElectronStoreContext {
+  get: (key: string) => Promise<any>
+  set: (key: string, value: any) => Promise<boolean>
+  delete: (key: string) => Promise<boolean>
+}
+
 export {}
 declare global {
   interface Window {
@@ -180,6 +186,7 @@ declare global {
     agent: AgentContext
     update: UpdateContext
     dialog: DialogContext
+    electronStore: ElectronStoreContext
     electron: {
       ipcRenderer: {
         on: (channel: string, func: (...args: any[]) => void) => void
