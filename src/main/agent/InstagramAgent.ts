@@ -2,7 +2,6 @@
 import { Browser, Page } from 'playwright'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import Anthropic from '@anthropic-ai/sdk'
 import { BaseAgent } from './common/BaseAgent'
 import fs from 'fs'
 import { AgentConfig } from '../..'

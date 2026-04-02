@@ -1,24 +1,16 @@
 // src/main/agent/common/BaseAgent.ts
-import { Browser, Page, BrowserContext } from 'playwright'
-import Anthropic from '@anthropic-ai/sdk'
+import { Page, BrowserContext } from 'playwright'
 import { AgentConfig } from '../../..'
 import { startBrowser } from './browser'
-import { log } from 'electron-log'
 
 export abstract class BaseAgent {
   protected context: BrowserContext | null = null
-  // protected browser: Browser | null = null
   protected page: Page | null = null
   protected isLoggedIn = false
   protected config: AgentConfig
-  protected anthropic: Anthropic
 
   constructor(config: AgentConfig) {
     this.config = config
-    this.anthropic = new Anthropic({
-      apiKey:
-        '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'
-    })
   }
 
   async initialize() {
