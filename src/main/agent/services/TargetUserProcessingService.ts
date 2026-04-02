@@ -11,6 +11,8 @@ interface TargetUserProcessingOptions {
   onComment?: (username: string, postIndex: number, imageBase64: string, content: string) => Promise<string | null>
   onUserStatusUpdate?: (username: string, status: TargetUser['status'], error?: string) => void
   onLog?: (action: string, details?: string, success?: boolean) => void
+  checkCommentHistory?: (postUrl: string) => Promise<boolean>  // Supabase 기록 체크 (async)
+  saveCommentHistory?: (postUrl: string, author: string) => Promise<void>  // Supabase 기록 저장 (async)
 }
 
 export class TargetUserProcessingService {
@@ -193,6 +195,25 @@ export class TargetUserProcessingService {
       this.log('스크롤 실패', `${username} 게시물 ${postIndex + 1}`)
     }
 
+    // 게시물 URL 먼저 획득 (클릭 전 href 추출)
+    let postUrl: string | null = null
+    try {
+      postUrl = await postLocator.getAttribute('href')
+      if (postUrl && !postUrl.startsWith('http')) {
+        postUrl = `https://www.instagram.com${postUrl}`
+      }
+    } catch {
+      // href 획득 실패 시 클릭 후 URL 확인
+    }
+
+    // Supabase 기록에서 중복 체크 (URL이 있는 경우)
+    if (postUrl && this.options.checkCommentHistory) {
+      if (await this.options.checkCommentHistory(postUrl)) {
+        this.log('이미 댓글 작성한 게시물 (Supabase 기록)', `${username} 게시물 ${postIndex + 1} - 건너뜀`)
+        return false
+      }
+    }
+
     // 게시물 클릭하여 모달 열기
     try {
       await postLocator.click({ force: true })
@@ -202,6 +223,11 @@ export class TargetUserProcessingService {
     }
 
     await this.page.waitForTimeout(2500)
+
+    // 클릭 후 URL 재확인 (href에서 못 얻었을 경우)
+    if (!postUrl) {
+      postUrl = this.page.url()
+    }
 
     // 모달 확인 - 여러 선택자 시도
     let dialog: Locator | null = null
@@ -226,12 +252,14 @@ export class TargetUserProcessingService {
     }
 
     let didSomething = false
+    // 댓글 성공 여부 추적 (기록 저장용)
+    let commentSuccess = false
 
     try {
       // 이미 좋아요 했는지 확인
       const alreadyLiked = await this.checkAlreadyLiked(dialog)
 
-      // 이미 댓글 작성했는지 확인
+      // 이미 댓글 작성했는지 확인 (UI 체크)
       const alreadyCommented = await this.checkAlreadyCommented(dialog)
 
       // 좋아요 필요 여부
@@ -255,11 +283,17 @@ export class TargetUserProcessingService {
 
       // 댓글 처리 (아직 안 했으면)
       if (needComment) {
-        const commentSuccess = await this.handleComment(dialog, username, postIndex)
+        commentSuccess = await this.handleComment(dialog, username, postIndex)
         if (commentSuccess) didSomething = true
       }
 
     } finally {
+      // 댓글 성공 시 Supabase에 기록 저장
+      if (commentSuccess && postUrl && this.options.saveCommentHistory) {
+        await this.options.saveCommentHistory(postUrl, username)
+        this.log('댓글 기록 저장 (Supabase)', `${username} - ${postUrl}`)
+      }
+
       // 모달 닫기
       await this.closeModal()
       await this.page.waitForTimeout(1000)

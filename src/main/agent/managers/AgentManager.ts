@@ -10,7 +10,9 @@ import {
   saveCommentHistory,
   hasCommentedOnPost,
   addCommentedPost,
-  CommentHistory
+  CommentHistory,
+  hasCommentedOnPostSupabase,
+  saveCommentToSupabase
 } from '../common/commentHistory'
 import { ArticleProcessingService } from '../services/ArticleProcessingService'
 import { HashtagService } from '../services/HashtagProcessingService'
@@ -352,10 +354,17 @@ export class AgentManager {
             const postHref = await postLinkLoc.getAttribute('href').catch(() => null)
             const currentPostUrl = postHref ? `https://www.instagram.com${postHref}` : `feed-${author}-${Date.now()}`
 
-            // 로컬 기록에서 중복 체크
+            // 1. 로컬 기록에서 중복 체크 (빠름)
             if (hasCommentedOnPost(this.commentHistory, currentPostUrl)) {
               console.log('이미 댓글을 작성한 게시물 스킵 (로컬 기록)')
               this.addLog('이미 댓글 작성한 게시물', '로컬 기록 - 건너뜀')
+              return false
+            }
+
+            // 2. Supabase 기록에서 중복 체크 (네트워크)
+            if (await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, currentPostUrl)) {
+              console.log('이미 댓글을 작성한 게시물 스킵 (Supabase 기록)')
+              this.addLog('이미 댓글 작성한 게시물', 'Supabase 기록 - 건너뜀')
               return false
             }
 
@@ -510,9 +519,10 @@ export class AgentManager {
               console.log('댓글 작성 성공!')
               this.addLog('댓글 게시 성공', author, true)
 
-              // 댓글 기록 저장
+              // 댓글 기록 저장 (로컬 + Supabase)
               addCommentedPost(this.commentHistory, currentPostUrl, author)
               saveCommentHistory(this.config.credentials.username, this.commentHistory)
+              await saveCommentToSupabase(this.supabase, this.config.credentials.username, currentPostUrl, author)
 
               const waitSeconds = this.config.postIntervalSeconds || 60
               const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
@@ -642,11 +652,19 @@ export class AgentManager {
                   return false
                 }
 
-                // 로컬 기록에서 중복 체크 (현재 페이지 URL 기준)
+                // 1. 로컬 기록에서 중복 체크 (현재 페이지 URL 기준)
                 const hashtagPostUrl = this.page!.url()
                 if (hasCommentedOnPost(this.commentHistory, hashtagPostUrl)) {
                   console.log('이미 댓글을 작성한 게시물 스킵 (로컬 기록)')
                   this.addLog('이미 댓글 작성한 게시물', '로컬 기록 - 건너뜀')
+                  await this.page!.getByLabel(/닫기|Close/).click()
+                  return false
+                }
+
+                // 2. Supabase 기록에서 중복 체크 (네트워크)
+                if (await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, hashtagPostUrl)) {
+                  console.log('이미 댓글을 작성한 게시물 스킵 (Supabase 기록)')
+                  this.addLog('이미 댓글 작성한 게시물', 'Supabase 기록 - 건너뜀')
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
@@ -792,9 +810,10 @@ export class AgentManager {
                   isProcessed = true
                   this.addLog('댓글 게시 성공', author, true)
 
-                  // 댓글 기록 저장
+                  // 댓글 기록 저장 (로컬 + Supabase)
                   addCommentedPost(this.commentHistory, hashtagPostUrl, author)
                   saveCommentHistory(this.config.credentials.username, this.commentHistory)
+                  await saveCommentToSupabase(this.supabase, this.config.credentials.username, hashtagPostUrl, author)
 
                   // 팔로우 시도 (활성화되어 있고 최대 횟수 미만인 경우)
                   if (work.hashtagWork.followEnabled && followCount < maxFollowCount) {
@@ -1120,6 +1139,23 @@ export class AgentManager {
               },
               onLog: (action: string, details?: string, success?: boolean) => {
                 this.addLog(action, details, success)
+              },
+              // Supabase 댓글 기록 체크 콜백 (로컬 + Supabase)
+              checkCommentHistory: async (postUrl: string) => {
+                // 1. 로컬 기록 체크 (빠름)
+                if (hasCommentedOnPost(this.commentHistory, postUrl)) {
+                  return true
+                }
+                // 2. Supabase 기록 체크 (네트워크)
+                return await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, postUrl)
+              },
+              // Supabase 댓글 기록 저장 콜백 (로컬 + Supabase)
+              saveCommentHistory: async (postUrl: string, author: string) => {
+                // 로컬 기록 저장
+                addCommentedPost(this.commentHistory, postUrl, author)
+                saveCommentHistory(this.config.credentials.username, this.commentHistory)
+                // Supabase에 저장
+                await saveCommentToSupabase(this.supabase, this.config.credentials.username, postUrl, author)
               }
             }
           )
