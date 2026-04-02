@@ -51,19 +51,25 @@ function exposeAgentContext() {
 function exposeUpdateContext() {
   contextBridge.exposeInMainWorld('update', {
     onUpdateAvailable: (callback: (info: any) => void) => {
-      ipcRenderer.on('update-available', (_, info) => callback(info))
+      ipcRenderer.on('update:available', (_, info) => callback(info))
+    },
+    onUpdateNotAvailable: (callback: () => void) => {
+      ipcRenderer.on('update:not-available', () => callback())
     },
     onUpdateDownloaded: (callback: () => void) => {
-      ipcRenderer.on('update-downloaded', () => callback())
+      ipcRenderer.on('update:downloaded', () => callback())
     },
     onDownloadProgress: (callback: (progress: any) => void) => {
-      ipcRenderer.on('download-progress', (_, progress) => callback(progress))
+      ipcRenderer.on('update:download-progress', (_, progress) => callback(progress))
+    },
+    onUpdateError: (callback: (error: string) => void) => {
+      ipcRenderer.on('update:error', (_, error) => callback(error))
     },
     startDownload: () => {
-      ipcRenderer.send('start-update-download')
+      return ipcRenderer.invoke('update:start-download')
     },
     installUpdate: () => {
-      ipcRenderer.send('install-update')
+      return ipcRenderer.invoke('update:install')
     }
   })
 }

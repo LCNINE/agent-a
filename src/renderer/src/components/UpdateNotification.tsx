@@ -41,7 +41,17 @@ export default function UpdateNotification() {
         action: <Button onClick={() => window.update.installUpdate()}>재시작</Button>
       })
     })
-  }, [])
+
+    // 업데이트 오류
+    window.update.onUpdateError((error) => {
+      toast({
+        variant: 'destructive',
+        title: '업데이트 오류',
+        description: error
+      })
+      setDownloadProgress(0)
+    })
+  }, [toast])
 
   if (!showUpdateDialog) return null
 

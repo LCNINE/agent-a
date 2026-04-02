@@ -160,10 +160,12 @@ interface AgentContext {
 
 interface UpdateContext {
   onUpdateAvailable: (callback: (info: { version: string; releaseNotes: string }) => void) => void
+  onUpdateNotAvailable: (callback: () => void) => void
   onUpdateDownloaded: (callback: () => void) => void
   onDownloadProgress: (callback: (progress: { percent: number }) => void) => void
-  startDownload: () => void
-  installUpdate: () => void
+  onUpdateError: (callback: (error: string) => void) => void
+  startDownload: () => Promise<void>
+  installUpdate: () => Promise<void>
 }
 
 interface DialogContext {
