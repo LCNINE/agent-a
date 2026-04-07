@@ -88,7 +88,7 @@ export class TargetUserProcessingService {
     }
 
     // 게시물 링크 가져오기
-    const postLinks = await this.getPostLinks()
+    let postLinks = await this.getPostLinks()
     if (postLinks.length === 0) {
       this.log('게시물 없음', username)
       return
@@ -98,23 +98,48 @@ export class TargetUserProcessingService {
 
     let processedCount = 0
     const postsToProcess = this.options.postsPerUser
+    let currentIndex = 0
+    let scrollAttempts = 0
+    const maxScrollAttempts = 5 // 최대 스크롤 시도 횟수
 
-    for (let i = 0; i < postLinks.length && processedCount < postsToProcess; i++) {
-      if (this.shouldStop) break
-
-      try {
-        // 프로필 페이지에서 다시 게시물 목록 가져오기 (DOM이 변경될 수 있으므로)
-        const currentPostLinks = await this.getPostLinks()
-        if (i >= currentPostLinks.length) {
-          this.log('게시물 인덱스 초과', `${i}/${currentPostLinks.length}`)
+    while (processedCount < postsToProcess && !this.shouldStop) {
+      // 현재 목록 다 확인했으면 스크롤해서 더 로드
+      if (currentIndex >= postLinks.length) {
+        if (scrollAttempts >= maxScrollAttempts) {
+          this.log('스크롤 최대 시도 도달', `${scrollAttempts}회`)
           break
         }
 
-        const wasProcessed = await this.processPost(currentPostLinks[i], username, i)
+        const prevCount = postLinks.length
+        await this.scrollForMorePosts()
+        scrollAttempts++
+
+        // 새로운 게시물 목록 가져오기
+        postLinks = await this.getPostLinks()
+
+        if (postLinks.length <= prevCount) {
+          this.log('더 이상 게시물 없음', `${postLinks.length}개에서 멈춤`)
+          break
+        }
+
+        this.log('스크롤로 게시물 추가 로드', `${prevCount} → ${postLinks.length}개`)
+      }
+
+      try {
+        // 현재 인덱스의 게시물 처리
+        const currentPostLinks = await this.getPostLinks()
+        if (currentIndex >= currentPostLinks.length) {
+          this.log('게시물 인덱스 초과', `${currentIndex}/${currentPostLinks.length}`)
+          break
+        }
+
+        const wasProcessed = await this.processPost(currentPostLinks[currentIndex], username, currentIndex)
         if (wasProcessed) {
           processedCount++
           this.log('게시물 처리 완료', `${username}: ${processedCount}/${postsToProcess}`)
         }
+
+        currentIndex++
 
         // 게시물 간 대기 - 설정된 postIntervalSeconds 사용
         if (processedCount < postsToProcess && !this.shouldStop) {
@@ -123,11 +148,31 @@ export class TargetUserProcessingService {
           await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000))
         }
       } catch (error) {
-        this.log('게시물 처리 실패', `${username} 게시물 ${i + 1}: ${error instanceof Error ? error.message : String(error)}`, false)
+        this.log('게시물 처리 실패', `${username} 게시물 ${currentIndex + 1}: ${error instanceof Error ? error.message : String(error)}`, false)
+        currentIndex++
       }
     }
 
     this.log('유저 처리 완료', `${username}: ${processedCount}개 처리됨`)
+  }
+
+  private async scrollForMorePosts(): Promise<void> {
+    this.log('스크롤하여 게시물 더 로드 중...')
+
+    // 페이지 하단으로 스크롤
+    await this.page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight)
+    })
+
+    // 로딩 대기
+    await this.page.waitForTimeout(2000)
+
+    // 조금 위로 스크롤 (인스타그램이 더 로드하도록)
+    await this.page.evaluate(() => {
+      window.scrollBy(0, -200)
+    })
+
+    await this.page.waitForTimeout(1000)
   }
 
   private async checkAccountStatus(): Promise<'accessible' | 'private' | 'not_found'> {
