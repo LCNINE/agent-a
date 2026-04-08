@@ -165,6 +165,7 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
 
     return result
   })
+
 }
 
 function addStoreEventListeners() {

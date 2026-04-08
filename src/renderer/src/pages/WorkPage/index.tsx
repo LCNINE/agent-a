@@ -8,7 +8,7 @@ import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch, Download } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { WorkType, TargetUser, UserCollectionSettings } from 'src'
 import { workSchema, WorkSchema } from './schema'
@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@renderer/components/ui/select"
+import useCreateClient from '@renderer/supabase/client'
 
 export default function WorkPage() {
   const workByAccount = useWorkStore((state) => state.workByAccount)
@@ -39,6 +40,8 @@ export default function WorkPage() {
 
   const { accountList, activeAccounts } = useAccountStore()
   const { hasError, removeError, addError } = useErrorStore()
+  const supabase = useCreateClient() as any  // collected_users, comment_history 테이블 타입 미정의
+  const [isLoadingCollectedUsers, setIsLoadingCollectedUsers] = useState(false)
 
   // 계정 목록 (활성화된 계정만)
   const availableAccounts = accountList.filter(a => activeAccounts.includes(a.username))
@@ -182,8 +185,114 @@ export default function WorkPage() {
     })
   }
 
+  // 수집된 유저 불러오기 (Supabase에서 조회하여 타겟 목록에 추가)
+  const handleLoadCollectedUsers = async () => {
+    if (!selectedAccountForWork) {
+      CustomToast({
+        status: 'error',
+        message: '계정을 선택해주세요.',
+        position: 'top-center',
+        duration: 3000
+      })
+      return
+    }
+
+    setIsLoadingCollectedUsers(true)
+    try {
+      // 1. 모든 수집 유저 조회
+      const { data: collectedUsers, error } = await supabase
+        .from('collected_users')
+        .select('*')
+        .eq('instagram_username', selectedAccountForWork)
+        .order('like_count', { ascending: false })
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      if (!collectedUsers || collectedUsers.length === 0) {
+        CustomToast({
+          status: 'info',
+          message: '수집된 유저가 없습니다.',
+          position: 'top-center',
+          duration: 3000
+        })
+        return
+      }
+
+      // 2. comment_history에서 이미 활동한 유저 목록 조회
+      const { data: commentHistory } = await supabase
+        .from('comment_history')
+        .select('post_author')
+        .eq('instagram_username', selectedAccountForWork)
+
+      const processedUsers = new Set(
+        (commentHistory || []).map(h => (h.post_author as string)?.toLowerCase())
+      )
+
+      // 3. 아직 활동하지 않은 유저만 필터링
+      const pendingUsers = collectedUsers.filter(
+        user => !processedUsers.has((user.collected_username as string)?.toLowerCase())
+      )
+
+      if (pendingUsers.length === 0) {
+        CustomToast({
+          status: 'info',
+          message: '모든 수집 유저에게 이미 활동을 완료했습니다.',
+          position: 'top-center',
+          duration: 3000
+        })
+        return
+      }
+
+      // 4. 기존 타겟 유저 목록에서 중복 제거하고 추가
+      const existingUsernames = new Set(
+        workList.targetUserWork.targetUsers.map(u => u.username.toLowerCase())
+      )
+      const newUsers = pendingUsers
+        .filter(u => !existingUsernames.has((u.collected_username as string)?.toLowerCase()))
+        .map(u => ({
+          username: u.collected_username as string,
+          status: 'pending' as const
+        }))
+
+      if (newUsers.length === 0) {
+        CustomToast({
+          status: 'info',
+          message: '불러올 새 유저가 없습니다. (이미 타겟 목록에 있음)',
+          position: 'top-center',
+          duration: 3000
+        })
+        return
+      }
+
+      upsert({
+        targetUserWork: {
+          ...workList.targetUserWork,
+          targetUsers: [...workList.targetUserWork.targetUsers, ...newUsers]
+        }
+      })
+
+      CustomToast({
+        status: 'success',
+        message: `${newUsers.length}명의 수집 유저를 불러왔습니다.`,
+        position: 'top-center',
+        duration: 3000
+      })
+    } catch (error) {
+      CustomToast({
+        status: 'error',
+        message: `수집 유저 불러오기 실패: ${error instanceof Error ? error.message : String(error)}`,
+        position: 'top-center',
+        duration: 3000
+      })
+    } finally {
+      setIsLoadingCollectedUsers(false)
+    }
+  }
+
   const handleTargetUserSettingChange = (
-    key: 'likeEnabled' | 'commentEnabled' | 'postsPerUser',
+    key: 'likeEnabled' | 'commentEnabled' | 'postsPerUser' | 'skipOldPostsMonths',
     value: boolean | number
   ) => {
     upsert({
@@ -358,6 +467,16 @@ export default function WorkPage() {
                         <FileUp className="h-4 w-4 mr-2" />
                         엑셀에서 불러오기
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleLoadCollectedUsers}
+                        disabled={isLoadingCollectedUsers}
+                        className="flex-1"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {isLoadingCollectedUsers ? '불러오는 중...' : '수집 유저 불러오기'}
+                      </Button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -401,6 +520,25 @@ export default function WorkPage() {
                         }
                         className="w-20"
                       />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Label className="text-sm whitespace-nowrap">오래된 게시물 스킵</Label>
+                      <Select
+                        value={String(workList.targetUserWork.skipOldPostsMonths || 0)}
+                        onValueChange={(v) => handleTargetUserSettingChange('skipOldPostsMonths', Number(v))}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">비활성화</SelectItem>
+                          <SelectItem value="1">1개월 이상</SelectItem>
+                          <SelectItem value="3">3개월 이상</SelectItem>
+                          <SelectItem value="6">6개월 이상</SelectItem>
+                          <SelectItem value="12">12개월 이상</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <TargetUserList
@@ -484,15 +622,15 @@ export default function WorkPage() {
                             <Input
                               type="number"
                               min={1}
-                              max={10}
+                              max={99}
                               value={workList.hashtagWork.userCollection?.usersPerHashtag ?? 5}
                               onChange={(e) =>
                                 handleUserCollectionChange(
                                   'usersPerHashtag',
-                                  Math.min(10, Math.max(1, parseInt(e.target.value) || 5))
+                                  Math.min(99, Math.max(1, parseInt(e.target.value) || 5))
                                 )
                               }
-                              className="w-16"
+                              className="w-20"
                             />
                             <span className="text-sm text-muted-foreground">명</span>
                           </div>

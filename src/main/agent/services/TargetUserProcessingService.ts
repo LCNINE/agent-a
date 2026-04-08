@@ -8,6 +8,7 @@ interface TargetUserProcessingOptions {
   commentEnabled: boolean
   postsPerUser: number
   tryFollowOnVisit?: boolean  // 프로필 방문 시 팔로우 시도 (수집 유저 활동용)
+  skipOldPostsMonths?: number  // 0 = 비활성화, N = N개월 이상 지난 게시물 스킵
   onLike?: (username: string, postIndex: number) => Promise<void>
   onComment?: (username: string, postIndex: number, imageBase64: string, content: string) => Promise<string | null>
   onUserStatusUpdate?: (username: string, status: TargetUser['status'], error?: string) => void
@@ -337,6 +338,26 @@ export class TargetUserProcessingService {
       this.log('게시물 모달 열기 실패', `${username} 게시물 ${postIndex + 1}`, false)
       await this.page.keyboard.press('Escape')
       return false
+    }
+
+    // 오래된 게시물 스킵 체크 (옵션이 활성화된 경우)
+    if (this.options.skipOldPostsMonths && this.options.skipOldPostsMonths > 0) {
+      this.log('오래된 게시물 체크', `${this.options.skipOldPostsMonths}개월 이상 스킵 설정됨`)
+      const postDate = await this.getPostDate(dialog)
+      if (postDate) {
+        const now = new Date()
+        const monthsDiff = (now.getFullYear() - postDate.getFullYear()) * 12
+                         + (now.getMonth() - postDate.getMonth())
+        this.log('날짜 비교', `게시물: ${postDate.toLocaleDateString()}, 현재: ${now.toLocaleDateString()}, 차이: ${monthsDiff}개월`)
+
+        if (this.isPostTooOld(postDate, this.options.skipOldPostsMonths)) {
+          this.log('오래된 게시물 스킵', `${this.options.skipOldPostsMonths}개월 이상 지남 (${postDate.toLocaleDateString()})`)
+          await this.closePostModal()
+          return false // 처리하지 않음 → 다음 게시물로
+        }
+      } else {
+        this.log('날짜 체크 불가', '게시물 날짜를 찾을 수 없어 스킵하지 않음')
+      }
     }
 
     let didSomething = false
@@ -724,6 +745,64 @@ export class TargetUserProcessingService {
     } catch (error) {
       this.log('댓글 처리 중 오류', `${username}: ${error instanceof Error ? error.message : String(error)}`, false)
       return false
+    }
+  }
+
+  /**
+   * 게시물 모달에서 작성 날짜 추출
+   */
+  private async getPostDate(dialog: Locator): Promise<Date | null> {
+    try {
+      // 1. dialog 내에서 time[datetime] 찾기
+      let timeElement = dialog.locator('time[datetime]').first()
+      let datetime = await timeElement.getAttribute('datetime', { timeout: 2000 }).catch(() => null)
+
+      // 2. dialog에서 못 찾으면 페이지 전체에서 찾기
+      if (!datetime) {
+        this.log('날짜 추출', 'dialog에서 time 요소 못찾음, 페이지에서 검색 중...')
+        timeElement = this.page.locator('[role="dialog"] time[datetime], article time[datetime]').first()
+        datetime = await timeElement.getAttribute('datetime', { timeout: 3000 }).catch(() => null)
+      }
+
+      if (!datetime) {
+        this.log('날짜 추출 실패', 'time[datetime] 요소를 찾을 수 없음')
+        return null
+      }
+
+      const postDate = new Date(datetime)
+      this.log('게시물 날짜 확인', `${datetime} → ${postDate.toLocaleDateString()}`)
+      return postDate
+    } catch (error) {
+      this.log('날짜 추출 오류', error instanceof Error ? error.message : String(error))
+      return null
+    }
+  }
+
+  /**
+   * 게시물이 지정된 개월 수보다 오래되었는지 확인
+   */
+  private isPostTooOld(postDate: Date, maxMonths: number): boolean {
+    const now = new Date()
+    const monthsDiff = (now.getFullYear() - postDate.getFullYear()) * 12
+                     + (now.getMonth() - postDate.getMonth())
+    return monthsDiff >= maxMonths
+  }
+
+  /**
+   * 게시물 모달 닫기 (날짜 스킵 시 사용)
+   */
+  private async closePostModal(): Promise<void> {
+    try {
+      const closeButton = this.page.getByLabel(/닫기|Close/).first()
+      if (await closeButton.isVisible().catch(() => false)) {
+        await closeButton.click()
+        await this.page.waitForTimeout(500)
+      } else {
+        await this.page.keyboard.press('Escape')
+        await this.page.waitForTimeout(500)
+      }
+    } catch {
+      await this.page.keyboard.press('Escape')
     }
   }
 

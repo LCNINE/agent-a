@@ -122,6 +122,7 @@ export type WorkType = {
     likeEnabled: boolean
     commentEnabled: boolean
     postsPerUser: number
+    skipOldPostsMonths: number  // 0 = 비활성화, 1/3/6/12 = N개월 이상 지난 게시물 스킵
   }
 }
 

@@ -64,7 +64,8 @@ const defaultWorkList: WorkType = {
     targetUsers: [],
     likeEnabled: true,
     commentEnabled: true,
-    postsPerUser: 3
+    postsPerUser: 3,
+    skipOldPostsMonths: 0
   }
 }
 

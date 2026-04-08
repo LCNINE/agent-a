@@ -1155,6 +1155,7 @@ export class AgentManager {
               likeEnabled: work.targetUserWork.likeEnabled,
               commentEnabled: work.targetUserWork.commentEnabled,
               postsPerUser: work.targetUserWork.postsPerUser,
+              skipOldPostsMonths: work.targetUserWork.skipOldPostsMonths || 0,
               onLike: async (username: string, postIndex: number) => {
                 this.addLog('좋아요 완료', `${username} 게시물 ${postIndex + 1}`, true)
               },
@@ -1311,6 +1312,7 @@ export class AgentManager {
           commentEnabled: settings.autoProcessCommentEnabled,
           postsPerUser: settings.postsPerCollectedUser,
           tryFollowOnVisit: true,  // 프로필 방문 시 팔로우 시도
+          skipOldPostsMonths: 0,  // 수집 유저 활동에는 날짜 스킵 미적용
           onLike: async (username: string, postIndex: number) => {
             this.addLog('좋아요 완료', `${username} 게시물 ${postIndex + 1}`, true)
           },
