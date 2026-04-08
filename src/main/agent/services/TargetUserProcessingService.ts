@@ -155,8 +155,14 @@ export class TargetUserProcessingService {
           break
         }
 
-        const wasProcessed = await this.processPost(currentPostLinks[currentIndex], username, currentIndex)
-        if (wasProcessed) {
+        const result = await this.processPost(currentPostLinks[currentIndex], username, currentIndex)
+
+        // 첫 번째 게시물이 오래되어 유저 전체 스킵
+        if (result === 'user_too_old') {
+          break
+        }
+
+        if (result === true) {
           processedCount++
           this.log('게시물 처리 완료', `${username}: ${processedCount}/${postsToProcess}`)
         }
@@ -331,7 +337,7 @@ export class TargetUserProcessingService {
     }
   }
 
-  private async processPost(postLocator: Locator, username: string, postIndex: number): Promise<boolean> {
+  private async processPost(postLocator: Locator, username: string, postIndex: number): Promise<boolean | 'user_too_old'> {
     this.log('게시물 클릭 시도', `${username} 게시물 ${postIndex + 1}`)
 
     // 게시물 요소로 스크롤
@@ -411,6 +417,11 @@ export class TargetUserProcessingService {
         if (this.isPostTooOld(postDate, this.options.skipOldPostsMonths)) {
           this.log('오래된 게시물 스킵', `${this.options.skipOldPostsMonths}개월 이상 지남 (${postDate.toLocaleDateString()})`)
           await this.closePostModal()
+          // 첫 번째 게시물이 오래됐으면 해당 유저 전체 스킵 (인스타그램은 최신순이므로 나머지도 다 오래됨)
+          if (postIndex === 0) {
+            this.log('유저 전체 스킵', `첫 번째 게시물이 오래되어 해당 유저의 모든 게시물 스킵`)
+            return 'user_too_old'
+          }
           return false // 처리하지 않음 → 다음 게시물로
         }
       } else {
