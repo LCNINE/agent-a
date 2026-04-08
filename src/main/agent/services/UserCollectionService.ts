@@ -62,7 +62,7 @@ export class UserCollectionService {
       }
 
       // 댓글 목록 파싱 (게시물 작성자 댓글 제외)
-      const comments = await this.parseComments(postAuthor)
+      let comments = await this.parseComments(postAuthor)
 
       if (comments.length === 0) {
         this.log('댓글 없음', '수집할 댓글이 없습니다')
@@ -74,52 +74,75 @@ export class UserCollectionService {
       // 좋아요 순으로 정렬
       comments.sort((a, b) => b.likeCount - a.likeCount)
 
-      // 상위 댓글 중 수집 가능한 유저 찾기
-      for (const comment of comments) {
-        // 제외 유저 체크
-        if (this.excludeUsernames.has(comment.username)) {
-          this.log('제외 유저 스킵', comment.username)
-          continue
+      // 상위 댓글 중 수집 가능한 유저 찾기 (댓글 더 로드 포함)
+      const maxLoadAttempts = 3 // 최대 댓글 로드 시도 횟수
+      let loadAttempt = 0
+
+      while (loadAttempt <= maxLoadAttempts) {
+        for (const comment of comments) {
+          // 제외 유저 체크
+          if (this.excludeUsernames.has(comment.username)) {
+            this.log('제외 유저 스킵', comment.username)
+            continue
+          }
+
+          // 본인 계정 체크
+          if (comment.username.toLowerCase() === this.instagramUsername.toLowerCase()) {
+            continue
+          }
+
+          // 이미 수집된 유저인지 확인
+          const isAlreadyCollected = await this.checkAlreadyCollected(comment.username)
+          if (isAlreadyCollected) {
+            this.log('이미 수집된 유저', comment.username)
+            continue
+          }
+
+          // comment_history에 해당 유저 게시물에 댓글 기록이 있는지 확인
+          const hasCommentHistory = await this.checkCommentHistoryForUser(comment.username)
+          if (hasCommentHistory) {
+            this.log('이미 활동한 유저 (comment_history)', comment.username)
+            continue
+          }
+
+          // 팔로우 없이 바로 Supabase에 저장
+          const collectedUser = await this.saveCollectedUser({
+            instagram_username: this.instagramUsername,
+            collected_username: comment.username,
+            collected_from_hashtag: hashtag,
+            collected_from_post_id: postId,
+            like_count: comment.likeCount
+          })
+
+          this.log(
+            '유저 수집 완료',
+            `${comment.username} (좋아요: ${comment.likeCount})`,
+            true
+          )
+
+          return collectedUser
         }
 
-        // 본인 계정 체크
-        if (comment.username.toLowerCase() === this.instagramUsername.toLowerCase()) {
-          continue
+        // 수집 가능한 유저를 못 찾음 → 댓글 더 로드 시도
+        if (loadAttempt < maxLoadAttempts) {
+          const loaded = await this.loadMoreComments()
+          if (!loaded) {
+            this.log('더 이상 로드할 댓글 없음')
+            break
+          }
+
+          loadAttempt++
+          this.log('댓글 추가 로드', `${loadAttempt}/${maxLoadAttempts}회`)
+
+          // 새 댓글 파싱 후 좋아요 순 정렬
+          comments = await this.parseComments(postAuthor)
+          comments.sort((a, b) => b.likeCount - a.likeCount)
+        } else {
+          break
         }
-
-        // 이미 수집된 유저인지 확인
-        const isAlreadyCollected = await this.checkAlreadyCollected(comment.username)
-        if (isAlreadyCollected) {
-          this.log('이미 수집된 유저', comment.username)
-          continue
-        }
-
-        // comment_history에 해당 유저 게시물에 댓글 기록이 있는지 확인
-        const hasCommentHistory = await this.checkCommentHistoryForUser(comment.username)
-        if (hasCommentHistory) {
-          this.log('이미 활동한 유저 (comment_history)', comment.username)
-          continue
-        }
-
-        // 팔로우 없이 바로 Supabase에 저장
-        const collectedUser = await this.saveCollectedUser({
-          instagram_username: this.instagramUsername,
-          collected_username: comment.username,
-          collected_from_hashtag: hashtag,
-          collected_from_post_id: postId,
-          like_count: comment.likeCount
-        })
-
-        this.log(
-          '유저 수집 완료',
-          `${comment.username} (좋아요: ${comment.likeCount})`,
-          true
-        )
-
-        return collectedUser
       }
 
-      this.log('수집 가능한 유저 없음', '모든 상위 댓글 유저가 이미 수집됨')
+      this.log('수집 가능한 유저 없음', '모든 댓글 확인 완료')
       return null
     } catch (error) {
       this.log(
@@ -128,6 +151,32 @@ export class UserCollectionService {
         false
       )
       return null
+    }
+  }
+
+  /**
+   * "댓글 더 읽어들이기" 버튼 클릭하여 더 많은 댓글 로드
+   */
+  private async loadMoreComments(): Promise<boolean> {
+    try {
+      const dialog = this.page.locator('[role="dialog"]').first()
+
+      // "댓글 더 읽어들이기" 버튼 찾기 (한국어/영어 지원)
+      const loadMoreBtn = dialog
+        .locator('[aria-label="댓글 더 읽어들이기"], [aria-label="Load more comments"]')
+        .first()
+
+      const isVisible = await loadMoreBtn.isVisible({ timeout: 1000 }).catch(() => false)
+
+      if (isVisible) {
+        await loadMoreBtn.click()
+        await this.page.waitForTimeout(1500) // 댓글 로드 대기
+        return true
+      }
+
+      return false
+    } catch {
+      return false
     }
   }
 

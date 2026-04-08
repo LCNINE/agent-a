@@ -674,20 +674,10 @@ export class AgentManager {
 
                 // 1. 로컬 기록에서 중복 체크 (현재 페이지 URL 기준)
                 const hashtagPostUrl = this.page!.url()
-                if (hasCommentedOnPost(this.commentHistory, hashtagPostUrl)) {
-                  console.log('이미 댓글을 작성한 게시물 스킵 (로컬 기록)')
-                  this.addLog('이미 댓글 작성한 게시물', '로컬 기록 - 건너뜀')
-                  await this.page!.getByLabel(/닫기|Close/).click()
-                  return false
-                }
+                const alreadyCommentedLocal = hasCommentedOnPost(this.commentHistory, hashtagPostUrl)
 
                 // 2. Supabase 기록에서 중복 체크 (네트워크)
-                if (await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, hashtagPostUrl)) {
-                  console.log('이미 댓글을 작성한 게시물 스킵 (Supabase 기록)')
-                  this.addLog('이미 댓글 작성한 게시물', 'Supabase 기록 - 건너뜀')
-                  await this.page!.getByLabel(/닫기|Close/).click()
-                  return false
-                }
+                const alreadyCommentedSupabase = await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, hashtagPostUrl)
 
                 // 내 댓글이 있는지 확인 (대소문자 무시)
                 const myUsername = this.config.credentials.username
@@ -703,10 +693,28 @@ export class AgentManager {
                 // 대소문자 무시하고 본인 댓글 확인
                 const hasMyComment = commentAuthors.some(author => author.toLowerCase().trim() === myUsernameLower)
 
-                if (hasMyComment) {
+                // 이미 댓글 작성한 게시물인지 확인
+                const alreadyCommented = alreadyCommentedLocal || alreadyCommentedSupabase || hasMyComment
+
+                if (alreadyCommented) {
+                  // 유저 수집이 활성화되어 있으면 먼저 수행
+                  if (this.userCollectionService && userCollectionSettings?.enabled) {
+                    const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
+                    if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
+                      this.addLog('유저 수집 시도 (이미 댓글 작성 게시물)', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
+                      const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
+                      const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
+                      if (collectedUser) {
+                        collectedUsersPerHashtag[hashtag]++
+                        this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
+                      }
+                    }
+                  }
+
                   await chooseRandomSleep(postInteractionDelays)
-                  console.log('이미 댓글을 작성한 게시물 스킵')
-                  this.addLog('이미 댓글 작성한 게시물', '건너뜀')
+                  const skipReason = alreadyCommentedLocal ? '로컬 기록' : alreadyCommentedSupabase ? 'Supabase 기록' : 'UI 확인'
+                  console.log(`이미 댓글을 작성한 게시물 스킵 (${skipReason})`)
+                  this.addLog('이미 댓글 작성한 게시물', `${skipReason} - 건너뜀`)
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
