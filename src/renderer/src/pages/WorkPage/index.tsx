@@ -8,7 +8,7 @@ import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch, Download } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { WorkType, TargetUser, UserCollectionSettings } from 'src'
 import { workSchema, WorkSchema } from './schema'
@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@renderer/components/ui/select"
-import useCreateClient from '@renderer/supabase/client'
 
 export default function WorkPage() {
   const workByAccount = useWorkStore((state) => state.workByAccount)
@@ -40,8 +39,6 @@ export default function WorkPage() {
 
   const { accountList, activeAccounts } = useAccountStore()
   const { hasError, removeError, addError } = useErrorStore()
-  const supabase = useCreateClient() as any  // collected_users, comment_history 테이블 타입 미정의
-  const [isLoadingCollectedUsers, setIsLoadingCollectedUsers] = useState(false)
 
   // 계정 목록 (활성화된 계정만)
   const availableAccounts = accountList.filter(a => activeAccounts.includes(a.username))
@@ -183,112 +180,6 @@ export default function WorkPage() {
         targetUsers: []
       }
     })
-  }
-
-  // 수집된 유저 불러오기 (Supabase에서 조회하여 타겟 목록에 추가)
-  const handleLoadCollectedUsers = async () => {
-    if (!selectedAccountForWork) {
-      CustomToast({
-        status: 'error',
-        message: '계정을 선택해주세요.',
-        position: 'top-center',
-        duration: 3000
-      })
-      return
-    }
-
-    setIsLoadingCollectedUsers(true)
-    try {
-      // 1. 모든 수집 유저 조회
-      const { data: collectedUsers, error } = await supabase
-        .from('collected_users')
-        .select('*')
-        .eq('instagram_username', selectedAccountForWork)
-        .order('like_count', { ascending: false })
-
-      if (error) {
-        throw new Error(error.message)
-      }
-
-      if (!collectedUsers || collectedUsers.length === 0) {
-        CustomToast({
-          status: 'info',
-          message: '수집된 유저가 없습니다.',
-          position: 'top-center',
-          duration: 3000
-        })
-        return
-      }
-
-      // 2. comment_history에서 이미 활동한 유저 목록 조회
-      const { data: commentHistory } = await supabase
-        .from('comment_history')
-        .select('post_author')
-        .eq('instagram_username', selectedAccountForWork)
-
-      const processedUsers = new Set(
-        (commentHistory || []).map(h => (h.post_author as string)?.toLowerCase())
-      )
-
-      // 3. 아직 활동하지 않은 유저만 필터링
-      const pendingUsers = collectedUsers.filter(
-        user => !processedUsers.has((user.collected_username as string)?.toLowerCase())
-      )
-
-      if (pendingUsers.length === 0) {
-        CustomToast({
-          status: 'info',
-          message: '모든 수집 유저에게 이미 활동을 완료했습니다.',
-          position: 'top-center',
-          duration: 3000
-        })
-        return
-      }
-
-      // 4. 기존 타겟 유저 목록에서 중복 제거하고 추가
-      const existingUsernames = new Set(
-        workList.targetUserWork.targetUsers.map(u => u.username.toLowerCase())
-      )
-      const newUsers = pendingUsers
-        .filter(u => !existingUsernames.has((u.collected_username as string)?.toLowerCase()))
-        .map(u => ({
-          username: u.collected_username as string,
-          status: 'pending' as const
-        }))
-
-      if (newUsers.length === 0) {
-        CustomToast({
-          status: 'info',
-          message: '불러올 새 유저가 없습니다. (이미 타겟 목록에 있음)',
-          position: 'top-center',
-          duration: 3000
-        })
-        return
-      }
-
-      upsert({
-        targetUserWork: {
-          ...workList.targetUserWork,
-          targetUsers: [...workList.targetUserWork.targetUsers, ...newUsers]
-        }
-      })
-
-      CustomToast({
-        status: 'success',
-        message: `${newUsers.length}명의 수집 유저를 불러왔습니다.`,
-        position: 'top-center',
-        duration: 3000
-      })
-    } catch (error) {
-      CustomToast({
-        status: 'error',
-        message: `수집 유저 불러오기 실패: ${error instanceof Error ? error.message : String(error)}`,
-        position: 'top-center',
-        duration: 3000
-      })
-    } finally {
-      setIsLoadingCollectedUsers(false)
-    }
   }
 
   const handleTargetUserSettingChange = (
@@ -467,16 +358,6 @@ export default function WorkPage() {
                         <FileUp className="h-4 w-4 mr-2" />
                         엑셀에서 불러오기
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleLoadCollectedUsers}
-                        disabled={isLoadingCollectedUsers}
-                        className="flex-1"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        {isLoadingCollectedUsers ? '불러오는 중...' : '수집 유저 불러오기'}
-                      </Button>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -635,56 +516,47 @@ export default function WorkPage() {
                             <span className="text-sm text-muted-foreground">명</span>
                           </div>
 
-                          {/* 수집 후 자동 활동 */}
+                          {/* 수집 유저 즉시 활동 설정 */}
                           <div className="pt-2 border-t space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-sm text-muted-foreground">수집 후 자동 활동 실행</Label>
-                              <Switch
-                                checked={workList.hashtagWork.userCollection?.autoProcessEnabled ?? false}
-                                onCheckedChange={(checked) => handleUserCollectionChange('autoProcessEnabled', checked)}
-                              />
-                            </div>
-
-                            {workList.hashtagWork.userCollection?.autoProcessEnabled && (
-                              <div className="pl-4 space-y-2">
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center gap-2">
-                                    <Switch
-                                      checked={workList.hashtagWork.userCollection?.autoProcessLikeEnabled ?? true}
-                                      onCheckedChange={(checked) => handleUserCollectionChange('autoProcessLikeEnabled', checked)}
-                                    />
-                                    <Heart className="h-3 w-3 text-apple-red" />
-                                    <Label className="text-xs">좋아요</Label>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Switch
-                                      checked={workList.hashtagWork.userCollection?.autoProcessCommentEnabled ?? true}
-                                      onCheckedChange={(checked) => handleUserCollectionChange('autoProcessCommentEnabled', checked)}
-                                    />
-                                    <MessageCircle className="h-3 w-3 text-apple-blue" />
-                                    <Label className="text-xs">댓글</Label>
-                                  </div>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <Label className="text-xs whitespace-nowrap text-muted-foreground">유저당 게시물</Label>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={5}
-                                    value={workList.hashtagWork.userCollection?.postsPerCollectedUser ?? 3}
-                                    onChange={(e) =>
-                                      handleUserCollectionChange(
-                                        'postsPerCollectedUser',
-                                        Math.min(5, Math.max(1, parseInt(e.target.value) || 3))
-                                      )
-                                    }
-                                    className="w-14 h-7 text-xs"
+                            <Label className="text-sm text-muted-foreground">수집 유저 즉시 활동</Label>
+                            <div className="pl-2 space-y-2">
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={workList.hashtagWork.userCollection?.autoProcessLikeEnabled ?? true}
+                                    onCheckedChange={(checked) => handleUserCollectionChange('autoProcessLikeEnabled', checked)}
                                   />
-                                  <span className="text-xs text-muted-foreground">개</span>
+                                  <Heart className="h-3 w-3 text-apple-red" />
+                                  <Label className="text-xs">좋아요</Label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={workList.hashtagWork.userCollection?.autoProcessCommentEnabled ?? true}
+                                    onCheckedChange={(checked) => handleUserCollectionChange('autoProcessCommentEnabled', checked)}
+                                  />
+                                  <MessageCircle className="h-3 w-3 text-apple-blue" />
+                                  <Label className="text-xs">댓글</Label>
                                 </div>
                               </div>
-                            )}
+
+                              <div className="flex items-center gap-3">
+                                <Label className="text-xs whitespace-nowrap text-muted-foreground">유저당 게시물</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={5}
+                                  value={workList.hashtagWork.userCollection?.postsPerCollectedUser ?? 3}
+                                  onChange={(e) =>
+                                    handleUserCollectionChange(
+                                      'postsPerCollectedUser',
+                                      Math.min(5, Math.max(1, parseInt(e.target.value) || 3))
+                                    )
+                                  }
+                                  className="w-14 h-7 text-xs"
+                                />
+                                <span className="text-xs text-muted-foreground">개</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}

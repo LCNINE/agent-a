@@ -43,7 +43,7 @@ const defaultWorkList: WorkType = {
     userCollection: {
       enabled: false,
       usersPerHashtag: 5,
-      autoProcessEnabled: false,
+      autoProcessEnabled: true,  // 더 이상 사용되지 않음 (실시간 처리로 전환), 호환성을 위해 유지
       autoProcessLikeEnabled: true,
       autoProcessCommentEnabled: true,
       postsPerCollectedUser: 3

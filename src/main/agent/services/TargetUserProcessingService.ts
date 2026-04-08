@@ -78,9 +78,24 @@ export class TargetUserProcessingService {
   private async processUser(username: string): Promise<void> {
     this.log('프로필 방문', username)
 
-    // 프로필 페이지 방문 (networkidle 대신 domcontentloaded 사용 - 인스타그램은 백그라운드 요청이 계속됨)
+    // 프로필 페이지 방문 (흰색 화면일 경우 최대 30초 대기)
     const profileUrl = `https://www.instagram.com/${username}/`
     await this.page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+    // 프로필 로드 대기 (최대 30초)
+    let profileLoaded = await this.waitForProfileLoad()
+
+    // 30초 후에도 안 뜨면 1회만 새로고침 시도
+    if (!profileLoaded) {
+      this.log('새로고침 시도', '30초 대기 후에도 로드 안됨')
+      await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+      profileLoaded = await this.waitForProfileLoad()
+    }
+
+    if (!profileLoaded) {
+      throw new Error('프로필 페이지 로드 실패')
+    }
+
     await randomSleep(3000, 0.5) // 3-5초 랜덤 대기
 
     // 팔로우 시도 (옵션 활성화 시)
@@ -164,6 +179,49 @@ export class TargetUserProcessingService {
   }
 
 /**
+   * 프로필 페이지 로드 대기 (흰색 화면일 경우 더 기다림)
+   * 최대 30초까지 대기
+   */
+  private async waitForProfileLoad(): Promise<boolean> {
+    const maxWaitTime = 30000 // 최대 30초
+    const checkInterval = 3000 // 3초마다 확인
+    let waited = 0
+
+    while (waited < maxWaitTime) {
+      await this.page.waitForTimeout(checkInterval)
+      waited += checkInterval
+
+      try {
+        // body 내용 길이 확인 (흰색 화면은 body가 거의 비어있음)
+        const bodyContent = await this.page.evaluate(() => {
+          return document.body?.innerText?.length || 0
+        })
+
+        if (bodyContent >= 100) {
+          // 충분한 콘텐츠가 로드됨
+          this.log('프로필 로드 완료', `${waited / 1000}초 후`)
+          return true
+        }
+
+        this.log('로드 대기 중', `${waited / 1000}초 / body ${bodyContent}자`)
+
+        // 에러 텍스트 체크
+        const pageText = await this.page.evaluate(() => document.body?.innerText || '')
+        if (pageText.includes('오류가 발생했습니다') ||
+            pageText.includes('Something went wrong')) {
+          this.log('에러 페이지 감지')
+          return false
+        }
+      } catch {
+        // 에러 시 계속 대기
+      }
+    }
+
+    this.log('프로필 로드 타임아웃', '30초 초과')
+    return false
+  }
+
+  /**
    * 프로필 페이지에서 팔로우 시도
    */
   private async tryFollowUser(username: string): Promise<boolean> {

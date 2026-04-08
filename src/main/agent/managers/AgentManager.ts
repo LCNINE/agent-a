@@ -592,13 +592,24 @@ export class AgentManager {
           this.addLog('유저 수집 서비스 초기화', `해시태그당 ${userCollectionSettings.usersPerHashtag}명 수집`)
         }
 
-        // 해시태그별 유저 수집 카운터
+        // 해시태그별 카운터 (댓글, 수집 독립 관리)
         let collectedUsersPerHashtag: Record<string, number> = {}
+        let commentsPerHashtag: Record<string, number> = {}
+
+        // 목표 개수 설정
+        const maxCommentCount = work.hashtagWork.count
+        const maxCollectionCount = userCollectionSettings?.enabled ? (userCollectionSettings.usersPerHashtag || 0) : 0
 
         for (let i = 0; i < work.hashtagWork.hashtags.length; i++) {
           const hashtag = work.hashtagWork.hashtags[i]
           collectedUsersPerHashtag[hashtag] = 0
-          this.addLog('해시태그 루프 시작', `[${i + 1}/${work.hashtagWork.hashtags.length}] #${hashtag}`)
+          commentsPerHashtag[hashtag] = 0
+
+          // 최대 시도 횟수 = 목표 합계의 3배 (무한 루프 방지)
+          // 두 목표 모두 달성할 때까지 게시물 순회
+          const totalWorkCount = Math.max((maxCommentCount + maxCollectionCount) * 3, 10)
+
+          this.addLog('해시태그 루프 시작', `[${i + 1}/${work.hashtagWork.hashtags.length}] #${hashtag} (댓글: ${maxCommentCount}개, 수집: ${maxCollectionCount}명, 최대시도: ${totalWorkCount})`)
 
           if (!this._status.isRunning) {
             this.addLog('isRunning이 false로 인해 중단')
@@ -610,6 +621,14 @@ export class AgentManager {
             this.page,
             async (articleLocator) => {
               let isProcessed = false
+
+              // 두 목표 모두 달성되었으면 빠르게 종료
+              const commentGoalDone = commentsPerHashtag[hashtag] >= maxCommentCount
+              const collectionGoalDone = collectedUsersPerHashtag[hashtag] >= maxCollectionCount
+              if (commentGoalDone && collectionGoalDone) {
+                this.addLog('목표 달성 완료', `댓글 ${commentsPerHashtag[hashtag]}/${maxCommentCount}, 수집 ${collectedUsersPerHashtag[hashtag]}/${maxCollectionCount}`)
+                return true // successCount 증가 → maxPosts 도달 시 종료
+              }
 
               try {
                 await articleLocator.click()
@@ -697,16 +716,32 @@ export class AgentManager {
                 const alreadyCommented = alreadyCommentedLocal || alreadyCommentedSupabase || hasMyComment
 
                 if (alreadyCommented) {
-                  // 유저 수집이 활성화되어 있으면 먼저 수행
+                  // 유저 수집 및 즉시 처리 (이미 댓글 작성 게시물에서도 실행)
                   if (this.userCollectionService && userCollectionSettings?.enabled) {
-                    const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
-                    if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
-                      this.addLog('유저 수집 시도 (이미 댓글 작성 게시물)', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
+                    if (collectedUsersPerHashtag[hashtag] < maxCollectionCount) {
+                      this.addLog('유저 수집 시도 (이미 댓글 작성 게시물)', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxCollectionCount})`)
                       const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
                       const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
                       if (collectedUser) {
                         collectedUsersPerHashtag[hashtag]++
-                        this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
+                        this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxCollectionCount})`, true)
+
+                        // 모달 닫기
+                        await this.page!.getByLabel(/닫기|Close/).click().catch(() => {})
+                        await this.page!.waitForTimeout(1000)
+
+                        // 즉시 수집된 유저 처리
+                        await this.processCollectedUserImmediately(collectedUser, userCollectionSettings)
+
+                        // 세션 처리 완료 표시
+                        this.userCollectionService!.markUserAsProcessed(collectedUser.collected_username)
+
+                        // 해시태그 페이지로 복귀
+                        this.addLog('해시태그 복귀', `#${hashtag}`)
+                        await this.page!.goto(`https://www.instagram.com/explore/tags/${hashtag}/`, { waitUntil: 'domcontentloaded' })
+                        await this.page!.waitForTimeout(2000)
+
+                        return true // 수집 처리했으므로 true 반환
                       }
                     }
                   }
@@ -724,6 +759,46 @@ export class AgentManager {
                   await chooseRandomSleep(postInteractionDelays)
                   console.log('광고 게시물 스킵')
                   this.addLog('광고 게시물', '건너뜀')
+                  await this.page!.getByLabel(/닫기|Close/).click()
+                  return false
+                }
+
+                // 댓글 목표 도달 체크 - 도달 시 수집만 진행
+                const commentGoalReached = commentsPerHashtag[hashtag] >= maxCommentCount
+                if (commentGoalReached) {
+                  this.addLog('댓글 목표 도달', `${commentsPerHashtag[hashtag]}/${maxCommentCount} - 수집만 진행`)
+
+                  // 수집만 시도
+                  if (this.userCollectionService && userCollectionSettings?.enabled) {
+                    if (collectedUsersPerHashtag[hashtag] < maxCollectionCount) {
+                      this.addLog('유저 수집 시도 (댓글 목표 도달)', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxCollectionCount})`)
+                      const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
+                      const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
+                      if (collectedUser) {
+                        collectedUsersPerHashtag[hashtag]++
+                        this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxCollectionCount})`, true)
+
+                        // 모달 닫기
+                        await this.page!.getByLabel(/닫기|Close/).click().catch(() => {})
+                        await this.page!.waitForTimeout(1000)
+
+                        // 즉시 수집된 유저 처리
+                        await this.processCollectedUserImmediately(collectedUser, userCollectionSettings)
+
+                        // 세션 처리 완료 표시
+                        this.userCollectionService!.markUserAsProcessed(collectedUser.collected_username)
+
+                        // 해시태그 페이지로 복귀
+                        this.addLog('해시태그 복귀', `#${hashtag}`)
+                        await this.page!.goto(`https://www.instagram.com/explore/tags/${hashtag}/`, { waitUntil: 'domcontentloaded' })
+                        await this.page!.waitForTimeout(2000)
+
+                        return true // 수집 처리했으므로 true
+                      }
+                    }
+                  }
+
+                  // 수집도 못 했으면 스킵
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
@@ -836,7 +911,8 @@ export class AgentManager {
 
                 if (commentTextareaResult) {
                   isProcessed = true
-                  this.addLog('댓글 게시 성공', author, true)
+                  commentsPerHashtag[hashtag]++  // 댓글 카운트 증가
+                  this.addLog('댓글 게시 성공', `${author} (${commentsPerHashtag[hashtag]}/${maxCommentCount})`, true)
 
                   // 댓글 기록 저장 (로컬 + Supabase)
                   addCommentedPost(this.commentHistory, hashtagPostUrl, author)
@@ -856,16 +932,32 @@ export class AgentManager {
                   this.addLog('댓글 게시 실패', '댓글 입력 영역을 찾을 수 없습니다', false)
                 }
 
-                // 유저 수집 시도 (댓글 성공/실패 관계없이 실행)
+                // 유저 수집 및 즉시 처리 (댓글 성공/실패 관계없이 실행)
                 if (this.userCollectionService && userCollectionSettings?.enabled) {
-                  const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
-                  if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
-                    this.addLog('유저 수집 시도', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
+                  if (collectedUsersPerHashtag[hashtag] < maxCollectionCount) {
+                    this.addLog('유저 수집 시도', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxCollectionCount})`)
                     const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
                     const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
                     if (collectedUser) {
                       collectedUsersPerHashtag[hashtag]++
-                      this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
+                      this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxCollectionCount})`, true)
+
+                      // 모달 닫기
+                      await this.page!.getByLabel(/닫기|Close/).click().catch(() => {})
+                      await this.page!.waitForTimeout(1000)
+
+                      // 즉시 수집된 유저 처리
+                      await this.processCollectedUserImmediately(collectedUser, userCollectionSettings)
+
+                      // 세션 처리 완료 표시
+                      this.userCollectionService!.markUserAsProcessed(collectedUser.collected_username)
+
+                      // 해시태그 페이지로 복귀
+                      this.addLog('해시태그 복귀', `#${hashtag}`)
+                      await this.page!.goto(`https://www.instagram.com/explore/tags/${hashtag}/`, { waitUntil: 'domcontentloaded' })
+                      await this.page!.waitForTimeout(2000)
+
+                      return true
                     }
                   }
                 }
@@ -898,7 +990,7 @@ export class AgentManager {
               return isProcessed
             },
             {},
-            work.hashtagWork.count,
+            totalWorkCount,  // 댓글 개수와 수집 개수 중 큰 값
             this.config,
             (action, details, success) => this.addLog(action, details, success)
           )
@@ -946,12 +1038,6 @@ export class AgentManager {
         }
 
         this.addLog('해시태그 작업 완료')
-
-        // 수집된 유저 자동 활동 처리
-        if (this.userCollectionService && userCollectionSettings?.enabled && userCollectionSettings.autoProcessEnabled) {
-          this.addLog('수집 유저 자동 활동 시작')
-          await this.processCollectedUsers(userCollectionSettings)
-        }
       }
 
       if (work.myFeedInteractionWork.enabled) {
@@ -1282,27 +1368,17 @@ export class AgentManager {
   }
 
   /**
-   * 수집된 유저의 피드에서 좋아요/댓글 자동 활동
-   * - 프로필 방문 시 팔로우 시도
-   * - comment_history 기반으로 이미 활동한 유저 필터링
+   * 수집된 유저를 즉시 처리 (실시간 처리)
+   * - 프로필 방문 → 팔로우 → 게시물 좋아요/댓글
    */
-  private async processCollectedUsers(settings: {
-    autoProcessLikeEnabled: boolean
-    autoProcessCommentEnabled: boolean
-    postsPerCollectedUser: number
-  }): Promise<void> {
-    if (!this.userCollectionService || !this.page) return
+  private async processCollectedUserImmediately(
+    collectedUser: import('../../..').CollectedUser,
+    settings: import('../../..').UserCollectionSettings
+  ): Promise<void> {
+    if (!this.page) return
 
     try {
-      // 아직 활동하지 않은 수집 유저 가져오기 (comment_history 기반 필터링)
-      const pendingUsers = await this.userCollectionService.getPendingCollectedUsers()
-
-      if (pendingUsers.length === 0) {
-        this.addLog('수집 유저 활동', '처리할 유저가 없습니다')
-        return
-      }
-
-      this.addLog('수집 유저 활동 시작', `${pendingUsers.length}명 대기 중`)
+      this.addLog('수집 유저 즉시 처리 시작', collectedUser.collected_username)
 
       const targetUserService = new TargetUserProcessingService(
         this.page,
@@ -1334,7 +1410,6 @@ export class AgentManager {
             return commentRes.comment
           },
           onUserStatusUpdate: (username: string, status, error?: string) => {
-            // 로그만 출력 (status 필드 제거됨, comment_history로 상태 관리)
             this.addLog('수집 유저 상태', `${username}: ${status}${error ? ` - ${error}` : ''}`)
           },
           onLog: (action: string, details?: string, success?: boolean) => {
@@ -1354,18 +1429,16 @@ export class AgentManager {
         }
       )
 
-      // 수집 유저를 TargetUser 형식으로 변환
-      const targetUsers = pendingUsers.map(user => ({
-        username: user.collected_username,
+      // 단일 유저 처리
+      await targetUserService.processTargetUsers([{
+        username: collectedUser.collected_username,
         status: 'pending' as const
-      }))
+      }])
 
-      await targetUserService.processTargetUsers(targetUsers)
-
-      this.addLog('수집 유저 활동 완료')
+      this.addLog('수집 유저 즉시 처리 완료', collectedUser.collected_username)
     } catch (error) {
       this.addLog(
-        '수집 유저 활동 오류',
+        '수집 유저 즉시 처리 오류',
         error instanceof Error ? error.message : String(error),
         false
       )

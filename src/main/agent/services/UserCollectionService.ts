@@ -1,7 +1,6 @@
-import { Locator, Page } from 'playwright-core'
+import { Page } from 'playwright-core'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { CollectedUser, UserCollectionSettings } from '../../..'
-import { randomSleep } from '../common/timeUtils'
 
 type LogCallback = (action: string, details?: string, success?: boolean) => void
 // Supabase 클라이언트 타입 (Database 타입 정의에 collected_users가 없으므로 any 사용)
@@ -20,6 +19,8 @@ export class UserCollectionService {
   private settings: UserCollectionSettings
   private excludeUsernames: Set<string>
   private onLog?: LogCallback
+  // 세션 내 처리된 유저 Set (실시간 처리용)
+  private processedUsersThisSession: Set<string> = new Set()
 
   constructor(
     page: Page,
@@ -43,7 +44,29 @@ export class UserCollectionService {
   }
 
   /**
+   * 세션 내에서 이미 처리된 유저인지 확인
+   */
+  isUserProcessedThisSession(username: string): boolean {
+    return this.processedUsersThisSession.has(username.toLowerCase())
+  }
+
+  /**
+   * 세션 처리 유저 목록에 추가
+   */
+  markUserAsProcessed(username: string): void {
+    this.processedUsersThisSession.add(username.toLowerCase())
+  }
+
+  /**
+   * 세션 처리 유저 목록 초기화
+   */
+  clearProcessedUsers(): void {
+    this.processedUsersThisSession.clear()
+  }
+
+  /**
    * 게시물 모달에서 상위 댓글을 파싱하여 좋아요가 가장 많은 유저를 수집
+   * DB 저장 없이 메모리에서만 관리하고 즉시 처리할 유저 정보 반환
    */
   async collectFromPostModal(
     hashtag: string,
@@ -54,6 +77,9 @@ export class UserCollectionService {
 
       // 댓글 영역 대기
       await this.page.waitForTimeout(2000)
+
+      // "숨겨진 댓글 보기" 버튼이 있으면 클릭
+      await this.clickHiddenCommentsButton()
 
       // 게시물 작성자 추출
       const postAuthor = await this.getPostAuthor()
@@ -91,10 +117,9 @@ export class UserCollectionService {
             continue
           }
 
-          // 이미 수집된 유저인지 확인
-          const isAlreadyCollected = await this.checkAlreadyCollected(comment.username)
-          if (isAlreadyCollected) {
-            this.log('이미 수집된 유저', comment.username)
+          // 세션 내 이미 처리된 유저 체크
+          if (this.isUserProcessedThisSession(comment.username)) {
+            this.log('세션 내 이미 처리된 유저', comment.username)
             continue
           }
 
@@ -105,14 +130,14 @@ export class UserCollectionService {
             continue
           }
 
-          // 팔로우 없이 바로 Supabase에 저장
-          const collectedUser = await this.saveCollectedUser({
+          // DB 저장 없이 수집된 유저 정보 생성
+          const collectedUser: CollectedUser = {
             instagram_username: this.instagramUsername,
             collected_username: comment.username,
             collected_from_hashtag: hashtag,
             collected_from_post_id: postId,
             like_count: comment.likeCount
-          })
+          }
 
           this.log(
             '유저 수집 완료',
@@ -151,6 +176,36 @@ export class UserCollectionService {
         false
       )
       return null
+    }
+  }
+
+  /**
+   * "숨겨진 댓글 보기" 버튼 클릭
+   */
+  private async clickHiddenCommentsButton(): Promise<void> {
+    try {
+      const dialog = this.page.locator('[role="dialog"]').first()
+
+      // 여러 선택자 시도
+      const hiddenCommentsSelectors = [
+        'div[role="button"]:has-text("숨겨진 댓글 보기")',
+        'span:has-text("숨겨진 댓글 보기")',
+        '[aria-label="숨겨진 댓글 보기"]',
+        'div[role="button"]:has-text("View hidden comments")',
+        'span:has-text("View hidden comments")',
+      ]
+
+      for (const selector of hiddenCommentsSelectors) {
+        const button = dialog.locator(selector).first()
+        if (await button.isVisible({ timeout: 1000 }).catch(() => false)) {
+          this.log('숨겨진 댓글 보기 클릭')
+          await button.click()
+          await this.page.waitForTimeout(1500) // 댓글 로드 대기
+          return
+        }
+      }
+    } catch {
+      // 버튼이 없으면 무시
     }
   }
 
@@ -285,32 +340,9 @@ export class UserCollectionService {
   }
 
   /**
-   * 이미 수집된 유저인지 Supabase에서 확인
-   */
-  private async checkAlreadyCollected(username: string): Promise<boolean> {
-    try {
-      const { data, error } = await this.supabase
-        .from('collected_users')
-        .select('id')
-        .eq('instagram_username', this.instagramUsername)
-        .eq('collected_username', username)
-        .maybeSingle()
-
-      if (error) {
-        console.error('수집 유저 확인 오류:', error)
-        return false
-      }
-
-      return !!data
-    } catch {
-      return false
-    }
-  }
-
-  /**
    * comment_history에서 해당 유저 게시물에 댓글 기록이 있는지 확인
    */
-  private async checkCommentHistoryForUser(username: string): Promise<boolean> {
+  async checkCommentHistoryForUser(username: string): Promise<boolean> {
     try {
       const { data, error } = await this.supabase
         .from('comment_history')
@@ -331,100 +363,4 @@ export class UserCollectionService {
     }
   }
 
-  /**
-   * 수집된 유저 Supabase에 저장
-   */
-  private async saveCollectedUser(user: {
-    instagram_username: string
-    collected_username: string
-    collected_from_hashtag: string
-    collected_from_post_id: string
-    like_count: number
-  }): Promise<CollectedUser | null> {
-    try {
-      const { data, error } = await this.supabase
-        .from('collected_users')
-        .upsert(
-          {
-            instagram_username: user.instagram_username,
-            collected_username: user.collected_username,
-            collected_from_hashtag: user.collected_from_hashtag,
-            collected_from_post_id: user.collected_from_post_id,
-            like_count: user.like_count
-          },
-          {
-            onConflict: 'instagram_username,collected_username',
-            ignoreDuplicates: true
-          }
-        )
-        .select()
-        .single()
-
-      if (error) {
-        this.log('유저 저장 오류', error.message, false)
-        return null
-      }
-
-      return data as CollectedUser
-    } catch (error) {
-      this.log(
-        '유저 저장 오류',
-        error instanceof Error ? error.message : String(error),
-        false
-      )
-      return null
-    }
-  }
-
-  /**
-   * 아직 활동하지 않은 수집 유저 목록 가져오기
-   * comment_history에 해당 유저의 게시물 기록이 없는 유저만 반환
-   */
-  async getPendingCollectedUsers(): Promise<CollectedUser[]> {
-    try {
-      // 1. 모든 수집 유저 조회
-      const { data: collectedUsers, error } = await this.supabase
-        .from('collected_users')
-        .select('*')
-        .eq('instagram_username', this.instagramUsername)
-        .order('like_count', { ascending: false })
-
-      if (error) {
-        this.log('수집 유저 조회 오류', error.message, false)
-        return []
-      }
-
-      if (!collectedUsers || collectedUsers.length === 0) {
-        return []
-      }
-
-      // 2. comment_history에서 이미 활동한 유저 목록 조회
-      const { data: commentHistory, error: historyError } = await this.supabase
-        .from('comment_history')
-        .select('post_author')
-        .eq('instagram_username', this.instagramUsername)
-
-      if (historyError) {
-        this.log('comment_history 조회 오류', historyError.message, false)
-        // 오류 시에도 일단 모든 수집 유저 반환
-        return collectedUsers as CollectedUser[]
-      }
-
-      // 3. 이미 활동한 유저 Set 생성
-      const processedUsers = new Set(
-        (commentHistory || []).map(h => h.post_author?.toLowerCase())
-      )
-
-      // 4. 아직 활동하지 않은 유저만 필터링
-      const pendingUsers = collectedUsers.filter(
-        user => !processedUsers.has(user.collected_username?.toLowerCase())
-      )
-
-      this.log('수집 유저 필터링', `전체 ${collectedUsers.length}명 중 ${pendingUsers.length}명 대기 중`)
-
-      return pendingUsers as CollectedUser[]
-    } catch {
-      return []
-    }
-  }
 }
