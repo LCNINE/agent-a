@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@renderer/components/ui/button'
 import { Input } from '@renderer/components/ui/input'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import {
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   X,
   Plus,
   Trash2,
@@ -46,6 +48,8 @@ const statusConfig = {
   }
 }
 
+const ITEMS_PER_PAGE = 100
+
 export default function TargetUserList({
   users,
   onAddUser,
@@ -54,6 +58,18 @@ export default function TargetUserList({
 }: TargetUserListProps) {
   const [newUsername, setNewUsername] = useState('')
   const [isListOpen, setIsListOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const totalPages = Math.ceil(users.length / ITEMS_PER_PAGE)
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return users.slice(start, start + ITEMS_PER_PAGE)
+  }, [users, currentPage])
+
+  // 유저 목록이 변경되면 페이지 범위 조정
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(totalPages)
+  }
 
   const handleAddUser = () => {
     const trimmed = newUsername.replace(/\s+/g, '').replace('@', '')
@@ -139,44 +155,72 @@ export default function TargetUserList({
         </Button>
 
         {isListOpen && (
-          <ScrollArea className="h-[200px] rounded-xl bg-muted/50 p-3">
-            <div className="space-y-2">
-              {users.length > 0 ? (
-                users.map((user, index) => {
-                  const StatusIcon = statusConfig[user.status].icon
-                  return (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-lg border bg-background px-3 py-2 shadow-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <StatusIcon
-                          className={cn('h-4 w-4', statusConfig[user.status].className)}
-                        />
-                        <span className="text-sm">@{user.username}</span>
-                        {user.error && (
-                          <span className="text-xs text-destructive">
-                            ({user.error})
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => onRemoveUser(user.username)}
-                        className="text-muted-foreground hover:text-destructive transition-colors"
-                        aria-label={`${user.username} 삭제`}
+          <>
+            <ScrollArea className="h-[200px] rounded-xl bg-muted/50 p-3">
+              <div className="space-y-2">
+                {paginatedUsers.length > 0 ? (
+                  paginatedUsers.map((user, index) => {
+                    const StatusIcon = statusConfig[user.status].icon
+                    return (
+                      <div
+                        key={user.username}
+                        className="flex items-center justify-between rounded-lg border bg-background px-3 py-2 shadow-sm"
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  추가된 타겟 유저가 없습니다.
-                </p>
-              )}
-            </div>
-          </ScrollArea>
+                        <div className="flex items-center gap-2">
+                          <StatusIcon
+                            className={cn('h-4 w-4', statusConfig[user.status].className)}
+                          />
+                          <span className="text-sm">@{user.username}</span>
+                          {user.error && (
+                            <span className="text-xs text-destructive">
+                              ({user.error})
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => onRemoveUser(user.username)}
+                          className="text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label={`${user.username} 삭제`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    추가된 타겟 유저가 없습니다.
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground min-w-[80px] text-center">
+                  {currentPage} / {totalPages} 페이지
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

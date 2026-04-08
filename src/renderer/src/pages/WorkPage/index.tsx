@@ -392,12 +392,11 @@ export default function WorkPage() {
                       <Input
                         type="number"
                         min={1}
-                        max={10}
                         value={workList.targetUserWork.postsPerUser}
                         onChange={(e) =>
                           handleTargetUserSettingChange(
                             'postsPerUser',
-                            Math.min(10, Math.max(1, parseInt(e.target.value) || 1))
+                            Math.max(1, parseInt(e.target.value) || 1)
                           )
                         }
                         className="w-20"

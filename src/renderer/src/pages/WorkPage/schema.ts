@@ -31,7 +31,7 @@ export const workSchema = z.object({
     targetUsers: z.array(targetUserSchema),
     likeEnabled: z.boolean(),
     commentEnabled: z.boolean(),
-    postsPerUser: z.coerce.number().min(1).max(10)
+    postsPerUser: z.coerce.number().min(1)
   })
 })
 
