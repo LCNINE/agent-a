@@ -39,7 +39,15 @@ const defaultWorkList: WorkType = {
     count: 1,
     enabled: false,
     hashtags: [],
-    followEnabled: false
+    followEnabled: false,
+    userCollection: {
+      enabled: false,
+      usersPerHashtag: 5,
+      autoProcessEnabled: false,
+      autoProcessLikeEnabled: true,
+      autoProcessCommentEnabled: true,
+      postsPerCollectedUser: 3
+    }
   },
   myFeedInteractionWork: {
     count: 1,
@@ -148,7 +156,7 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
         workByAccount: state.workByAccount,
@@ -157,6 +165,21 @@ export const useWorkStore = create<WorkState>()(
       }),
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as any
+
+        // userCollection 기본값 추가 헬퍼
+        const ensureUserCollection = (workList: any) => {
+          if (workList?.hashtagWork && !workList.hashtagWork.userCollection) {
+            workList.hashtagWork.userCollection = {
+              enabled: false,
+              usersPerHashtag: 5,
+              autoProcessEnabled: false,
+              autoProcessLikeEnabled: true,
+              autoProcessCommentEnabled: true,
+              postsPerCollectedUser: 3
+            }
+          }
+          return workList
+        }
 
         // v6 이하에서 v7로 마이그레이션: workList -> workByAccount
         if (version < 7) {
@@ -179,6 +202,7 @@ export const useWorkStore = create<WorkState>()(
                 state.workList.feedWork.suggestedFollowCount = 5
               }
             }
+            ensureUserCollection(state.workList)
             migratedDefaultWork = state.workList
           }
 
@@ -186,6 +210,16 @@ export const useWorkStore = create<WorkState>()(
             workByAccount: {},
             selectedAccountForWork: null,
             defaultWork: migratedDefaultWork
+          }
+        }
+
+        // v7에서도 userCollection 필드 보장
+        if (state.defaultWork) {
+          ensureUserCollection(state.defaultWork)
+        }
+        if (state.workByAccount) {
+          for (const key of Object.keys(state.workByAccount)) {
+            ensureUserCollection(state.workByAccount[key])
           }
         }
 

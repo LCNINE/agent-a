@@ -1,5 +1,5 @@
 import { BrowserContext, Locator, Page } from 'playwright-core'
-import { AgentConfig, WorkType } from '../../..'
+import { AgentConfig, WorkType, UserCollectionSettings } from '../../..'
 import { startBrowser } from '../common/browser'
 import { loginWithCredentials, navigateToHome } from '../common/browserUtils'
 import { checkedAction } from '../common/checkedAction'
@@ -19,6 +19,7 @@ import { HashtagService } from '../services/HashtagProcessingService'
 import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
 import { TargetUserProcessingService } from '../services/TargetUserProcessingService'
 import { SuggestedUsersService } from '../services/SuggestedUsersService'
+import { UserCollectionService } from '../services/UserCollectionService'
 import { app, BrowserWindow } from 'electron'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../../../renderer/src/supabase/database.types'
@@ -57,6 +58,7 @@ export class AgentManager {
   private commentHistory: CommentHistory = { commentedPosts: [], lastCleanup: Date.now() }
   private isLoggedIn: Boolean = false
   private mainWindow: BrowserWindow | null = null
+  private userCollectionService: UserCollectionService | null = null
   private supabase = createClient<Database>(
     'https://xszdgbmgwnaxbyekqons.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzemRnYm1nd25heGJ5ZWtxb25zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzODAxMDcsImV4cCI6MjA1Mzk1NjEwN30.S4fGG1sv9drG9f04ejWCpmeGyrLkRTdXnxq_UaZzlUg'
@@ -576,8 +578,26 @@ export class AgentManager {
         let followCount = 0
         const maxFollowCount = work.hashtagWork.followEnabled ? work.hashtagWork.count : 0
 
+        // 유저 수집 서비스 초기화 (활성화된 경우)
+        const userCollectionSettings = work.hashtagWork.userCollection
+        if (userCollectionSettings?.enabled) {
+          this.userCollectionService = new UserCollectionService(
+            this.page!,
+            this.supabase,
+            this.config.credentials.username,
+            userCollectionSettings,
+            this.excludeUsernames,
+            (action, details, success) => this.addLog(action, details, success)
+          )
+          this.addLog('유저 수집 서비스 초기화', `해시태그당 ${userCollectionSettings.usersPerHashtag}명 수집`)
+        }
+
+        // 해시태그별 유저 수집 카운터
+        let collectedUsersPerHashtag: Record<string, number> = {}
+
         for (let i = 0; i < work.hashtagWork.hashtags.length; i++) {
           const hashtag = work.hashtagWork.hashtags[i]
+          collectedUsersPerHashtag[hashtag] = 0
           this.addLog('해시태그 루프 시작', `[${i + 1}/${work.hashtagWork.hashtags.length}] #${hashtag}`)
 
           if (!this._status.isRunning) {
@@ -654,20 +674,10 @@ export class AgentManager {
 
                 // 1. 로컬 기록에서 중복 체크 (현재 페이지 URL 기준)
                 const hashtagPostUrl = this.page!.url()
-                if (hasCommentedOnPost(this.commentHistory, hashtagPostUrl)) {
-                  console.log('이미 댓글을 작성한 게시물 스킵 (로컬 기록)')
-                  this.addLog('이미 댓글 작성한 게시물', '로컬 기록 - 건너뜀')
-                  await this.page!.getByLabel(/닫기|Close/).click()
-                  return false
-                }
+                const alreadyCommentedLocal = hasCommentedOnPost(this.commentHistory, hashtagPostUrl)
 
                 // 2. Supabase 기록에서 중복 체크 (네트워크)
-                if (await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, hashtagPostUrl)) {
-                  console.log('이미 댓글을 작성한 게시물 스킵 (Supabase 기록)')
-                  this.addLog('이미 댓글 작성한 게시물', 'Supabase 기록 - 건너뜀')
-                  await this.page!.getByLabel(/닫기|Close/).click()
-                  return false
-                }
+                const alreadyCommentedSupabase = await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, hashtagPostUrl)
 
                 // 내 댓글이 있는지 확인 (대소문자 무시)
                 const myUsername = this.config.credentials.username
@@ -683,10 +693,28 @@ export class AgentManager {
                 // 대소문자 무시하고 본인 댓글 확인
                 const hasMyComment = commentAuthors.some(author => author.toLowerCase().trim() === myUsernameLower)
 
-                if (hasMyComment) {
+                // 이미 댓글 작성한 게시물인지 확인
+                const alreadyCommented = alreadyCommentedLocal || alreadyCommentedSupabase || hasMyComment
+
+                if (alreadyCommented) {
+                  // 유저 수집이 활성화되어 있으면 먼저 수행
+                  if (this.userCollectionService && userCollectionSettings?.enabled) {
+                    const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
+                    if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
+                      this.addLog('유저 수집 시도 (이미 댓글 작성 게시물)', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
+                      const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
+                      const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
+                      if (collectedUser) {
+                        collectedUsersPerHashtag[hashtag]++
+                        this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
+                      }
+                    }
+                  }
+
                   await chooseRandomSleep(postInteractionDelays)
-                  console.log('이미 댓글을 작성한 게시물 스킵')
-                  this.addLog('이미 댓글 작성한 게시물', '건너뜀')
+                  const skipReason = alreadyCommentedLocal ? '로컬 기록' : alreadyCommentedSupabase ? 'Supabase 기록' : 'UI 확인'
+                  console.log(`이미 댓글을 작성한 게시물 스킵 (${skipReason})`)
+                  this.addLog('이미 댓글 작성한 게시물', `${skipReason} - 건너뜀`)
                   await this.page!.getByLabel(/닫기|Close/).click()
                   return false
                 }
@@ -824,7 +852,26 @@ export class AgentManager {
                       this.addLog('팔로우 성공', `${author} (${followCount}/${maxFollowCount})`, true)
                     }
                   }
+                } else {
+                  this.addLog('댓글 게시 실패', '댓글 입력 영역을 찾을 수 없습니다', false)
+                }
 
+                // 유저 수집 시도 (댓글 성공/실패 관계없이 실행)
+                if (this.userCollectionService && userCollectionSettings?.enabled) {
+                  const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
+                  if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
+                    this.addLog('유저 수집 시도', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
+                    const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
+                    const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
+                    if (collectedUser) {
+                      collectedUsersPerHashtag[hashtag]++
+                      this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
+                    }
+                  }
+                }
+
+                // 대기 시간 적용 (댓글 성공 시에만)
+                if (commentTextareaResult) {
                   const waitSeconds = this.config.postIntervalSeconds || 60
                   const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
                   this._status.waiting = {
@@ -832,8 +879,6 @@ export class AgentManager {
                     until
                   }
                   this.broadcastStatus()
-                } else {
-                  this.addLog('댓글 게시 실패', '댓글 입력 영역을 찾을 수 없습니다', false)
                 }
 
                 await chooseRandomSleep(postInteractionDelays)
@@ -901,6 +946,12 @@ export class AgentManager {
         }
 
         this.addLog('해시태그 작업 완료')
+
+        // 수집된 유저 자동 활동 처리
+        if (this.userCollectionService && userCollectionSettings?.enabled && userCollectionSettings.autoProcessEnabled) {
+          this.addLog('수집 유저 자동 활동 시작')
+          await this.processCollectedUsers(userCollectionSettings)
+        }
       }
 
       if (work.myFeedInteractionWork.enabled) {
@@ -1226,6 +1277,96 @@ export class AgentManager {
     } catch (error) {
       this.addLog('팔로우 실패', `${author}: ${error instanceof Error ? error.message : String(error)}`, false)
       return false
+    }
+  }
+
+  /**
+   * 수집된 유저의 피드에서 좋아요/댓글 자동 활동
+   * - 프로필 방문 시 팔로우 시도
+   * - comment_history 기반으로 이미 활동한 유저 필터링
+   */
+  private async processCollectedUsers(settings: {
+    autoProcessLikeEnabled: boolean
+    autoProcessCommentEnabled: boolean
+    postsPerCollectedUser: number
+  }): Promise<void> {
+    if (!this.userCollectionService || !this.page) return
+
+    try {
+      // 아직 활동하지 않은 수집 유저 가져오기 (comment_history 기반 필터링)
+      const pendingUsers = await this.userCollectionService.getPendingCollectedUsers()
+
+      if (pendingUsers.length === 0) {
+        this.addLog('수집 유저 활동', '처리할 유저가 없습니다')
+        return
+      }
+
+      this.addLog('수집 유저 활동 시작', `${pendingUsers.length}명 대기 중`)
+
+      const targetUserService = new TargetUserProcessingService(
+        this.page,
+        this.config,
+        {
+          likeEnabled: settings.autoProcessLikeEnabled,
+          commentEnabled: settings.autoProcessCommentEnabled,
+          postsPerUser: settings.postsPerCollectedUser,
+          tryFollowOnVisit: true,  // 프로필 방문 시 팔로우 시도
+          onLike: async (username: string, postIndex: number) => {
+            this.addLog('좋아요 완료', `${username} 게시물 ${postIndex + 1}`, true)
+          },
+          onComment: async (username: string, postIndex: number, imageBase64: string, content: string) => {
+            this.addLog('AI 댓글 생성 중', `${username} 게시물 ${postIndex + 1}`)
+            const commentRes = await callGenerateComments({
+              image: imageBase64,
+              content: content,
+              minLength: this.config.commentLength.min,
+              maxLength: this.config.commentLength.max,
+              prompt: this.config.prompt
+            })
+
+            if (!commentRes.isAllowed) {
+              this.addLog('AI 댓글 거부', '부적절한 게시물', false)
+              return null
+            }
+            this.addLog('AI 댓글 생성 완료', commentRes.comment)
+            return commentRes.comment
+          },
+          onUserStatusUpdate: (username: string, status, error?: string) => {
+            // 로그만 출력 (status 필드 제거됨, comment_history로 상태 관리)
+            this.addLog('수집 유저 상태', `${username}: ${status}${error ? ` - ${error}` : ''}`)
+          },
+          onLog: (action: string, details?: string, success?: boolean) => {
+            this.addLog(action, details, success)
+          },
+          checkCommentHistory: async (postUrl: string) => {
+            if (hasCommentedOnPost(this.commentHistory, postUrl)) {
+              return true
+            }
+            return await hasCommentedOnPostSupabase(this.supabase, this.config.credentials.username, postUrl)
+          },
+          saveCommentHistory: async (postUrl: string, author: string) => {
+            addCommentedPost(this.commentHistory, postUrl, author)
+            saveCommentHistory(this.config.credentials.username, this.commentHistory)
+            await saveCommentToSupabase(this.supabase, this.config.credentials.username, postUrl, author)
+          }
+        }
+      )
+
+      // 수집 유저를 TargetUser 형식으로 변환
+      const targetUsers = pendingUsers.map(user => ({
+        username: user.collected_username,
+        status: 'pending' as const
+      }))
+
+      await targetUserService.processTargetUsers(targetUsers)
+
+      this.addLog('수집 유저 활동 완료')
+    } catch (error) {
+      this.addLog(
+        '수집 유저 활동 오류',
+        error instanceof Error ? error.message : String(error),
+        false
+      )
     }
   }
 

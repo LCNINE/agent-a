@@ -86,6 +86,25 @@ export interface TargetUser {
   error?: string
 }
 
+export interface UserCollectionSettings {
+  enabled: boolean                    // 유저 수집 활성화
+  usersPerHashtag: number             // 해시태그당 수집 유저 수
+  autoProcessEnabled: boolean         // 수집 후 자동 활동 실행
+  autoProcessLikeEnabled: boolean     // 자동 활동: 좋아요
+  autoProcessCommentEnabled: boolean  // 자동 활동: 댓글
+  postsPerCollectedUser: number       // 유저당 처리할 게시물 수
+}
+
+export interface CollectedUser {
+  id?: number
+  instagram_username: string         // 수집 실행 계정
+  collected_username: string         // 수집된 유저
+  collected_from_hashtag?: string    // 출처 해시태그
+  collected_from_post_id?: string    // 출처 게시물 ID
+  like_count: number                 // 댓글 좋아요 수
+  created_at?: string
+}
+
 export type WorkType = {
   feedWork: WorkItem & {
     suggestedFollowEnabled: boolean
@@ -94,6 +113,7 @@ export type WorkType = {
   hashtagWork: WorkItem & {
     hashtags: string[]
     followEnabled: boolean
+    userCollection: UserCollectionSettings  // 유저 수집 설정 추가
   }
   myFeedInteractionWork: WorkItem
   hashtagInteractionWork: WorkItem & { hashtags: string[] }

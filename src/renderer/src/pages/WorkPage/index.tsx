@@ -8,9 +8,9 @@ import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { WorkType, TargetUser } from 'src'
+import { WorkType, TargetUser, UserCollectionSettings } from 'src'
 import { workSchema, WorkSchema } from './schema'
 import WorkSection from './WorkSection'
 import { useForm } from 'react-hook-form'
@@ -199,6 +199,21 @@ export default function WorkPage() {
       hashtagWork: {
         ...workList.hashtagWork,
         followEnabled: enabled
+      }
+    })
+  }
+
+  const handleUserCollectionChange = (
+    key: keyof UserCollectionSettings,
+    value: boolean | number
+  ) => {
+    upsert({
+      hashtagWork: {
+        ...workList.hashtagWork,
+        userCollection: {
+          ...workList.hashtagWork.userCollection,
+          [key]: value
+        }
       }
     })
   }
@@ -437,7 +452,7 @@ export default function WorkPage() {
                   }}
                   error={hasError('noHashtags')}
                 >
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-3">
                     <div className="flex items-center justify-between rounded-lg border p-3">
                       <div className="flex items-center gap-2">
                         <UserPlus className="h-4 w-4 text-apple-green" />
@@ -447,6 +462,94 @@ export default function WorkPage() {
                         checked={workList.hashtagWork.followEnabled}
                         onCheckedChange={handleHashtagFollowChange}
                       />
+                    </div>
+
+                    {/* 유저 수집 옵션 */}
+                    <div className="rounded-lg border p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <UserSearch className="h-4 w-4 text-apple-orange" />
+                          <Label className="text-sm font-medium">댓글 좋아요 기반 유저 수집</Label>
+                        </div>
+                        <Switch
+                          checked={workList.hashtagWork.userCollection?.enabled ?? false}
+                          onCheckedChange={(checked) => handleUserCollectionChange('enabled', checked)}
+                        />
+                      </div>
+
+                      {workList.hashtagWork.userCollection?.enabled && (
+                        <div className="pl-6 space-y-3 border-l-2 border-apple-orange/30">
+                          <div className="flex items-center gap-3">
+                            <Label className="text-sm whitespace-nowrap text-muted-foreground">수집 유저 수</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={10}
+                              value={workList.hashtagWork.userCollection?.usersPerHashtag ?? 5}
+                              onChange={(e) =>
+                                handleUserCollectionChange(
+                                  'usersPerHashtag',
+                                  Math.min(10, Math.max(1, parseInt(e.target.value) || 5))
+                                )
+                              }
+                              className="w-16"
+                            />
+                            <span className="text-sm text-muted-foreground">명</span>
+                          </div>
+
+                          {/* 수집 후 자동 활동 */}
+                          <div className="pt-2 border-t space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-sm text-muted-foreground">수집 후 자동 활동 실행</Label>
+                              <Switch
+                                checked={workList.hashtagWork.userCollection?.autoProcessEnabled ?? false}
+                                onCheckedChange={(checked) => handleUserCollectionChange('autoProcessEnabled', checked)}
+                              />
+                            </div>
+
+                            {workList.hashtagWork.userCollection?.autoProcessEnabled && (
+                              <div className="pl-4 space-y-2">
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={workList.hashtagWork.userCollection?.autoProcessLikeEnabled ?? true}
+                                      onCheckedChange={(checked) => handleUserCollectionChange('autoProcessLikeEnabled', checked)}
+                                    />
+                                    <Heart className="h-3 w-3 text-apple-red" />
+                                    <Label className="text-xs">좋아요</Label>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={workList.hashtagWork.userCollection?.autoProcessCommentEnabled ?? true}
+                                      onCheckedChange={(checked) => handleUserCollectionChange('autoProcessCommentEnabled', checked)}
+                                    />
+                                    <MessageCircle className="h-3 w-3 text-apple-blue" />
+                                    <Label className="text-xs">댓글</Label>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                  <Label className="text-xs whitespace-nowrap text-muted-foreground">유저당 게시물</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={5}
+                                    value={workList.hashtagWork.userCollection?.postsPerCollectedUser ?? 3}
+                                    onChange={(e) =>
+                                      handleUserCollectionChange(
+                                        'postsPerCollectedUser',
+                                        Math.min(5, Math.max(1, parseInt(e.target.value) || 3))
+                                      )
+                                    }
+                                    className="w-14 h-7 text-xs"
+                                  />
+                                  <span className="text-xs text-muted-foreground">개</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </WorkSection>
