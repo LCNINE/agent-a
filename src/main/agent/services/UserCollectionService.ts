@@ -18,7 +18,6 @@ export class UserCollectionService {
   private supabase: SupabaseClientAny
   private instagramUsername: string
   private settings: UserCollectionSettings
-  private sessionId: string
   private excludeUsernames: Set<string>
   private onLog?: LogCallback
 
@@ -34,7 +33,6 @@ export class UserCollectionService {
     this.supabase = supabase
     this.instagramUsername = instagramUsername
     this.settings = settings
-    this.sessionId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
     this.excludeUsernames = excludeUsernames
     this.onLog = onLog
   }
@@ -96,29 +94,20 @@ export class UserCollectionService {
           continue
         }
 
-        // 이미 팔로우 중인지 확인
-        const isFollowing = await this.checkIsFollowing(comment.username)
-        if (isFollowing) {
-          this.log('이미 팔로우 중', comment.username)
+        // comment_history에 해당 유저 게시물에 댓글 기록이 있는지 확인
+        const hasCommentHistory = await this.checkCommentHistoryForUser(comment.username)
+        if (hasCommentHistory) {
+          this.log('이미 활동한 유저 (comment_history)', comment.username)
           continue
         }
 
-        // 팔로우 실행
-        const followSuccess = await this.followUser(comment.username)
-        if (!followSuccess) {
-          this.log('팔로우 실패', comment.username, false)
-          continue
-        }
-
-        // Supabase에 저장
+        // 팔로우 없이 바로 Supabase에 저장
         const collectedUser = await this.saveCollectedUser({
           instagram_username: this.instagramUsername,
           collected_username: comment.username,
           collected_from_hashtag: hashtag,
           collected_from_post_id: postId,
-          like_count: comment.likeCount,
-          status: 'pending',
-          session_id: this.sessionId
+          like_count: comment.likeCount
         })
 
         this.log(
@@ -270,95 +259,25 @@ export class UserCollectionService {
   }
 
   /**
-   * 이미 팔로우 중인지 확인 (프로필 방문 없이 모달에서 확인)
+   * comment_history에서 해당 유저 게시물에 댓글 기록이 있는지 확인
    */
-  private async checkIsFollowing(username: string): Promise<boolean> {
-    // 모달 내에서 확인이 어려우므로 false 반환
-    // 실제 팔로우 시도 시 "팔로잉" 버튼 유무로 판단
-    return false
-  }
-
-  /**
-   * 유저 팔로우 (댓글 작성자 이름 클릭 → 프로필 방문 → 팔로우)
-   */
-  private async followUser(username: string): Promise<boolean> {
+  private async checkCommentHistoryForUser(username: string): Promise<boolean> {
     try {
-      this.log('팔로우 시도', username)
+      const { data, error } = await this.supabase
+        .from('comment_history')
+        .select('id')
+        .eq('instagram_username', this.instagramUsername)
+        .eq('post_author', username)
+        .limit(1)
+        .maybeSingle()
 
-      // 모달 내에서 작성자 이름 클릭하여 프로필 방문
-      const dialog = this.page.locator('[role="dialog"]').first()
-      const authorLink = dialog.locator(`a[href="/${username}/"]`).first()
-
-      if (await authorLink.isVisible().catch(() => false)) {
-        await authorLink.click()
-        await this.page.waitForTimeout(2500)
-      } else {
-        // 직접 프로필 URL로 이동
-        await this.page.goto(`https://www.instagram.com/${username}/`, {
-          waitUntil: 'networkidle',
-          timeout: 15000
-        })
-        await this.page.waitForTimeout(2000)
-      }
-
-      // 팔로우 버튼 찾기
-      const followButton = this.page
-        .locator('header button, header div[role="button"]')
-        .filter({ hasText: /^팔로우$/i })
-        .first()
-
-      // 이미 팔로잉인지 확인
-      const followingButton = this.page
-        .locator('header button, header div[role="button"]')
-        .filter({ hasText: /^(팔로잉|Following|요청됨|Requested)$/i })
-        .first()
-
-      if (await followingButton.isVisible().catch(() => false)) {
-        this.log('이미 팔로우 중', username)
-        // 뒤로 가기
-        await this.page.goBack()
-        await this.page.waitForTimeout(1500)
+      if (error) {
+        console.error('comment_history 확인 오류:', error)
         return false
       }
 
-      if (!(await followButton.isVisible().catch(() => false))) {
-        this.log('팔로우 버튼 없음', username, false)
-        await this.page.goBack()
-        await this.page.waitForTimeout(1500)
-        return false
-      }
-
-      await followButton.click()
-      await this.page.waitForTimeout(2000)
-
-      // 팔로우 성공 확인
-      const isNowFollowing = await this.page
-        .locator('header button, header div[role="button"]')
-        .filter({ hasText: /^(팔로잉|Following|요청됨|Requested)$/i })
-        .first()
-        .isVisible()
-        .catch(() => false)
-
-      // 뒤로 가기 (해시태그 페이지로)
-      await this.page.goBack()
-      await this.page.waitForTimeout(1500)
-
-      if (isNowFollowing) {
-        this.log('팔로우 성공', username, true)
-        return true
-      } else {
-        this.log('팔로우 확인 실패', username, false)
-        return false
-      }
-    } catch (error) {
-      this.log(
-        '팔로우 오류',
-        `${username}: ${error instanceof Error ? error.message : String(error)}`,
-        false
-      )
-      // 오류 시에도 뒤로 가기 시도
-      await this.page.goBack().catch(() => {})
-      await this.page.waitForTimeout(1500)
+      return !!data
+    } catch {
       return false
     }
   }
@@ -366,9 +285,13 @@ export class UserCollectionService {
   /**
    * 수집된 유저 Supabase에 저장
    */
-  private async saveCollectedUser(
-    user: Omit<CollectedUser, 'id' | 'processed_at' | 'created_at'>
-  ): Promise<CollectedUser | null> {
+  private async saveCollectedUser(user: {
+    instagram_username: string
+    collected_username: string
+    collected_from_hashtag: string
+    collected_from_post_id: string
+    like_count: number
+  }): Promise<CollectedUser | null> {
     try {
       const { data, error } = await this.supabase
         .from('collected_users')
@@ -378,9 +301,7 @@ export class UserCollectionService {
             collected_username: user.collected_username,
             collected_from_hashtag: user.collected_from_hashtag,
             collected_from_post_id: user.collected_from_post_id,
-            like_count: user.like_count,
-            status: user.status,
-            session_id: user.session_id
+            like_count: user.like_count
           },
           {
             onConflict: 'instagram_username,collected_username',
@@ -407,39 +328,16 @@ export class UserCollectionService {
   }
 
   /**
-   * 현재 세션에서 수집된 유저 목록 가져오기
-   */
-  async getCollectedUsersForSession(): Promise<CollectedUser[]> {
-    try {
-      const { data, error } = await this.supabase
-        .from('collected_users')
-        .select('*')
-        .eq('instagram_username', this.instagramUsername)
-        .eq('session_id', this.sessionId)
-        .eq('status', 'pending')
-        .order('like_count', { ascending: false })
-
-      if (error) {
-        this.log('수집 유저 조회 오류', error.message, false)
-        return []
-      }
-
-      return (data || []) as CollectedUser[]
-    } catch {
-      return []
-    }
-  }
-
-  /**
-   * 대기 중인 모든 수집 유저 가져오기
+   * 아직 활동하지 않은 수집 유저 목록 가져오기
+   * comment_history에 해당 유저의 게시물 기록이 없는 유저만 반환
    */
   async getPendingCollectedUsers(): Promise<CollectedUser[]> {
     try {
-      const { data, error } = await this.supabase
+      // 1. 모든 수집 유저 조회
+      const { data: collectedUsers, error } = await this.supabase
         .from('collected_users')
         .select('*')
         .eq('instagram_username', this.instagramUsername)
-        .eq('status', 'pending')
         .order('like_count', { ascending: false })
 
       if (error) {
@@ -447,41 +345,37 @@ export class UserCollectionService {
         return []
       }
 
-      return (data || []) as CollectedUser[]
+      if (!collectedUsers || collectedUsers.length === 0) {
+        return []
+      }
+
+      // 2. comment_history에서 이미 활동한 유저 목록 조회
+      const { data: commentHistory, error: historyError } = await this.supabase
+        .from('comment_history')
+        .select('post_author')
+        .eq('instagram_username', this.instagramUsername)
+
+      if (historyError) {
+        this.log('comment_history 조회 오류', historyError.message, false)
+        // 오류 시에도 일단 모든 수집 유저 반환
+        return collectedUsers as CollectedUser[]
+      }
+
+      // 3. 이미 활동한 유저 Set 생성
+      const processedUsers = new Set(
+        (commentHistory || []).map(h => h.post_author?.toLowerCase())
+      )
+
+      // 4. 아직 활동하지 않은 유저만 필터링
+      const pendingUsers = collectedUsers.filter(
+        user => !processedUsers.has(user.collected_username?.toLowerCase())
+      )
+
+      this.log('수집 유저 필터링', `전체 ${collectedUsers.length}명 중 ${pendingUsers.length}명 대기 중`)
+
+      return pendingUsers as CollectedUser[]
     } catch {
       return []
     }
-  }
-
-  /**
-   * 수집 유저 상태 업데이트
-   */
-  async updateCollectedUserStatus(
-    collectedUsername: string,
-    status: CollectedUser['status']
-  ): Promise<boolean> {
-    try {
-      const { error } = await this.supabase
-        .from('collected_users')
-        .update({
-          status,
-          processed_at: status === 'completed' || status === 'failed' ? new Date().toISOString() : null
-        })
-        .eq('instagram_username', this.instagramUsername)
-        .eq('collected_username', collectedUsername)
-
-      if (error) {
-        this.log('상태 업데이트 오류', error.message, false)
-        return false
-      }
-
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  getSessionId(): string {
-    return this.sessionId
   }
 }

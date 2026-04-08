@@ -844,21 +844,26 @@ export class AgentManager {
                       this.addLog('팔로우 성공', `${author} (${followCount}/${maxFollowCount})`, true)
                     }
                   }
+                } else {
+                  this.addLog('댓글 게시 실패', '댓글 입력 영역을 찾을 수 없습니다', false)
+                }
 
-                  // 유저 수집 시도 (활성화되어 있고 최대 수집 수 미만인 경우)
-                  if (this.userCollectionService && userCollectionSettings?.enabled) {
-                    const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
-                    if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
-                      this.addLog('유저 수집 시도', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
-                      const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
-                      const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
-                      if (collectedUser) {
-                        collectedUsersPerHashtag[hashtag]++
-                        this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
-                      }
+                // 유저 수집 시도 (댓글 성공/실패 관계없이 실행)
+                if (this.userCollectionService && userCollectionSettings?.enabled) {
+                  const maxUsersPerHashtag = userCollectionSettings.usersPerHashtag || 5
+                  if (collectedUsersPerHashtag[hashtag] < maxUsersPerHashtag) {
+                    this.addLog('유저 수집 시도', `#${hashtag} (${collectedUsersPerHashtag[hashtag] + 1}/${maxUsersPerHashtag})`)
+                    const postId = hashtagPostUrl.match(/\/p\/([^/]+)/)?.[1] || hashtagPostUrl
+                    const collectedUser = await this.userCollectionService.collectFromPostModal(hashtag, postId)
+                    if (collectedUser) {
+                      collectedUsersPerHashtag[hashtag]++
+                      this.addLog('유저 수집 완료', `${collectedUser.collected_username} (${collectedUsersPerHashtag[hashtag]}/${maxUsersPerHashtag})`, true)
                     }
                   }
+                }
 
+                // 대기 시간 적용 (댓글 성공 시에만)
+                if (commentTextareaResult) {
                   const waitSeconds = this.config.postIntervalSeconds || 60
                   const until = new Date(Date.now() + waitSeconds * 1000).toLocaleTimeString()
                   this._status.waiting = {
@@ -866,8 +871,6 @@ export class AgentManager {
                     until
                   }
                   this.broadcastStatus()
-                } else {
-                  this.addLog('댓글 게시 실패', '댓글 입력 영역을 찾을 수 없습니다', false)
                 }
 
                 await chooseRandomSleep(postInteractionDelays)
@@ -1271,6 +1274,8 @@ export class AgentManager {
 
   /**
    * 수집된 유저의 피드에서 좋아요/댓글 자동 활동
+   * - 프로필 방문 시 팔로우 시도
+   * - comment_history 기반으로 이미 활동한 유저 필터링
    */
   private async processCollectedUsers(settings: {
     autoProcessLikeEnabled: boolean
@@ -1280,7 +1285,7 @@ export class AgentManager {
     if (!this.userCollectionService || !this.page) return
 
     try {
-      // 대기 중인 수집 유저 가져오기
+      // 아직 활동하지 않은 수집 유저 가져오기 (comment_history 기반 필터링)
       const pendingUsers = await this.userCollectionService.getPendingCollectedUsers()
 
       if (pendingUsers.length === 0) {
@@ -1297,6 +1302,7 @@ export class AgentManager {
           likeEnabled: settings.autoProcessLikeEnabled,
           commentEnabled: settings.autoProcessCommentEnabled,
           postsPerUser: settings.postsPerCollectedUser,
+          tryFollowOnVisit: true,  // 프로필 방문 시 팔로우 시도
           onLike: async (username: string, postIndex: number) => {
             this.addLog('좋아요 완료', `${username} 게시물 ${postIndex + 1}`, true)
           },
@@ -1317,14 +1323,8 @@ export class AgentManager {
             this.addLog('AI 댓글 생성 완료', commentRes.comment)
             return commentRes.comment
           },
-          onUserStatusUpdate: async (username: string, status, error?: string) => {
-            // Supabase에서 수집 유저 상태 업데이트
-            if (this.userCollectionService) {
-              await this.userCollectionService.updateCollectedUserStatus(
-                username,
-                status as 'pending' | 'processing' | 'completed' | 'failed'
-              )
-            }
+          onUserStatusUpdate: (username: string, status, error?: string) => {
+            // 로그만 출력 (status 필드 제거됨, comment_history로 상태 관리)
             this.addLog('수집 유저 상태', `${username}: ${status}${error ? ` - ${error}` : ''}`)
           },
           onLog: (action: string, details?: string, success?: boolean) => {

@@ -102,9 +102,6 @@ export interface CollectedUser {
   collected_from_hashtag?: string    // 출처 해시태그
   collected_from_post_id?: string    // 출처 게시물 ID
   like_count: number                 // 댓글 좋아요 수
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  session_id: string                 // 세션 ID
-  processed_at?: string
   created_at?: string
 }
 

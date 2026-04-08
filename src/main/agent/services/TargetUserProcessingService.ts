@@ -7,6 +7,7 @@ interface TargetUserProcessingOptions {
   likeEnabled: boolean
   commentEnabled: boolean
   postsPerUser: number
+  tryFollowOnVisit?: boolean  // 프로필 방문 시 팔로우 시도 (수집 유저 활동용)
   onLike?: (username: string, postIndex: number) => Promise<void>
   onComment?: (username: string, postIndex: number, imageBase64: string, content: string) => Promise<string | null>
   onUserStatusUpdate?: (username: string, status: TargetUser['status'], error?: string) => void
@@ -76,10 +77,15 @@ export class TargetUserProcessingService {
   private async processUser(username: string): Promise<void> {
     this.log('프로필 방문', username)
 
-    // 프로필 페이지 방문
+    // 프로필 페이지 방문 (networkidle 대신 domcontentloaded 사용 - 인스타그램은 백그라운드 요청이 계속됨)
     const profileUrl = `https://www.instagram.com/${username}/`
-    await this.page.goto(profileUrl, { waitUntil: 'networkidle' })
+    await this.page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await randomSleep(3000, 0.5) // 3-5초 랜덤 대기
+
+    // 팔로우 시도 (옵션 활성화 시)
+    if (this.options.tryFollowOnVisit) {
+      await this.tryFollowUser(username)
+    }
 
     // 계정 상태 확인
     const accountStatus = await this.checkAccountStatus()
@@ -130,6 +136,39 @@ export class TargetUserProcessingService {
     this.log('유저 처리 완료', `${username}: ${processedCount}개 처리됨`)
   }
 
+  /**
+   * 프로필 페이지에서 팔로우 시도
+   */
+  private async tryFollowUser(username: string): Promise<boolean> {
+    try {
+      // 팔로우 버튼 찾기 (header 영역에서)
+      const followButton = this.page
+        .locator('header button, header div[role="button"]')
+        .filter({ hasText: /^팔로우$/i })
+        .first()
+
+      if (await followButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await followButton.click()
+        await this.page.waitForTimeout(1500)
+        this.log('팔로우 성공', username, true)
+        return true
+      }
+
+      // 이미 팔로잉인 경우 로그만
+      const followingButton = this.page
+        .locator('header button, header div[role="button"]')
+        .filter({ hasText: /^(팔로잉|Following|요청됨|Requested)$/i })
+        .first()
+
+      if (await followingButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+        this.log('이미 팔로우 중', username)
+      }
+      return false
+    } catch {
+      return false
+    }
+  }
+
   private async checkAccountStatus(): Promise<'accessible' | 'private' | 'not_found'> {
     try {
       await this.page.waitForTimeout(1000)
@@ -154,12 +193,16 @@ export class TargetUserProcessingService {
 
   private async getPostLinks(): Promise<Locator[]> {
     try {
+      // 페이지 로드 대기 (DOM이 렌더링될 시간)
+      await this.page.waitForTimeout(2000)
+
       // 프로필 게시물 그리드 로드 대기 - /p/ (게시물)와 /reel/ (릴스) 모두 포함
+      // role="link" 속성이 있는 것을 우선 사용 (인스타그램 최신 구조)
       const selectors = [
-        'main article a[href*="/p/"], main article a[href*="/reel/"]',
-        'main section a[href*="/p/"], main section a[href*="/reel/"]',
         'a[href*="/p/"][role="link"], a[href*="/reel/"][role="link"]',
         'div._ac7v a[href*="/p/"], div._ac7v a[href*="/reel/"]',
+        'main article a[href*="/p/"], main article a[href*="/reel/"]',
+        'main section a[href*="/p/"], main section a[href*="/reel/"]',
         'article div a[href*="/p/"], article div a[href*="/reel/"]'
       ]
 
@@ -167,7 +210,7 @@ export class TargetUserProcessingService {
 
       for (const selector of selectors) {
         try {
-          await this.page.waitForSelector(selector, { timeout: 3000 })
+          await this.page.waitForSelector(selector, { timeout: 5000 })
           postLocators = await this.page.locator(selector).all()
           if (postLocators.length > 0) {
             this.log('게시물 선택자 사용', `${selector} - ${postLocators.length}개 발견`)
