@@ -415,14 +415,10 @@ export class TargetUserProcessingService {
         this.log('날짜 비교', `게시물: ${postDate.toLocaleDateString()}, 현재: ${now.toLocaleDateString()}, 차이: ${monthsDiff}개월`)
 
         if (this.isPostTooOld(postDate, this.options.skipOldPostsMonths)) {
-          this.log('오래된 게시물 스킵', `${this.options.skipOldPostsMonths}개월 이상 지남 (${postDate.toLocaleDateString()})`)
+          this.log('오래된 게시물 발견', `${this.options.skipOldPostsMonths}개월 이상 지남 (${postDate.toLocaleDateString()})`)
           await this.closePostModal()
-          // 첫 번째 게시물이 오래됐으면 해당 유저 전체 스킵 (인스타그램은 최신순이므로 나머지도 다 오래됨)
-          if (postIndex === 0) {
-            this.log('유저 전체 스킵', `첫 번째 게시물이 오래되어 해당 유저의 모든 게시물 스킵`)
-            return 'user_too_old'
-          }
-          return false // 처리하지 않음 → 다음 게시물로
+          this.log('유저 전체 스킵', `오래된 게시물 발견으로 해당 유저 스킵`)
+          return 'user_too_old'
         }
       } else {
         this.log('날짜 체크 불가', '게시물 날짜를 찾을 수 없어 스킵하지 않음')
@@ -822,19 +818,46 @@ export class TargetUserProcessingService {
    */
   private async getPostDate(dialog: Locator): Promise<Date | null> {
     try {
-      // 1. dialog 내에서 time[datetime] 찾기
-      let timeElement = dialog.locator('time[datetime]').first()
-      let datetime = await timeElement.getAttribute('datetime', { timeout: 2000 }).catch(() => null)
+      let datetime: string | null = null
+
+      // 여러 셀렉터로 시도 (인스타그램 구조 변경 대응)
+      const selectors = [
+        'time[datetime]',                    // 기본 time 태그
+        'a[href*="/p/"] time[datetime]',     // 게시물 링크 내 time
+        'span time[datetime]',               // span 내 time
+        '[class*="_aaco"] time[datetime]',   // 인스타그램 클래스 내 time
+      ]
+
+      // 1. dialog 내에서 찾기
+      for (const selector of selectors) {
+        const element = dialog.locator(selector).first()
+        datetime = await element.getAttribute('datetime', { timeout: 3000 }).catch(() => null)
+        if (datetime) {
+          this.log('날짜 추출 성공', `셀렉터: ${selector}`)
+          break
+        }
+      }
 
       // 2. dialog에서 못 찾으면 페이지 전체에서 찾기
       if (!datetime) {
-        this.log('날짜 추출', 'dialog에서 time 요소 못찾음, 페이지에서 검색 중...')
-        timeElement = this.page.locator('[role="dialog"] time[datetime], article time[datetime]').first()
-        datetime = await timeElement.getAttribute('datetime', { timeout: 3000 }).catch(() => null)
+        this.log('날짜 추출', 'dialog에서 못찾음, 페이지 전체 검색...')
+        const pageSelectors = [
+          '[role="dialog"] time[datetime]',
+          'article time[datetime]',
+          '[role="dialog"] a[href*="/p/"] time[datetime]',
+        ]
+        for (const selector of pageSelectors) {
+          const element = this.page.locator(selector).first()
+          datetime = await element.getAttribute('datetime', { timeout: 3000 }).catch(() => null)
+          if (datetime) {
+            this.log('날짜 추출 성공 (페이지)', `셀렉터: ${selector}`)
+            break
+          }
+        }
       }
 
       if (!datetime) {
-        this.log('날짜 추출 실패', 'time[datetime] 요소를 찾을 수 없음')
+        this.log('날짜 추출 실패', '모든 셀렉터에서 time[datetime] 찾지 못함')
         return null
       }
 
