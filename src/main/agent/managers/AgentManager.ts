@@ -1378,6 +1378,8 @@ export class AgentManager {
     if (!this.page) return
 
     try {
+      this.addLog('수집 유저 프로필 작업 시작', `@${collectedUser.collected_username} 방문 예정`)
+      this.broadcastStatus() // UI에 즉시 반영
       this.addLog('수집 유저 즉시 처리 시작', collectedUser.collected_username)
 
       const targetUserService = new TargetUserProcessingService(

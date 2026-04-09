@@ -183,6 +183,13 @@ export class HashtagService {
               await wait(1000) // 실패 시 짧은 대기
             }
           }
+
+          // 페이지 이동 감지 - 유저 수집 후 해시태그 복귀 시 locator 갱신 필요
+          const currentUrl = this.page.url()
+          if (!currentUrl.includes('/explore/tags/')) {
+            this.log('페이지 이동 감지', '게시물 목록 재조회 필요')
+            break // for 루프 탈출 → while 루프에서 postLocators 재조회
+          }
         }
 
         if (this.shouldStop) {
