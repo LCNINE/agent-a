@@ -8,7 +8,7 @@ import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch, Info, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { WorkType, TargetUser, UserCollectionSettings } from 'src'
 import { workSchema, WorkSchema } from './schema'
@@ -19,6 +19,7 @@ import { Switch } from '@renderer/components/ui/switch'
 import { Label } from '@renderer/components/ui/label'
 import { Input } from '@renderer/components/ui/input'
 import TargetUserImportDialog from '@renderer/components/TargetUserImportDialog'
+import HashtagImportDialog from '@renderer/components/HashtagImportDialog'
 import TargetUserList from '@renderer/components/TargetUserList'
 import { cn } from '@renderer/lib/utils'
 import { CustomToast } from '@renderer/components/CustomToast'
@@ -65,6 +66,8 @@ export default function WorkPage() {
   const hashtagInputRef = useRef<HTMLInputElement>(null)
   const hashtagInteractionInputRef = useRef<HTMLInputElement>(null)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isHashtagImportDialogOpen, setIsHashtagImportDialogOpen] = useState(false)
+  const [isUserCollectionGuideOpen, setIsUserCollectionGuideOpen] = useState(false)
 
   const form = useForm<WorkSchema>({
     defaultValues: {
@@ -146,6 +149,47 @@ export default function WorkPage() {
         ...workList.targetUserWork,
         targetUsers: [...workList.targetUserWork.targetUsers, ...newUsers]
       }
+    })
+  }
+
+  const handleImportHashtags = (incoming: string[]) => {
+    const existing = new Set(workList.hashtagWork.hashtags)
+    const added: string[] = []
+    for (const tag of incoming) {
+      if (!existing.has(tag)) {
+        existing.add(tag)
+        added.push(tag)
+      }
+    }
+
+    if (added.length === 0) {
+      CustomToast({
+        status: 'info',
+        message: `추가할 해시태그가 없습니다. (중복 ${incoming.length}개 제외됨)`,
+        position: 'top-center',
+        duration: 2500
+      })
+      return
+    }
+
+    upsert({
+      ...workList,
+      hashtagWork: {
+        ...workList.hashtagWork,
+        hashtags: [...workList.hashtagWork.hashtags, ...added]
+      }
+    })
+    removeError('noHashtags')
+
+    const skipped = incoming.length - added.length
+    CustomToast({
+      status: 'success',
+      message:
+        skipped > 0
+          ? `${added.length}개 추가 / 중복 ${skipped}개 제외`
+          : `${added.length}개 해시태그가 추가되었습니다.`,
+      position: 'top-center',
+      duration: 2500
     })
   }
 
@@ -437,6 +481,12 @@ export default function WorkPage() {
                   onImport={handleImportTargetUsers}
                 />
 
+                <HashtagImportDialog
+                  open={isHashtagImportDialogOpen}
+                  onOpenChange={setIsHashtagImportDialogOpen}
+                  onImport={handleImportHashtags}
+                />
+
 <WorkSection
                   title="해시태그 검색 작업"
                   type="hashtagWork"
@@ -469,6 +519,23 @@ export default function WorkPage() {
                     })
                     removeError('noHashtags')
                   }}
+                  onImportHashtags={() => setIsHashtagImportDialogOpen(true)}
+                  onClearHashtags={() => {
+                    const prevCount = workList.hashtagWork.hashtags.length
+                    upsert({
+                      ...workList,
+                      hashtagWork: {
+                        ...workList.hashtagWork,
+                        hashtags: []
+                      }
+                    })
+                    CustomToast({
+                      status: 'success',
+                      message: `해시태그 ${prevCount}개가 모두 삭제되었습니다.`,
+                      position: 'top-center',
+                      duration: 2500
+                    })
+                  }}
                   error={hasError('noHashtags')}
                 >
                   <div className="mt-4 space-y-3">
@@ -494,6 +561,73 @@ export default function WorkPage() {
                           checked={workList.hashtagWork.userCollection?.enabled ?? false}
                           onCheckedChange={(checked) => handleUserCollectionChange('enabled', checked)}
                         />
+                      </div>
+
+                      <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+                        해시태그 게시물의 <span className="font-semibold text-foreground">인기 댓글 작성자</span>
+                        (좋아요 많은 순)를 자동 수집해 프로필을 방문·팔로우하고 해당 유저 피드에도 상호작용합니다.
+                      </p>
+
+                      <div className="ml-6 rounded-lg border border-apple-orange/30 bg-apple-orange/5">
+                        <button
+                          type="button"
+                          onClick={() => setIsUserCollectionGuideOpen((v) => !v)}
+                          className="flex w-full items-center justify-between px-3 py-2 text-left"
+                        >
+                          <span className="flex items-center gap-2 text-xs font-medium">
+                            <Info className="h-3.5 w-3.5 text-apple-orange" />
+                            자세한 동작 방식과 설정 안내
+                          </span>
+                          {isUserCollectionGuideOpen ? (
+                            <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
+                        </button>
+                        {isUserCollectionGuideOpen && (
+                          <div className="space-y-3 px-3 pb-3 text-xs text-muted-foreground">
+                            <div>
+                              <div className="mb-1 text-[11px] font-semibold text-foreground">동작 순서</div>
+                              <ol className="list-decimal space-y-1 pl-4">
+                                <li>해시태그 페이지에서 게시물 열기 → 좋아요·댓글 작업</li>
+                                <li>
+                                  해당 게시물의 상위 댓글을{' '}
+                                  <span className="font-semibold text-foreground">좋아요 많은 순</span>으로 정렬해
+                                  설정한 인원만큼 <span className="font-semibold text-foreground">유저 수집</span>
+                                </li>
+                                <li>수집된 유저의 프로필로 이동 → <span className="font-semibold text-foreground">팔로우</span></li>
+                                <li>해당 유저 피드의 최근 게시물에 좋아요·댓글</li>
+                                <li>해시태그 페이지로 복귀 → 다음 게시물 반복</li>
+                              </ol>
+                            </div>
+
+                            <div>
+                              <div className="mb-1 text-[11px] font-semibold text-foreground">설정 안내</div>
+                              <ul className="list-disc space-y-1 pl-4">
+                                <li>
+                                  <span className="font-semibold text-foreground">수집 유저 수</span>: 해시태그 1개당
+                                  수집할 인원. 많을수록 작업 시간이 길어져요.
+                                </li>
+                                <li>
+                                  <span className="font-semibold text-foreground">수집 유저 즉시 활동 · 좋아요/댓글</span>:
+                                  수집한 유저의 프로필에 들어가 각 항목을 실행할지 선택.
+                                </li>
+                                <li>
+                                  <span className="font-semibold text-foreground">유저당 게시물</span>: 수집된 유저의
+                                  최근 게시물 중 몇 개에 상호작용할지 (최대 5개).
+                                </li>
+                              </ul>
+                            </div>
+
+                            <div className="rounded-md bg-background/60 p-2 text-[11px] leading-relaxed">
+                              <span className="font-semibold text-foreground">참고</span> · 한 번이라도 활동한 유저는
+                              자동으로 제외돼 중복 작업이 일어나지 않습니다. 또한 해시태그 작업의
+                              <span className="font-semibold text-foreground"> 댓글 개수</span>와
+                              <span className="font-semibold text-foreground"> 수집 유저 수</span>는 독립적으로
+                              카운트되므로, 원하는 만큼 따로 설정할 수 있습니다.
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {workList.hashtagWork.userCollection?.enabled && (

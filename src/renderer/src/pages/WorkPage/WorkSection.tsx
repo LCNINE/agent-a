@@ -3,7 +3,7 @@ import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { Switch } from '@renderer/components/ui/switch'
-import { ChevronDown, ChevronUp, Star, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileUp, Star, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { WorkCountField } from './WorkCountField'
 import { WorkType } from 'src'
@@ -20,6 +20,8 @@ interface WorkSectionProps {
   hashtags?: string[]
   onAddHashtag?: (tag: string) => void
   onRemoveHashtag?: (tag: string) => void
+  onImportHashtags?: () => void
+  onClearHashtags?: () => void
   error?: boolean
   children?: React.ReactNode
   showCount?: boolean
@@ -35,6 +37,8 @@ export default function WorkSection({
   hashtags,
   onAddHashtag,
   onRemoveHashtag,
+  onImportHashtags,
+  onClearHashtags,
   error,
   children,
   showCount = true
@@ -120,21 +124,55 @@ export default function WorkSection({
             <Button onClick={handleAddHashtag} size="sm">
               추가
             </Button>
+            {onImportHashtags && (
+              <Button
+                type="button"
+                onClick={onImportHashtags}
+                size="sm"
+                variant="outline"
+              >
+                <FileUp className="h-4 w-4 mr-1.5" />
+                엑셀
+              </Button>
+            )}
           </div>
           <div className="space-y-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-between rounded-xl"
-              onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
-            >
-              해시태그 목록 ({hashtags.length || 0})
-              {isHashtagListOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 justify-between rounded-xl"
+                onClick={() => setIsHashtagListOpen(!isHashtagListOpen)}
+              >
+                해시태그 목록 ({hashtags.length || 0})
+                {isHashtagListOpen ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+              {hashtags.length > 0 && onClearHashtags && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `해시태그 ${hashtags.length}개를 모두 삭제할까요?\n이 동작은 되돌릴 수 없습니다.`
+                      )
+                    ) {
+                      onClearHashtags()
+                    }
+                  }}
+                  aria-label="해시태그 전체 삭제"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  전체 삭제
+                </Button>
               )}
-            </Button>
+            </div>
 
             {isHashtagListOpen && (
               <ScrollArea className="relative h-[120px] rounded-xl bg-muted/50 p-3 scrollbar-apple">
