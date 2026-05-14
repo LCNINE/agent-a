@@ -8,7 +8,8 @@ import {
   parsePostCount
 } from '../common/stringUtils'
 
-type HashtagProcessor = (hashtag: Locator) => Promise<boolean>
+export type HashtagProcessResult = { processed: boolean; goalsReached?: boolean }
+type HashtagProcessor = (hashtag: Locator) => Promise<boolean | HashtagProcessResult>
 type LogCallback = (action: string, details?: string, success?: boolean) => void
 
 interface ScrollOptions {
@@ -41,6 +42,7 @@ export class HashtagInteractionService {
   private processed: boolean = false
   private successCount: number = 0
   private processedUrls: Set<string> = new Set() // 이미 처리한 게시물 URL 추적
+  private lastProcessedUrl: string | null = null // page.goto 복귀 후 점프할 위치
   private onLog?: LogCallback
 
   constructor(
@@ -90,6 +92,7 @@ export class HashtagInteractionService {
       this.processed = false
       this.successCount = 0
       this.processedUrls.clear() // 새 해시태그마다 초기화
+      this.lastProcessedUrl = null
       let consecutiveSkips = 0
       let noNewPostsCount = 0
       const MAX_NO_NEW_POSTS = 3 // 새 게시물 없이 스크롤 3회 시 종료
@@ -158,8 +161,16 @@ export class HashtagInteractionService {
             this.options.processingDelay.min
           await this.page.waitForTimeout(delay)
 
+          let goalsReached = false
           try {
-            this.processed = await this.hashtagProcessor(postLoc)
+            const result = await this.hashtagProcessor(postLoc)
+            const normalized: HashtagProcessResult =
+              typeof result === 'boolean' ? { processed: result } : result
+            this.processed = normalized.processed
+            goalsReached = normalized.goalsReached === true
+            if (this.processed) {
+              this.lastProcessedUrl = postUrl
+            }
           } catch (error) {
             this.log('게시물 처리 실패', error instanceof Error ? error.message : String(error), false)
             consecutiveSkips++
@@ -170,8 +181,11 @@ export class HashtagInteractionService {
             }
             continue
           } finally {
-            // 실제로 댓글을 작성한 경우에만 카운트에 추가
-            if (this.processed) {
+            if (goalsReached) {
+              // 두 목표(댓글 + 수집) 모두 달성 - wait 없이 즉시 다음 해시태그로
+              this.log('해시태그 목표 달성', '다음 해시태그로 즉시 이동', true)
+              this.shouldStop = true
+            } else if (this.processed) {
               this.successCount++
               consecutiveSkips = 0
               await wait(this.config.postIntervalSeconds * 1000) // 성공 시에만 긴 대기
@@ -180,6 +194,10 @@ export class HashtagInteractionService {
               this.log('게시물 스킵', '이미 처리했거나 처리 불가능한 게시물')
               await wait(1000) // 실패 시 짧은 대기
             }
+          }
+
+          if (this.shouldStop) {
+            break
           }
 
           // 페이지 이동 감지 - 유저 수집 후 해시태그 복귀 시 locator 갱신 필요
@@ -358,6 +376,41 @@ export class HashtagInteractionService {
     } catch {
       /* 무시 */
     }
+  }
+
+  /**
+   * page.goto로 해시태그 페이지를 새로 로드한 직후 호출.
+   * 마지막으로 처리한 게시물(lastProcessedUrl)이 화면에 보일 때까지 페이지 하단으로
+   * 스크롤한 뒤 그 위치로 점프한다. 이를 통해 1번 게시물부터 다시 순회·스킵하는
+   * 헛손질을 줄인다.
+   */
+  public async scrollToLastProcessedPost(maxAttempts: number = 8): Promise<boolean> {
+    if (!this.lastProcessedUrl) return false
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const target = this.page.locator(`a[href="${this.lastProcessedUrl}"]`).first()
+      try {
+        if ((await target.count()) > 0) {
+          const handle = await target.elementHandle()
+          if (handle) {
+            await smoothScrollToElement(this.page, handle)
+            this.log('마지막 처리 위치 복귀', this.lastProcessedUrl, true)
+            return true
+          }
+        }
+      } catch {
+        // 다음 시도
+      }
+
+      // 페이지 하단으로 스크롤하여 추가 게시물 로드
+      await this.page.evaluate(() => {
+        window.scrollBy({ top: window.innerHeight * 2, behavior: 'auto' })
+      })
+      await this.page.waitForTimeout(1200)
+    }
+
+    this.log('마지막 처리 위치 복귀 실패', this.lastProcessedUrl ?? '', false)
+    return false
   }
 
   private async scrollToLoadMore(): Promise<void> {

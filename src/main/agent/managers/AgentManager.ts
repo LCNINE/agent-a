@@ -617,17 +617,18 @@ export class AgentManager {
           }
 
           this.addLog('해시태그 검색 시작', `#${hashtag}`)
-          const hashtagService = new HashtagService(
+          let hashtagService: HashtagService | null = null
+          hashtagService = new HashtagService(
             this.page,
             async (articleLocator) => {
               let isProcessed = false
 
-              // 두 목표 모두 달성되었으면 빠르게 종료
+              // 두 목표 모두 달성되었으면 즉시 다음 해시태그로 (wait 없이)
               const commentGoalDone = commentsPerHashtag[hashtag] >= maxCommentCount
               const collectionGoalDone = collectedUsersPerHashtag[hashtag] >= maxCollectionCount
               if (commentGoalDone && collectionGoalDone) {
                 this.addLog('목표 달성 완료', `댓글 ${commentsPerHashtag[hashtag]}/${maxCommentCount}, 수집 ${collectedUsersPerHashtag[hashtag]}/${maxCollectionCount}`)
-                return true // successCount 증가 → maxPosts 도달 시 종료
+                return { processed: false, goalsReached: true }
               }
 
               try {
@@ -740,6 +741,7 @@ export class AgentManager {
                         this.addLog('해시태그 복귀', `#${hashtag}`)
                         await this.page!.goto(`https://www.instagram.com/explore/tags/${hashtag}/`, { waitUntil: 'domcontentloaded' })
                         await this.page!.waitForTimeout(2000)
+                        await hashtagService?.scrollToLastProcessedPost()
 
                         return true // 수집 처리했으므로 true 반환
                       }
@@ -792,6 +794,7 @@ export class AgentManager {
                         this.addLog('해시태그 복귀', `#${hashtag}`)
                         await this.page!.goto(`https://www.instagram.com/explore/tags/${hashtag}/`, { waitUntil: 'domcontentloaded' })
                         await this.page!.waitForTimeout(2000)
+                        await hashtagService?.scrollToLastProcessedPost()
 
                         return true // 수집 처리했으므로 true
                       }
@@ -956,6 +959,7 @@ export class AgentManager {
                       this.addLog('해시태그 복귀', `#${hashtag}`)
                       await this.page!.goto(`https://www.instagram.com/explore/tags/${hashtag}/`, { waitUntil: 'domcontentloaded' })
                       await this.page!.waitForTimeout(2000)
+                      await hashtagService?.scrollToLastProcessedPost()
 
                       return true
                     }
