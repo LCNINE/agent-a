@@ -8,7 +8,16 @@ export const electronStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     try {
       const value = await window.electronStore.get(name)
-      return value ? JSON.stringify(value) : null
+      if (value) {
+        return JSON.stringify(value)
+      }
+
+      const localValue = localStorage.getItem(name)
+      if (localValue) {
+        await window.electronStore.set(name, JSON.parse(localValue))
+      }
+
+      return localValue
     } catch (error) {
       console.error('electronStorage getItem error:', error)
       return null

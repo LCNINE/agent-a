@@ -2,7 +2,8 @@
 
 import { LoginCredentials } from 'src'
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { electronStorage } from '@/lib/electronStorage'
 
 interface AccountState {
   accountList: LoginCredentials[]
@@ -150,7 +151,8 @@ export const useAccountStore = create<AccountState>()(
       }
     }),
     {
-      name: 'account' // localStorage 등에 저장될 key
+      name: 'account',
+      storage: createJSONStorage(() => electronStorage)
     }
   )
 )

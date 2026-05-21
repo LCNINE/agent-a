@@ -66,6 +66,12 @@ const defaultWorkList: WorkType = {
     commentEnabled: true,
     postsPerUser: 3,
     skipOldPostsMonths: 0
+  },
+  targetFollowerCollectWork: {
+    count: 200,
+    enabled: false,
+    targetUsers: [],
+    minDailyLimit: 50
   }
 }
 
@@ -157,7 +163,7 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 8,
+      version: 9,
       storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
         workByAccount: state.workByAccount,
@@ -178,6 +184,38 @@ export const useWorkStore = create<WorkState>()(
               autoProcessCommentEnabled: true,
               postsPerCollectedUser: 3
             }
+          }
+          return workList
+        }
+
+        const ensureTargetFollowerCollectWork = (workList: any) => {
+          if (!workList) return workList
+          if (!workList.targetFollowerCollectWork) {
+            workList.targetFollowerCollectWork = JSON.parse(JSON.stringify(defaultWorkList.targetFollowerCollectWork))
+          } else {
+            if (workList.targetFollowerCollectWork.count === undefined) {
+              workList.targetFollowerCollectWork.count = defaultWorkList.targetFollowerCollectWork.count
+            }
+            if (workList.targetFollowerCollectWork.enabled === undefined) {
+              workList.targetFollowerCollectWork.enabled = false
+            }
+            if (!Array.isArray(workList.targetFollowerCollectWork.targetUsers)) {
+              workList.targetFollowerCollectWork.targetUsers = []
+            }
+            if (workList.targetFollowerCollectWork.minDailyLimit === undefined) {
+              workList.targetFollowerCollectWork.minDailyLimit = defaultWorkList.targetFollowerCollectWork.minDailyLimit
+            }
+          }
+          return workList
+        }
+
+        const ensureTargetUserDefaults = (workList: any) => {
+          if (!workList) return workList
+          if (!workList.targetUserWork) {
+            workList.targetUserWork = JSON.parse(JSON.stringify(defaultWorkList.targetUserWork))
+          }
+          if (workList.targetUserWork.skipOldPostsMonths === undefined) {
+            workList.targetUserWork.skipOldPostsMonths = defaultWorkList.targetUserWork.skipOldPostsMonths
           }
           return workList
         }
@@ -204,6 +242,8 @@ export const useWorkStore = create<WorkState>()(
               }
             }
             ensureUserCollection(state.workList)
+            ensureTargetUserDefaults(state.workList)
+            ensureTargetFollowerCollectWork(state.workList)
             migratedDefaultWork = state.workList
           }
 
@@ -217,10 +257,14 @@ export const useWorkStore = create<WorkState>()(
         // v7에서도 userCollection 필드 보장
         if (state.defaultWork) {
           ensureUserCollection(state.defaultWork)
+          ensureTargetUserDefaults(state.defaultWork)
+          ensureTargetFollowerCollectWork(state.defaultWork)
         }
         if (state.workByAccount) {
           for (const key of Object.keys(state.workByAccount)) {
             ensureUserCollection(state.workByAccount[key])
+            ensureTargetUserDefaults(state.workByAccount[key])
+            ensureTargetFollowerCollectWork(state.workByAccount[key])
           }
         }
 

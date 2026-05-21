@@ -81,7 +81,18 @@ type WorkItem = {
 
 export interface TargetUser {
   username: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  status: 'pending' | 'processing' | 'waiting' | 'completed' | 'failed'
+  processedAt?: number
+  error?: string
+}
+
+export interface TargetFollowerCollectionTarget {
+  username: string
+  groupName?: string
+  status: 'pending' | 'processing' | 'waiting' | 'completed' | 'failed'
+  followerCount?: number
+  collectedCount?: number
+  nextRunAt?: number
   processedAt?: number
   error?: string
 }
@@ -123,6 +134,10 @@ export type WorkType = {
     commentEnabled: boolean
     postsPerUser: number
     skipOldPostsMonths: number  // 0 = 비활성화, 1/3/6/12 = N개월 이상 지난 게시물 스킵
+  }
+  targetFollowerCollectWork: WorkItem & {
+    targetUsers: TargetFollowerCollectionTarget[]
+    minDailyLimit: number
   }
 }
 
@@ -168,6 +183,7 @@ export interface StartAgentParams {
   config: AgentConfig
   workList: WorkType
   userId: string
+  userEmail?: string
 }
 
 interface AgentContext {

@@ -83,7 +83,7 @@ function addAgentEventListeners(mainWindow: BrowserWindow) {
         startPowerSaveBlocker()
       }
 
-      const manager = new AgentManager(params.workList, params.config, mainWindow, agentId, params.userId)
+      const manager = new AgentManager(params.workList, params.config, mainWindow, agentId, params.userId, params.userEmail)
       managers.set(agentId, manager)
       await manager.start(params.config, params.workList)
 

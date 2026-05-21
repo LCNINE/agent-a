@@ -2,6 +2,8 @@
 
 import { useWorkStore } from '@/store/workStore'
 import { useAccountStore } from '@/store/accountStore'
+import { useAuthContext } from '@/hooks/useAuth'
+import useCreateClient from '@/supabase/client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Footer from '@renderer/components/template/Footer'
 import { Form } from '@renderer/components/ui/form'
@@ -10,7 +12,7 @@ import { TooltipProvider } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
 import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch, Info, ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { WorkType, TargetUser, UserCollectionSettings } from 'src'
+import { WorkType, TargetUser, UserCollectionSettings, TargetFollowerCollectionTarget } from 'src'
 import { workSchema, WorkSchema } from './schema'
 import WorkSection from './WorkSection'
 import { useForm } from 'react-hook-form'
@@ -21,6 +23,7 @@ import { Input } from '@renderer/components/ui/input'
 import TargetUserImportDialog from '@renderer/components/TargetUserImportDialog'
 import HashtagImportDialog from '@renderer/components/HashtagImportDialog'
 import TargetUserList from '@renderer/components/TargetUserList'
+import TargetFollowerList from '@renderer/components/TargetFollowerList'
 import { cn } from '@renderer/lib/utils'
 import { CustomToast } from '@renderer/components/CustomToast'
 import {
@@ -32,6 +35,8 @@ import {
 } from "@renderer/components/ui/select"
 
 export default function WorkPage() {
+  const supabase = useCreateClient()
+  const { user } = useAuthContext()
   const workByAccount = useWorkStore((state) => state.workByAccount)
   const defaultWork = useWorkStore((state) => state.defaultWork)
   const upsert = useWorkStore((state) => state.upsert)
@@ -238,6 +243,146 @@ export default function WorkPage() {
     })
   }
 
+  const handleAddTargetFollowerUser = (username: string, groupName?: string) => {
+    const normalized = username.trim().replace(/^@/, '').toLowerCase()
+    if (!normalized) return
+    if (workList.targetFollowerCollectWork.targetUsers.some(u => u.username.toLowerCase() === normalized)) {
+      return
+    }
+
+    const nextUser: TargetFollowerCollectionTarget = {
+      username: normalized,
+      groupName: groupName?.trim() || undefined,
+      status: 'pending'
+    }
+
+    upsert({
+      targetFollowerCollectWork: {
+        ...workList.targetFollowerCollectWork,
+        targetUsers: [...workList.targetFollowerCollectWork.targetUsers, nextUser]
+      }
+    })
+  }
+
+  const handleUpdateTargetFollowerGroup = (username: string, groupName: string) => {
+    upsert({
+      targetFollowerCollectWork: {
+        ...workList.targetFollowerCollectWork,
+        targetUsers: workList.targetFollowerCollectWork.targetUsers.map((user) =>
+          user.username === username ? { ...user, groupName: groupName.trim() || undefined } : user
+        )
+      }
+    })
+  }
+
+  const handleRemoveTargetFollowerUser = (username: string) => {
+    upsert({
+      targetFollowerCollectWork: {
+        ...workList.targetFollowerCollectWork,
+        targetUsers: workList.targetFollowerCollectWork.targetUsers.filter(u => u.username !== username)
+      }
+    })
+  }
+
+  const handleResetTargetFollowerUser = async (username: string) => {
+    const normalized = username.trim().replace(/^@/, '').toLowerCase()
+    if (!normalized) return
+
+    const resetLocalTarget = () => {
+      upsert({
+        targetFollowerCollectWork: {
+          ...workList.targetFollowerCollectWork,
+          targetUsers: workList.targetFollowerCollectWork.targetUsers.map((target) =>
+            target.username.toLowerCase() === normalized
+              ? {
+                  ...target,
+                  status: 'pending' as const,
+                  followerCount: undefined,
+                  nextRunAt: undefined,
+                  processedAt: undefined,
+                  error: undefined
+                }
+              : target
+          )
+        }
+      })
+    }
+
+    if (!user?.id) {
+      resetLocalTarget()
+      CustomToast({
+        status: 'info',
+        message: `@${normalized} 화면 상태만 초기화했습니다.`,
+        description: '로그인 사용자 정보를 확인하지 못해 서버의 다음 실행 예약은 변경하지 못했습니다.',
+        position: 'top-center',
+        duration: 4500
+      })
+      return
+    }
+
+    try {
+      const { error } = await (supabase as any)
+        .from('target_follower_collection_jobs')
+        .update({
+          status: 'pending',
+          target_follower_count: null,
+          configured_daily_limit: workList.targetFollowerCollectWork.count || 200,
+          adaptive_daily_limit: workList.targetFollowerCollectWork.count || 200,
+          scroll_delay_ms: 1800,
+          last_error: null,
+          next_run_at: null,
+          completed_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('app_user_id', user.id)
+        .eq('target_username', normalized)
+
+      if (error) throw error
+
+      resetLocalTarget()
+      CustomToast({
+        status: 'success',
+        message: `@${normalized} 대기 예약을 해제했습니다.`,
+        description: '에이전트를 실행하면 이 타겟을 다시 확인합니다. 이미 저장된 팔로워 데이터는 그대로 유지됩니다.',
+        position: 'top-center',
+        duration: 4500
+      })
+    } catch (error) {
+      CustomToast({
+        status: 'error',
+        message: `@${normalized} 대기 초기화에 실패했습니다.`,
+        description: error instanceof Error ? error.message : String(error),
+        position: 'top-center',
+        duration: 4000
+      })
+    }
+  }
+
+  const handleClearAllTargetFollowerUsers = () => {
+    upsert({
+      targetFollowerCollectWork: {
+        ...workList.targetFollowerCollectWork,
+        targetUsers: []
+      }
+    })
+  }
+
+  const handleTargetFollowerSettingChange = (
+    key: 'count' | 'minDailyLimit',
+    value: number
+  ) => {
+    const safeValue = key === 'count'
+      ? Math.min(1000, Math.max(1, value))
+      : Math.min(workList.targetFollowerCollectWork.count, Math.max(1, value))
+
+    upsert({
+      targetFollowerCollectWork: {
+        ...workList.targetFollowerCollectWork,
+        [key]: safeValue
+      }
+    })
+  }
+
   const handleHashtagFollowChange = (enabled: boolean) => {
     upsert({
       hashtagWork: {
@@ -404,7 +549,7 @@ export default function WorkPage() {
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="flex items-center justify-between rounded-lg border p-3">
                         <div className="flex items-center gap-2">
                           <Heart className="h-4 w-4 text-apple-red" />
@@ -471,6 +616,69 @@ export default function WorkPage() {
                       onAddUser={handleAddTargetUser}
                       onRemoveUser={handleRemoveTargetUser}
                       onClearAll={handleClearAllTargetUsers}
+                    />
+                  </div>
+                </WorkSection>
+
+                <WorkSection
+                  title="타겟 유저 팔로워 수집"
+                  type="targetFollowerCollectWork"
+                  icon={<UserSearch className="h-5 w-5 text-apple-orange" />}
+                  description="지정한 타겟 유저의 팔로워 목록을 하루 단위로 안정적으로 수집합니다."
+                  enabled={workList.targetFollowerCollectWork.enabled}
+                  onToggle={() => {
+                    handleSwitchChange('targetFollowerCollectWork', workList.targetFollowerCollectWork.enabled)
+                    removeError('noTargetFollowerUsers')
+                  }}
+                  showCount={false}
+                  error={hasError('noTargetFollowerUsers')}
+                >
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3 rounded-lg border p-3">
+                        <Label className="text-sm whitespace-nowrap">하루 수집 상한</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={1000}
+                          value={workList.targetFollowerCollectWork.count}
+                          onChange={(e) =>
+                            handleTargetFollowerSettingChange(
+                              'count',
+                              parseInt(e.target.value, 10) || 200
+                            )
+                          }
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">명</span>
+                      </div>
+
+                      <div className="flex items-center gap-3 rounded-lg border p-3">
+                        <Label className="text-sm whitespace-nowrap">자동 감소 하한</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={workList.targetFollowerCollectWork.count}
+                          value={workList.targetFollowerCollectWork.minDailyLimit}
+                          onChange={(e) =>
+                            handleTargetFollowerSettingChange(
+                              'minDailyLimit',
+                              parseInt(e.target.value, 10) || 50
+                            )
+                          }
+                          className="w-24"
+                        />
+                        <span className="text-sm text-muted-foreground">명</span>
+                      </div>
+                    </div>
+
+                    <TargetFollowerList
+                      users={workList.targetFollowerCollectWork.targetUsers}
+                      onAddUser={handleAddTargetFollowerUser}
+                      onRemoveUser={handleRemoveTargetFollowerUser}
+                      onResetUser={handleResetTargetFollowerUser}
+                      onUpdateGroup={handleUpdateTargetFollowerGroup}
+                      onClearAll={handleClearAllTargetFollowerUsers}
                     />
                   </div>
                 </WorkSection>

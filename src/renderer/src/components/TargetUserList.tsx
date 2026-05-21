@@ -36,6 +36,11 @@ const statusConfig = {
     label: '처리중',
     className: 'text-apple-blue animate-spin'
   },
+  waiting: {
+    icon: Clock,
+    label: '대기',
+    className: 'text-apple-orange'
+  },
   completed: {
     icon: CheckCircle2,
     label: '완료',

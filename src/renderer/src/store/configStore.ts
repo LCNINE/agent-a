@@ -1,6 +1,7 @@
 import { LoginCredentials } from 'src'
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { electronStorage } from '@/lib/electronStorage'
 
 export type AgentConfig = {
   prompt:
@@ -66,6 +67,7 @@ export const useConfigStore = create<ConfigState>()(
 
     {
       name: 'config',
+      storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
         config: state.config
       })

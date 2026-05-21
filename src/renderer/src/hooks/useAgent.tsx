@@ -30,7 +30,7 @@ export function useAgent() {
     }
   }, [])
 
-  const startAgent = async (credentials: LoginCredentials, userId: string) => {
+  const startAgent = async (credentials: LoginCredentials, userId: string, userEmail?: string) => {
     if (!credentials.username || !credentials.password) {
       CustomToast({
         status: 'error',
@@ -59,14 +59,16 @@ export function useAgent() {
         workEnabled: {
           feedWork: workList.feedWork.enabled,
           hashtagWork: workList.hashtagWork.enabled,
-          targetUserWork: workList.targetUserWork.enabled
+          targetUserWork: workList.targetUserWork.enabled,
+          targetFollowerCollectWork: workList.targetFollowerCollectWork?.enabled
         }
       })
 
       await window.agent.start({
         config: agentConfig,
         workList,
-        userId
+        userId,
+        userEmail
       })
 
       clearAllErrors()

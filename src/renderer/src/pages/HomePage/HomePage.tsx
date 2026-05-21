@@ -40,6 +40,8 @@ export default function HomePage() {
     if (!status.currentWork) return null
     if (status.currentWork.feedWork.enabled) return '피드 작업'
     if (status.currentWork.hashtagWork.enabled) return '해시태그 검색 작업'
+    if (status.currentWork.targetFollowerCollectWork?.enabled) return '타겟 유저 팔로워 수집'
+    if (status.currentWork.targetUserWork?.enabled) return '타겟 유저 프로필 방문'
     if (status.currentWork.myFeedInteractionWork.enabled) return '내 피드 댓글 작업'
     return '작업 진행 중'
   }

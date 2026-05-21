@@ -1,5 +1,5 @@
 import { BrowserContext, Locator, Page } from 'playwright-core'
-import { AgentConfig, WorkType, UserCollectionSettings } from '../../..'
+import { AgentConfig, WorkType, UserCollectionSettings, TargetFollowerCollectionTarget } from '../../..'
 import { startBrowser } from '../common/browser'
 import { loginWithCredentials, navigateToHome } from '../common/browserUtils'
 import { checkedAction } from '../common/checkedAction'
@@ -20,6 +20,7 @@ import { MyFeedInteractionService } from '../services/MyFeedInteractionService'
 import { TargetUserProcessingService } from '../services/TargetUserProcessingService'
 import { SuggestedUsersService } from '../services/SuggestedUsersService'
 import { UserCollectionService } from '../services/UserCollectionService'
+import { TargetFollowerCollectionService } from '../services/TargetFollowerCollectionService'
 import { app, BrowserWindow } from 'electron'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../../../renderer/src/supabase/database.types'
@@ -69,7 +70,8 @@ export class AgentManager {
     private config: AgentConfig,
     mainWindow?: BrowserWindow,
     private agentId?: string,
-    private userId?: string
+    private userId?: string,
+    private userEmail?: string
   ) {
     this.excludeUsernames = new Set(this.config.excludeUsernames)
     this.mainWindow = mainWindow || BrowserWindow.getAllWindows()[0]
@@ -1310,12 +1312,57 @@ export class AgentManager {
         this.addLog('타겟 유저 작업 완료')
       }
 
+      if (work.targetFollowerCollectWork?.enabled) {
+        this.addLog('타겟 유저 팔로워 수집 시작')
+        await this.page.waitForTimeout(2000)
+
+        const targets = work.targetFollowerCollectWork.targetUsers || []
+        if (targets.length === 0) {
+          this.addLog('타겟 유저 팔로워 수집', '대기 중인 타겟이 없습니다')
+        } else {
+          const followerCollectionService = new TargetFollowerCollectionService(
+            this.page,
+            this.supabase as any,
+            {
+              appUserId: this.userId || 'unknown',
+              appUserEmail: this.userEmail || this.userId || 'unknown',
+              dailyLimit: Math.max(1, work.targetFollowerCollectWork.count || 200),
+              minDailyLimit: Math.max(1, work.targetFollowerCollectWork.minDailyLimit || 50),
+              isRunning: () => this._status.isRunning,
+              onLog: (action: string, details?: string, success?: boolean) => {
+                this.addLog(action, details, success)
+              },
+              onTargetStatusUpdate: (
+                username: string,
+                patch: Partial<TargetFollowerCollectionTarget>
+              ) => {
+                const userIndex = targets.findIndex((u) => u.username.toLowerCase() === username.toLowerCase())
+                if (userIndex !== -1) {
+                  targets[userIndex] = {
+                    ...targets[userIndex],
+                    ...patch
+                  }
+                  this.broadcastStatus()
+                }
+              }
+            }
+          )
+
+          await followerCollectionService.processTargets(targets)
+        }
+
+        this._status.waiting = null
+        this.broadcastStatus()
+        this.addLog('타겟 유저 팔로워 수집 완료')
+      }
+
       if (
         !work.myFeedInteractionWork.enabled &&
         !work.feedWork.enabled &&
         !work.hashtagWork.enabled &&
         !work.hashtagInteractionWork.enabled &&
-        !work.targetUserWork?.enabled
+        !work.targetUserWork?.enabled &&
+        !work.targetFollowerCollectWork?.enabled
       ) {
         this.addLog('지원하지 않는 작업', '활성화된 작업이 없습니다', false)
         throw Error('지원하지 않는 작업')

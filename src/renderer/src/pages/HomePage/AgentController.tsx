@@ -105,12 +105,25 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       return false
     }
 
+    if (workList.targetFollowerCollectWork?.enabled && workList.targetFollowerCollectWork.targetUsers.length === 0) {
+      addError('noTargetFollowerUsers')
+      CustomToast({
+        status: 'error',
+        message: `[${username}] 팔로워 수집 타겟 유저가 설정되지 않았습니다.`,
+        position: 'top-center',
+        duration: 2000,
+        action: { label: '설정하기', onClick: () => router.navigate({ to: '/work' }) }
+      })
+      return false
+    }
+
     if (
       !workList.feedWork.enabled &&
       !workList.hashtagWork.enabled &&
       !workList.hashtagInteractionWork.enabled &&
       !workList.myFeedInteractionWork.enabled &&
-      !workList.targetUserWork?.enabled
+      !workList.targetUserWork?.enabled &&
+      !workList.targetFollowerCollectWork?.enabled
     ) {
       addError('all')
       CustomToast({
@@ -137,7 +150,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       })
       return
     }
-    startAgent({ username: account.username, password: account.password }, user?.id || '')
+    startAgent({ username: account.username, password: account.password }, user?.id || '', user?.email)
   }
 
   const activeAccountList = accountList.filter((a) => activeAccounts.includes(a.username))
@@ -162,7 +175,7 @@ export function AgentController({ isSubscriptionActive, maxInstances }: AgentCon
       if (!status.isRunning && account.password) {
         // 각 계정별로 work 검증
         if (!validateWorkForAccount(account.username)) continue
-        startAgent({ username: account.username, password: account.password }, user?.id || '')
+        startAgent({ username: account.username, password: account.password }, user?.id || '', user?.email)
         started++
       }
     }
