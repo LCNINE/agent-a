@@ -8,9 +8,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Footer from '@renderer/components/template/Footer'
 import { Form } from '@renderer/components/ui/form'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
-import { TooltipProvider } from '@renderer/components/ui/tooltip'
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip'
 import { useErrorStore } from '@renderer/store/errorStore'
-import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch, Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { Hash, MessageSquare, Rss, Users, FileUp, Heart, MessageCircle, UserPlus, User, UserSearch, Info, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { WorkType, TargetUser, UserCollectionSettings, TargetFollowerCollectionTarget } from 'src'
 import { workSchema, WorkSchema } from './schema'
@@ -372,7 +372,7 @@ export default function WorkPage() {
     value: number
   ) => {
     const safeValue = key === 'count'
-      ? Math.min(1000, Math.max(1, value))
+      ? Math.max(1, value)
       : Math.min(workList.targetFollowerCollectWork.count, Math.max(1, value))
 
     upsert({
@@ -640,7 +640,6 @@ export default function WorkPage() {
                         <Input
                           type="number"
                           min={1}
-                          max={1000}
                           value={workList.targetFollowerCollectWork.count}
                           onChange={(e) =>
                             handleTargetFollowerSettingChange(
@@ -655,6 +654,17 @@ export default function WorkPage() {
 
                       <div className="flex items-center gap-3 rounded-lg border p-3">
                         <Label className="text-sm whitespace-nowrap">자동 감소 하한</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 cursor-help text-muted-foreground shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>
+                              인스타그램 활동 제한이 감지되면 다음 수집 한도를 약 20%씩 자동으로 줄여 계정을 보호합니다.
+                              이 값은 그 감소의 최저선으로, 한도가 아무리 줄어도 이 수치 밑으로는 내려가지 않습니다. (기본 50명)
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
                         <Input
                           type="number"
                           min={1}

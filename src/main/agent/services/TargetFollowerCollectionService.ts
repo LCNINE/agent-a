@@ -40,6 +40,8 @@ interface CollectionResult {
   insertedCount: number
   followerCount: number | null
   stoppedByEnd: boolean
+  // 팔로워 수에 한참 못 미치는데 스크롤이 바닥남 = 인스타 차단 의심 (진짜 목록 끝과 구분)
+  suspectedBlock: boolean
 }
 
 export class TargetFollowerCollectionService {
@@ -131,6 +133,12 @@ export class TargetFollowerCollectionService {
 
       const alreadyCollected = await this.countCollectedFollowers(targetUsername)
       const dailyLimit = this.resolveDailyLimit(job)
+      // 직전에 차단 등으로 한도가 줄어든 타겟이면 막힌 팔로워 창을 재사용하지 않고
+      // 새로고침 후 프로필을 다시 열어 줄어든 한도로 재수집한다.
+      const forceFresh =
+        job.configured_daily_limit > 0 &&
+        job.adaptive_daily_limit > 0 &&
+        job.adaptive_daily_limit < job.configured_daily_limit
       this.options.onTargetStatusUpdate?.(targetUsername, {
         status: 'processing',
         followerCount: job.target_follower_count ?? undefined,
@@ -138,14 +146,24 @@ export class TargetFollowerCollectionService {
         error: undefined
       })
 
-      this.log('타겟 팔로워 수집 시작', `@${targetUsername} 하루 상한 ${dailyLimit}명`)
+      this.log(
+        '타겟 팔로워 수집 시작',
+        `@${targetUsername} 하루 상한 ${dailyLimit}명${forceFresh ? ' (직전 차단/부진으로 새로고침 후 재접속)' : ''}`
+      )
 
-      const result = await this.collectFollowers(targetUsername, targetGroup, dailyLimit, alreadyCollected, job.scroll_delay_ms)
+      const result = await this.collectFollowers(targetUsername, targetGroup, dailyLimit, alreadyCollected, job.scroll_delay_ms, forceFresh)
       const totalCollected = await this.countCollectedFollowers(targetUsername)
       const followerCount = result.followerCount ?? job.target_follower_count
       const isComplete = followerCount !== null && followerCount > 0 && totalCollected >= followerCount
       const nextRun = isComplete ? null : this.getNextRunAt()
       const adaptive = this.getNextAdaptiveSettings(job, result)
+      if (adaptive.dailyLimit < dailyLimit) {
+        this.log(
+          '수집 한도 축소',
+          `@${targetUsername} ${dailyLimit} → ${adaptive.dailyLimit}명 (${result.suspectedBlock ? '차단 의심' : '수집 부진'}, 다음 작업부터 적용)`,
+          false
+        )
+      }
 
       await this.updateJob(job.id, {
         target_follower_count: followerCount,
@@ -206,9 +224,15 @@ export class TargetFollowerCollectionService {
     targetGroup: string | null,
     dailyLimit: number,
     alreadyCollected: number,
-    scrollDelayMs: number
+    scrollDelayMs: number,
+    forceFresh: boolean = false
   ): Promise<CollectionResult> {
-    const reusableDialog = await this.getReusableFollowersDialog(targetUsername)
+    // 직전에 차단 의심으로 끝난 타겟은 떠 있던 (막힌) 팔로워 창을 재사용하지 않고
+    // 무조건 새로고침 + 프로필 재접속으로 깨끗하게 다시 시작한다.
+    if (forceFresh) {
+      this.log('차단 의심 후 재접속', `@${targetUsername} 새로고침 후 처음부터 재수집`)
+    }
+    const reusableDialog = forceFresh ? null : await this.getReusableFollowersDialog(targetUsername)
     const reusedOpenDialog = Boolean(reusableDialog)
     let followerCount: number | null = null
     let dialog = reusableDialog
@@ -219,6 +243,12 @@ export class TargetFollowerCollectionService {
     } else {
       const profileUrl = `https://www.instagram.com/${targetUsername}/`
       await this.page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+
+      // 차단 의심 후 재접속이면 막힌 상태/캐시를 확실히 털어내기 위해 한 번 더 새로고침
+      if (forceFresh) {
+        this.log('차단 의심 후 새로고침', `@${targetUsername} 페이지 reload`)
+        await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
+      }
 
       if (!(await this.waitForProfileLoad())) {
         await this.page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 })
@@ -248,6 +278,7 @@ export class TargetFollowerCollectionService {
     let stagnantRounds = 0
     let lastScrollTop = -1
     let stoppedByEnd = false
+    let suspectedBlock = false
     const attemptedThisRun = new Set<string>()
     const maxScrollRounds = this.resolveMaxScrollRounds(dailyLimit)
 
@@ -292,7 +323,21 @@ export class TargetFollowerCollectionService {
 
       if (stagnantRounds >= 6) {
         stoppedByEnd = true
-        this.log('팔로워 목록 끝 감지', `@${targetUsername} 스크롤 ${rounds}회`)
+        const totalNow = alreadyCollected + insertedCount
+        // 팔로워 수의 70%도 못 모았는데 바닥 = 진짜 목록 끝이 아니라 인스타가 막은 것
+        suspectedBlock =
+          followerCount !== null &&
+          followerCount > 0 &&
+          totalNow < Math.floor(followerCount * 0.7)
+        if (suspectedBlock) {
+          this.log(
+            '인스타 차단 의심',
+            `@${targetUsername} 팔로워 ${followerCount!.toLocaleString()}명 중 ${totalNow}명만 수집 후 스크롤 바닥 — 다음 작업은 새로고침 후 재접속, 한도 축소 예정`,
+            false
+          )
+        } else {
+          this.log('팔로워 목록 끝 감지', `@${targetUsername} 스크롤 ${rounds}회, 누적 ${totalNow}명`)
+        }
         break
       }
     }
@@ -311,7 +356,8 @@ export class TargetFollowerCollectionService {
     return {
       insertedCount,
       followerCount,
-      stoppedByEnd
+      stoppedByEnd,
+      suspectedBlock
     }
   }
 
@@ -635,7 +681,11 @@ export class TargetFollowerCollectionService {
     const configured = Math.max(1, this.options.dailyLimit)
     const currentLimit = Math.min(configured, Math.max(this.options.minDailyLimit, job.adaptive_daily_limit || configured))
 
-    if (result.insertedCount === 0 || (result.stoppedByEnd && result.insertedCount < currentLimit)) {
+    if (
+      result.suspectedBlock ||
+      result.insertedCount === 0 ||
+      (result.stoppedByEnd && result.insertedCount < currentLimit)
+    ) {
       return {
         dailyLimit: this.reduceDailyLimit(currentLimit),
         scrollDelayMs: Math.min(6000, (job.scroll_delay_ms || 1800) + 500)
