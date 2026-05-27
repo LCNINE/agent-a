@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { EditAccountDialog } from './EditAccountDialog'
 import { useAccountStore } from '@/store/accountStore'
+import { useConfigStore } from '@/store/configStore'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, Circle, Edit2, Key, Lock, Trash2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
@@ -36,6 +37,7 @@ export function AccountTable({ accounts, maxInstances }: AccountTableProps) {
   const { t } = useTranslation()
   const { deleteAccount, selectAccount, selectedAccount, activeAccounts, toggleAccountActive } =
     useAccountStore()
+  const { deleteAccountPrompt } = useConfigStore()
 
   const handleToggleActive = (e: React.MouseEvent, username: string) => {
     e.stopPropagation()
@@ -47,6 +49,7 @@ export function AccountTable({ accounts, maxInstances }: AccountTableProps) {
 
   const handleDeleteAccount = (username: string) => {
     deleteAccount(username)
+    deleteAccountPrompt(username)
     toast.success(t('accountTable.accountDeleted'))
   }
 

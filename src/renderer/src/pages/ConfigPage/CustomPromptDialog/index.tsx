@@ -19,13 +19,15 @@ import { useConfigStore } from '@/store/configStore'
 
 export default function CustomPromptDialog({
   visible,
-  setVisible
+  setVisible,
+  selectedAccount
 }: {
   visible: boolean
   setVisible: (visible: boolean) => void
+  selectedAccount?: string
 }) {
   const [activeTab, setActiveTab] = useState<'help' | 'precautions' | null>(null)
-  const { setConfig } = useConfigStore()
+  const { setConfig, setPromptForAccount } = useConfigStore()
   const form = useFormContext<ConfigSchema>()
 
   return (
@@ -210,12 +212,12 @@ export default function CustomPromptDialog({
                   return
                 }
 
-                setConfig({
-                  prompt: {
-                    preset: 'custom',
-                    custom: customValue as string
-                  }
-                })
+                const promptValue = { preset: 'custom' as const, custom: customValue as string }
+                if (selectedAccount) {
+                  setPromptForAccount(selectedAccount, promptValue)
+                } else {
+                  setConfig({ prompt: promptValue })
+                }
                 setVisible(false)
               }}
             >

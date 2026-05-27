@@ -3,15 +3,12 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { electronStorage } from '@/lib/electronStorage'
 
+export type AgentPrompt =
+  | { preset: 'formal' | 'casual' | 'hyper' }
+  | { preset: 'custom'; custom: string }
+
 export type AgentConfig = {
-  prompt:
-    | {
-        preset: 'formal' | 'casual' | 'hyper'
-      }
-    | {
-        preset: 'custom'
-        custom: string
-      }
+  prompt: AgentPrompt
   commentLength: {
     min: number
     max: number
@@ -27,9 +24,13 @@ export type AgentConfig = {
 
 export type ConfigState = {
   config: AgentConfig
+  promptByAccount: Record<string, AgentPrompt>
   setConfig: (newConfig: Partial<AgentConfig>) => void
   resetConfig: () => void
   setIsDirty: (isDirty: boolean) => void
+  setPromptForAccount: (username: string, prompt: AgentPrompt) => void
+  getPromptForAccount: (username: string) => AgentPrompt
+  deleteAccountPrompt: (username: string) => void
   excludeUsernames?: string[]
 }
 
@@ -50,8 +51,9 @@ const defaultConfig: AgentConfig = {
 
 export const useConfigStore = create<ConfigState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       config: defaultConfig,
+      promptByAccount: {},
       isDirty: false,
       excludeUsernames: undefined,
       setConfig: (newConfig) =>
@@ -62,14 +64,29 @@ export const useConfigStore = create<ConfigState>()(
         set((state) => ({
           config: { ...state.config, isDirty }
         })),
-      resetConfig: () => set({ config: defaultConfig })
+      resetConfig: () => set({ config: defaultConfig }),
+      setPromptForAccount: (username, prompt) =>
+        set((state) => ({
+          promptByAccount: { ...state.promptByAccount, [username]: prompt }
+        })),
+      getPromptForAccount: (username) => {
+        const { promptByAccount, config } = get()
+        return promptByAccount[username] ?? config.prompt
+      },
+      deleteAccountPrompt: (username) =>
+        set((state) => {
+          const next = { ...state.promptByAccount }
+          delete next[username]
+          return { promptByAccount: next }
+        })
     }),
 
     {
       name: 'config',
       storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
-        config: state.config
+        config: state.config,
+        promptByAccount: state.promptByAccount
       })
     }
   )

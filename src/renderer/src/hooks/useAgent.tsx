@@ -7,6 +7,7 @@ import { useWorkStore } from '../store/workStore'
 
 export function useAgent() {
   const config = useConfigStore((state) => state.config)
+  const getPromptForAccount = useConfigStore((state) => state.getPromptForAccount)
   const getWorkForAccount = useWorkStore((state) => state.getWorkForAccount)
   const { clearAllErrors } = useErrorStore()
 
@@ -44,6 +45,7 @@ export function useAgent() {
     try {
       const agentConfig = {
         ...config,
+        prompt: getPromptForAccount(credentials.username),
         credentials: {
           username: credentials.username,
           password: credentials.password

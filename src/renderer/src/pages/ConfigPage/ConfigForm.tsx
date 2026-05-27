@@ -12,11 +12,19 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAccountStore } from '@/store/accountStore'
 import { useConfigStore } from '@/store/configStore'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@renderer/lib/utils'
-import { Check, Clock, HelpCircle, MessageSquare, PencilLine, Timer, X, Pencil } from 'lucide-react'
+import { Check, Clock, HelpCircle, MessageSquare, PencilLine, Timer, X, Pencil, User } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -29,7 +37,9 @@ import { useAuth } from '@/hooks/useAuth'
 
 export function ConfigForm() {
   const { t } = useTranslation()
-  const { config, setConfig, setIsDirty } = useConfigStore()
+  const { config, setConfig, setIsDirty, promptByAccount, setPromptForAccount, getPromptForAccount } = useConfigStore()
+  const accountList = useAccountStore((state) => state.accountList)
+  const [selectedAccount, setSelectedAccount] = useState<string>('')
   const [isCustomPromptDialogOpen, setIsCustomPromptDialogOpen] = useState(false)
   const supabase = useCreateClient()
   const { user } = useAuth()
@@ -64,6 +74,11 @@ export function ConfigForm() {
   useEffect(() => {
     form.reset(config)
   }, [])
+
+  useEffect(() => {
+    const prompt = selectedAccount ? getPromptForAccount(selectedAccount) : config.prompt
+    form.setValue('prompt', prompt as any)
+  }, [selectedAccount])
 
   useEffect(() => {
     const loadBlockedAccounts = async () => {
@@ -145,26 +160,20 @@ export function ConfigForm() {
         }
       }
 
-      setConfig({
-        ...values,
-        commentLength: {
-          min:
-            form.watch('commentLengthPreset') === 'short'
-              ? 10
-              : form.watch('commentLengthPreset') === 'normal'
-                ? 30
-                : 50,
-          max:
-            form.watch('commentLengthPreset') === 'short'
-              ? 20
-              : form.watch('commentLengthPreset') === 'normal'
-                ? 50
-                : 100
-        }
-      })
+      const preset = form.watch('commentLengthPreset')
+      const commentLength = {
+        min: preset === 'short' ? 10 : preset === 'normal' ? 30 : 50,
+        max: preset === 'short' ? 20 : preset === 'normal' ? 50 : 100
+      }
+
+      if (selectedAccount) {
+        setPromptForAccount(selectedAccount, values.prompt)
+      } else {
+        setConfig({ ...values, commentLength })
+      }
 
       form.reset(values)
-      toast.success('설정이 저장되었습니다')
+      toast.success(selectedAccount ? `@${selectedAccount} 프롬프트가 저장되었습니다` : '설정이 저장되었습니다')
     } catch (error) {
       console.error('설정 저장 중 오류:', error)
       toast.error(t('configForm.error.save'))
@@ -260,7 +269,47 @@ export function ConfigForm() {
                 <CustomPromptDialog
                   visible={isCustomPromptDialogOpen}
                   setVisible={setIsCustomPromptDialogOpen}
+                  selectedAccount={selectedAccount}
                 />
+              )}
+
+              {/* 계정 선택 (프롬프트 개별 설정용) */}
+              {accountList.length > 1 && (
+                <Card className="overflow-hidden">
+                  <div className="p-4 border-b border-border/50 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <User className="h-5 w-5 text-apple-green" />
+                      <h3 className="font-semibold">계정별 프롬프트 설정</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">계정을 선택하면 해당 계정에만 적용되는 댓글 스타일을 설정할 수 있습니다</p>
+                  </div>
+                  <CardContent className="p-4">
+                    <Select
+                      value={selectedAccount}
+                      onValueChange={(value) => setSelectedAccount(value === '__global__' ? '' : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="전체 (공통 설정)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__global__">전체 (공통 설정)</SelectItem>
+                        {accountList.map((account) => (
+                          <SelectItem key={account.username} value={account.username}>
+                            @{account.username}
+                            {promptByAccount[account.username] && (
+                              <span className="ml-2 text-xs text-primary">• 개별설정</span>
+                            )}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedAccount && (
+                      <p className="text-xs text-primary mt-2">
+                        @{selectedAccount} 계정의 댓글 스타일을 설정 중입니다
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               )}
 
               {/* 섹션 1: 댓글 스타일 */}
