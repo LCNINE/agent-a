@@ -9,7 +9,6 @@ interface TargetFollowerCollectionOptions {
   appUserId: string
   appUserEmail: string
   dailyLimit: number
-  minDailyLimit: number
   onLog?: LogCallback
   onTargetStatusUpdate?: (
     username: string,
@@ -27,9 +26,6 @@ interface CollectionJob {
   target_follower_count: number | null
   target_user_id: string | null
   collected_count: number
-  configured_daily_limit: number
-  adaptive_daily_limit: number
-  scroll_delay_ms: number
   next_cursor: string | null
   status: 'pending' | 'waiting' | 'completed' | 'failed'
   last_error: string | null
@@ -98,53 +94,21 @@ export class TargetFollowerCollectionService {
 
     try {
       job = await this.loadOrCreateJob(targetUsername, targetGroup)
-      const now = Date.now()
-      const nextRunAt = job.next_run_at ? new Date(job.next_run_at).getTime() : null
 
-      if (nextRunAt && nextRunAt > now && job.status !== 'pending') {
+      // 이미 완료된 경우 스킵
+      if (job.status === 'completed') {
         this.options.onTargetStatusUpdate?.(targetUsername, {
-          status: 'waiting',
+          status: 'completed',
           followerCount: job.target_follower_count ?? undefined,
-          collectedCount: job.collected_count,
-          nextRunAt
-        })
-        this.log('다음날 대기 중', `@${targetUsername} - ${new Date(nextRunAt).toLocaleString()}`)
-        return
-      }
-
-      if (
-        job.target_follower_count !== null &&
-        job.target_follower_count > 0 &&
-        job.collected_count >= job.target_follower_count
-      ) {
-        await this.updateJob(job.id, {
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          next_run_at: null,
-          last_error: null
-        })
-        this.options.onTargetStatusUpdate?.(targetUsername, {
-          status: 'completed',
-          followerCount: job.target_follower_count,
           collectedCount: job.collected_count,
           nextRunAt: undefined,
           error: undefined
         })
-        this.log('이미 수집 완료', `@${targetUsername} ${job.collected_count}/${job.target_follower_count}`)
+        this.log('이미 수집 완료', `@${targetUsername} ${job.collected_count}명`)
         return
       }
 
       const alreadyCollected = await this.countCollectedFollowers(targetUsername)
-      const dailyLimit = this.resolveDailyLimit(job)
-
-      // 직전에 차단 등으로 한도가 줄어든 경우 cursor도 초기화하여 처음부터 재수집
-      const forceFresh =
-        job.configured_daily_limit > 0 &&
-        job.adaptive_daily_limit > 0 &&
-        job.adaptive_daily_limit < job.configured_daily_limit
-
-      const savedCursor = forceFresh ? null : (job.next_cursor || null)
-      const savedUserId = forceFresh ? null : (job.target_user_id || null)
 
       this.options.onTargetStatusUpdate?.(targetUsername, {
         status: 'processing',
@@ -153,49 +117,31 @@ export class TargetFollowerCollectionService {
         error: undefined
       })
 
-      this.log(
-        '타겟 팔로워 수집 시작',
-        `@${targetUsername} 하루 상한 ${dailyLimit}명${forceFresh ? ' (직전 차단/부진으로 cursor 초기화 후 재수집)' : savedCursor ? ' (이어서 수집)' : ''}`
-      )
+      this.log('타겟 팔로워 수집 시작', `@${targetUsername}${job.next_cursor ? ' (이어서 수집)' : ''}`)
 
       const result = await this.collectFollowers(
         targetUsername,
         targetGroup,
-        dailyLimit,
-        alreadyCollected,
-        job.scroll_delay_ms,
-        savedCursor,
-        savedUserId
+        job.next_cursor || null,
+        job.target_user_id || null
       )
 
       const totalCollected = await this.countCollectedFollowers(targetUsername)
       const followerCount = result.followerCount ?? job.target_follower_count
-      const isComplete = (result.stoppedByEnd && result.nextCursor === null) ||
+      const isComplete =
+        (result.stoppedByEnd && result.nextCursor === null) ||
         (followerCount !== null && followerCount > 0 && totalCollected >= followerCount)
-      const nextRun = isComplete ? null : this.getNextRunAt()
-      const adaptive = this.getNextAdaptiveSettings(job, result)
-
-      if (adaptive.dailyLimit < dailyLimit) {
-        this.log(
-          '수집 한도 축소',
-          `@${targetUsername} ${dailyLimit} → ${adaptive.dailyLimit}명 (${result.suspectedBlock ? '차단 의심' : '수집 부진'}, 다음 작업부터 적용)`,
-          false
-        )
-      }
 
       await this.updateJob(job.id, {
         target_follower_count: followerCount,
         target_group: targetGroup,
         target_user_id: result.targetUserId ?? job.target_user_id,
         collected_count: totalCollected,
-        configured_daily_limit: this.options.dailyLimit,
-        adaptive_daily_limit: adaptive.dailyLimit,
-        scroll_delay_ms: adaptive.scrollDelayMs,
         next_cursor: isComplete ? null : result.nextCursor,
         status: isComplete ? 'completed' : 'waiting',
         last_error: null,
         last_run_at: new Date().toISOString(),
-        next_run_at: nextRun ? nextRun.toISOString() : null,
+        next_run_at: isComplete ? null : this.getNextRunAt().toISOString(),
         completed_at: isComplete ? new Date().toISOString() : null,
         app_user_email: this.options.appUserEmail
       })
@@ -204,13 +150,13 @@ export class TargetFollowerCollectionService {
         status: isComplete ? 'completed' : 'waiting',
         followerCount: followerCount ?? undefined,
         collectedCount: totalCollected,
-        nextRunAt: nextRun?.getTime(),
+        nextRunAt: isComplete ? undefined : this.getNextRunAt().getTime(),
         processedAt: Date.now(),
         error: undefined
       })
 
       this.log(
-        isComplete ? '타겟 팔로워 수집 완료' : '타겟 팔로워 수집 일일 작업 완료',
+        isComplete ? '타겟 팔로워 수집 완료' : '타겟 팔로워 수집 중단 (다음 실행 시 재개)',
         `@${targetUsername} 신규 ${result.insertedCount}명, 누적 ${totalCollected}${followerCount ? `/${followerCount}` : ''}`,
         true
       )
@@ -219,14 +165,9 @@ export class TargetFollowerCollectionService {
       this.log('타겟 팔로워 수집 실패', `@${targetUsername}: ${message}`, false)
 
       if (job) {
-        const reducedLimit = this.reduceDailyLimit(job.adaptive_daily_limit || this.options.dailyLimit)
-        const slowerDelay = Math.min(6000, (job.scroll_delay_ms || 1800) + 800)
-        // 에러 시 cursor는 유지 (다음 실행 시 이어서 재시도)
         await this.updateJob(job.id, {
           status: 'failed',
           last_error: message,
-          adaptive_daily_limit: reducedLimit,
-          scroll_delay_ms: slowerDelay,
           last_run_at: new Date().toISOString(),
           next_run_at: this.getNextRunAt().toISOString()
         })
@@ -243,20 +184,15 @@ export class TargetFollowerCollectionService {
   private async collectFollowers(
     targetUsername: string,
     targetGroup: string | null,
-    dailyLimit: number,
-    alreadyCollected: number,
-    requestDelayMs: number,
     savedCursor: string | null,
     savedUserId: string | null
   ): Promise<CollectionResult> {
-    // instagram.com 도메인에 있어야 fetch 시 쿠키가 포함됨
     const currentUrl = this.page.url()
     if (!currentUrl.includes('instagram.com')) {
       await this.page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded', timeout: 30000 })
       await this.page.waitForTimeout(2000)
     }
 
-    // user_id 취득 (저장된 게 없으면 API로 조회)
     let targetUserId = savedUserId
     let followerCount: number | null = null
 
@@ -275,18 +211,17 @@ export class TargetFollowerCollectionService {
     let stoppedByEnd = false
     let suspectedBlock = false
     let nextCursor: string | null = cursor
+    const recentlyCollected: string[] = []
+    const dailyLimit = this.options.dailyLimit
 
     while (this.running && insertedCount < dailyLimit) {
-      const pageResult = await this.fetchFollowersPage(targetUserId, cursor)
+      // 한 번에 30~50명 랜덤 요청
+      const pageCount = 30 + Math.floor(Math.random() * 21)
+      const pageResult = await this.fetchFollowersPage(targetUserId, cursor, pageCount)
 
       if (!pageResult) {
-        // API 요청 실패 = 차단 또는 세션 만료 의심
         suspectedBlock = true
-        this.log(
-          '인스타 API 차단 의심',
-          `@${targetUsername} 팔로워 API 요청 실패 — 한도 축소 예정`,
-          false
-        )
+        this.log('인스타 API 차단 의심', `@${targetUsername} 팔로워 API 요청 실패`, false)
         break
       }
 
@@ -298,30 +233,36 @@ export class TargetFollowerCollectionService {
         const toSave = users.slice(0, remaining).map((u) => u.username)
         const saved = await this.saveFollowers(targetUsername, targetGroup, toSave)
         insertedCount += saved
+        recentlyCollected.push(...toSave.slice(0, 5))
+        if (recentlyCollected.length > 20) recentlyCollected.splice(0, recentlyCollected.length - 20)
 
         this.options.onTargetStatusUpdate?.(targetUsername, {
           status: 'processing',
           followerCount: followerCount ?? undefined,
-          collectedCount: alreadyCollected + insertedCount
+          collectedCount: await this.countCollectedFollowers(targetUsername)
         })
 
         if (saved > 0) {
-          this.log('팔로워 저장', `@${targetUsername} 신규 ${saved}명 (${insertedCount}/${dailyLimit})`)
+          this.log('팔로워 저장', `@${targetUsername} 신규 ${saved}명 (총 ${insertedCount}명)`)
         }
       }
 
-      if (insertedCount >= dailyLimit) break
-
       if (!nextMaxId) {
         stoppedByEnd = true
-        this.log('팔로워 목록 끝 감지', `@${targetUsername} 누적 ${alreadyCollected + insertedCount}명`)
+        this.log('팔로워 목록 끝 감지', `@${targetUsername}`)
         break
       }
 
       cursor = nextMaxId
 
-      // 요청 간 랜덤 딜레이 (봇 감지 회피)
-      await this.page.waitForTimeout(this.randomDelay(requestDelayMs))
+      if (this.running) {
+        await this.browseRandomly(recentlyCollected)
+        // 브라우징 후 instagram.com 도메인 확인
+        if (!this.page.url().includes('instagram.com')) {
+          await this.page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded', timeout: 30000 })
+          await this.page.waitForTimeout(2000)
+        }
+      }
     }
 
     return {
@@ -334,7 +275,63 @@ export class TargetFollowerCollectionService {
     }
   }
 
-  // 브라우저 세션(쿠키) 그대로 사용해서 user_id + 팔로워 수 조회
+  private async browseRandomly(collectedUsernames: string[]): Promise<void> {
+    // 피드 40%, 탐색 30%, 수집한 프로필 30%
+    const weights = [4, 3, 3]
+    const total = weights.reduce((a, b) => a + b, 0)
+    let rand = Math.random() * total
+    let choice: 'feed' | 'explore' | 'profile' = 'feed'
+
+    if (rand < weights[0]) {
+      choice = 'feed'
+    } else if (rand < weights[0] + weights[1]) {
+      choice = 'explore'
+    } else {
+      choice = collectedUsernames.length > 0 ? 'profile' : 'feed'
+    }
+
+    try {
+      if (choice === 'profile' && collectedUsernames.length > 0) {
+        const randomUser = collectedUsernames[Math.floor(Math.random() * collectedUsernames.length)]
+        this.log('랜덤 브라우징', `프로필 방문: @${randomUser}`)
+        await this.page.goto(`https://www.instagram.com/${randomUser}/`, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        })
+      } else if (choice === 'explore') {
+        this.log('랜덤 브라우징', '탐색 페이지 방문')
+        await this.page.goto('https://www.instagram.com/explore/', {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        })
+      } else {
+        this.log('랜덤 브라우징', '피드 방문')
+        await this.page.goto('https://www.instagram.com/', {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        })
+      }
+
+      await this.page.waitForTimeout(2000 + Math.floor(Math.random() * 2000))
+
+      // 1~4회 랜덤 스크롤
+      const scrollCount = 1 + Math.floor(Math.random() * 4)
+      for (let i = 0; i < scrollCount; i++) {
+        await this.page.evaluate(() => {
+          window.scrollBy(0, 300 + Math.floor(Math.random() * 400))
+        })
+        await this.page.waitForTimeout(1500 + Math.floor(Math.random() * 2500))
+      }
+
+      // 30~120초 랜덤 대기
+      const browseTime = 30000 + Math.floor(Math.random() * 90000)
+      this.log('브라우징 대기', `${Math.round(browseTime / 1000)}초`)
+      await this.page.waitForTimeout(browseTime)
+    } catch {
+      // 브라우징 실패해도 수집 계속 진행
+    }
+  }
+
   private async fetchProfileInfo(
     username: string
   ): Promise<{ userId: string; followerCount: number | null } | null> {
@@ -368,19 +365,19 @@ export class TargetFollowerCollectionService {
     }, username)
   }
 
-  // 팔로워 목록 한 페이지 요청 (최대 200명, cursor 기반 이어서 수집)
   private async fetchFollowersPage(
     userId: string,
-    cursor: string | null
+    cursor: string | null,
+    count: number = 50
   ): Promise<{ users: Array<{ username: string }>; nextMaxId: string | null } | null> {
     return await this.page.evaluate(
-      async ({ userId, cursor }) => {
+      async ({ userId, cursor, count }) => {
         try {
           const csrfToken =
             document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] ?? ''
 
           const url = new URL(`https://www.instagram.com/api/v1/friendships/${userId}/followers/`)
-          url.searchParams.set('count', '200')
+          url.searchParams.set('count', String(count))
           if (cursor) url.searchParams.set('max_id', cursor)
 
           const res = await fetch(url.toString(), {
@@ -405,16 +402,8 @@ export class TargetFollowerCollectionService {
           return null
         }
       },
-      { userId, cursor }
+      { userId, cursor, count }
     )
-  }
-
-  // 랜덤 딜레이: base의 100%~350% 범위
-  private randomDelay(baseMs: number): number {
-    const base = Math.max(3000, baseMs)
-    const min = Math.floor(base * 1.0)
-    const max = Math.floor(base * 3.5)
-    return min + Math.floor(Math.random() * (max - min))
   }
 
   private async saveFollowers(
@@ -483,9 +472,6 @@ export class TargetFollowerCollectionService {
         app_user_email: this.options.appUserEmail,
         target_username: targetUsername,
         target_group: targetGroup,
-        configured_daily_limit: this.options.dailyLimit,
-        adaptive_daily_limit: this.options.dailyLimit,
-        scroll_delay_ms: 3000,
         status: 'pending'
       })
       .select('*')
@@ -525,50 +511,6 @@ export class TargetFollowerCollectionService {
     }
 
     return count ?? 0
-  }
-
-  private resolveDailyLimit(job: CollectionJob): number {
-    const configured = Math.max(1, this.options.dailyLimit)
-    const adaptive = Math.max(1, job.adaptive_daily_limit || configured)
-    return Math.min(configured, Math.max(this.options.minDailyLimit, adaptive))
-  }
-
-  private getNextAdaptiveSettings(
-    job: CollectionJob,
-    result: CollectionResult
-  ): { dailyLimit: number; scrollDelayMs: number } {
-    const configured = Math.max(1, this.options.dailyLimit)
-    const currentLimit = Math.min(
-      configured,
-      Math.max(this.options.minDailyLimit, job.adaptive_daily_limit || configured)
-    )
-
-    if (
-      result.suspectedBlock ||
-      result.insertedCount === 0 ||
-      (result.stoppedByEnd && result.insertedCount < currentLimit)
-    ) {
-      return {
-        dailyLimit: this.reduceDailyLimit(currentLimit),
-        scrollDelayMs: Math.min(8000, (job.scroll_delay_ms || 3000) + 800)
-      }
-    }
-
-    if (result.insertedCount >= currentLimit && currentLimit < configured) {
-      return {
-        dailyLimit: Math.min(configured, Math.ceil(currentLimit * 1.1)),
-        scrollDelayMs: Math.max(1600, (job.scroll_delay_ms || 2000) - 200)
-      }
-    }
-
-    return {
-      dailyLimit: currentLimit,
-      scrollDelayMs: job.scroll_delay_ms || 2000
-    }
-  }
-
-  private reduceDailyLimit(currentLimit: number): number {
-    return Math.max(this.options.minDailyLimit, Math.floor(currentLimit * 0.8))
   }
 
   private getNextRunAt(): Date {

@@ -326,9 +326,6 @@ export default function WorkPage() {
         .update({
           status: 'pending',
           target_follower_count: null,
-          configured_daily_limit: workList.targetFollowerCollectWork.count || 200,
-          adaptive_daily_limit: workList.targetFollowerCollectWork.count || 200,
-          scroll_delay_ms: 1800,
           last_error: null,
           next_run_at: null,
           completed_at: null,
@@ -367,21 +364,6 @@ export default function WorkPage() {
     })
   }
 
-  const handleTargetFollowerSettingChange = (
-    key: 'count' | 'minDailyLimit',
-    value: number
-  ) => {
-    const safeValue = key === 'count'
-      ? Math.max(1, value)
-      : Math.min(workList.targetFollowerCollectWork.count, Math.max(1, value))
-
-    upsert({
-      targetFollowerCollectWork: {
-        ...workList.targetFollowerCollectWork,
-        [key]: safeValue
-      }
-    })
-  }
 
   const handleHashtagFollowChange = (enabled: boolean) => {
     upsert({
@@ -624,8 +606,8 @@ export default function WorkPage() {
                   title="타겟 유저 팔로워 수집"
                   type="targetFollowerCollectWork"
                   icon={<UserSearch className="h-5 w-5 text-apple-orange" />}
-                  description="지정한 타겟 유저의 팔로워 목록을 하루 단위로 안정적으로 수집합니다."
-                  tooltip="인스타그램 화면을 직접 건드리지 않고, 내부 API를 통해 조용히 팔로워 목록을 가져옵니다. 화면에 아무런 움직임 없이 백그라운드에서 수집되며, 중간에 중단되어도 마지막 위치부터 이어서 수집합니다."
+                  description="지정한 타겟 유저의 팔로워 목록을 안전하게 수집합니다."
+                  tooltip="내부 API로 팔로워 목록을 수집하며, 수집 사이마다 피드·탐색·프로필을 랜덤 방문합니다. 30~50명씩 끊어서 수집하고 매번 30초~2분 브라우징 후 재개하므로 자연스러운 패턴을 유지합니다. 중단해도 마지막 위치부터 이어서 수집합니다."
                   enabled={workList.targetFollowerCollectWork.enabled}
                   onToggle={() => {
                     handleSwitchChange('targetFollowerCollectWork', workList.targetFollowerCollectWork.enabled)
@@ -635,52 +617,23 @@ export default function WorkPage() {
                   error={hasError('noTargetFollowerUsers')}
                 >
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 rounded-lg border p-3">
-                        <Label className="text-sm whitespace-nowrap">하루 수집 상한</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={workList.targetFollowerCollectWork.count}
-                          onChange={(e) =>
-                            handleTargetFollowerSettingChange(
-                              'count',
-                              parseInt(e.target.value, 10) || 200
-                            )
-                          }
-                          className="w-24"
-                        />
-                        <span className="text-sm text-muted-foreground">명</span>
-                      </div>
-
-                      <div className="flex items-center gap-3 rounded-lg border p-3">
-                        <Label className="text-sm whitespace-nowrap">자동 감소 하한</Label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="w-4 h-4 cursor-help text-muted-foreground shrink-0" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p>
-                              인스타그램 활동 제한이 감지되면 다음 수집 한도를 약 20%씩 자동으로 줄여 계정을 보호합니다.
-                              이 값은 그 감소의 최저선으로, 한도가 아무리 줄어도 이 수치 밑으로는 내려가지 않습니다. (기본 50명)
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Input
-                          type="number"
-                          min={1}
-                          max={workList.targetFollowerCollectWork.count}
-                          value={workList.targetFollowerCollectWork.minDailyLimit}
-                          onChange={(e) =>
-                            handleTargetFollowerSettingChange(
-                              'minDailyLimit',
-                              parseInt(e.target.value, 10) || 50
-                            )
-                          }
-                          className="w-24"
-                        />
-                        <span className="text-sm text-muted-foreground">명</span>
-                      </div>
+                    <div className="flex items-center gap-3 rounded-lg border p-3">
+                      <Label className="text-sm whitespace-nowrap">하루 수집 한도</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={workList.targetFollowerCollectWork.dailyLimit ?? 500}
+                        onChange={(e) =>
+                          upsert({
+                            targetFollowerCollectWork: {
+                              ...workList.targetFollowerCollectWork,
+                              dailyLimit: Math.max(1, parseInt(e.target.value, 10) || 500)
+                            }
+                          })
+                        }
+                        className="w-24"
+                      />
+                      <span className="text-sm text-muted-foreground">명</span>
                     </div>
 
                     <TargetFollowerList

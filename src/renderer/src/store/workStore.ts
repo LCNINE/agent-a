@@ -68,10 +68,9 @@ const defaultWorkList: WorkType = {
     skipOldPostsMonths: 0
   },
   targetFollowerCollectWork: {
-    count: 200,
     enabled: false,
     targetUsers: [],
-    minDailyLimit: 50
+    dailyLimit: 500
   }
 }
 
@@ -163,7 +162,7 @@ export const useWorkStore = create<WorkState>()(
 
     {
       name: 'work',
-      version: 9,
+      version: 10,
       storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
         workByAccount: state.workByAccount,
@@ -193,17 +192,14 @@ export const useWorkStore = create<WorkState>()(
           if (!workList.targetFollowerCollectWork) {
             workList.targetFollowerCollectWork = JSON.parse(JSON.stringify(defaultWorkList.targetFollowerCollectWork))
           } else {
-            if (workList.targetFollowerCollectWork.count === undefined) {
-              workList.targetFollowerCollectWork.count = defaultWorkList.targetFollowerCollectWork.count
-            }
             if (workList.targetFollowerCollectWork.enabled === undefined) {
               workList.targetFollowerCollectWork.enabled = false
             }
             if (!Array.isArray(workList.targetFollowerCollectWork.targetUsers)) {
               workList.targetFollowerCollectWork.targetUsers = []
             }
-            if (workList.targetFollowerCollectWork.minDailyLimit === undefined) {
-              workList.targetFollowerCollectWork.minDailyLimit = defaultWorkList.targetFollowerCollectWork.minDailyLimit
+            if (workList.targetFollowerCollectWork.dailyLimit === undefined) {
+              workList.targetFollowerCollectWork.dailyLimit = defaultWorkList.targetFollowerCollectWork.dailyLimit
             }
           }
           return workList

@@ -1326,8 +1326,7 @@ export class AgentManager {
             {
               appUserId: this.userId || 'unknown',
               appUserEmail: this.userEmail || this.userId || 'unknown',
-              dailyLimit: Math.max(1, work.targetFollowerCollectWork.count || 200),
-              minDailyLimit: Math.max(1, work.targetFollowerCollectWork.minDailyLimit || 50),
+              dailyLimit: Math.max(1, work.targetFollowerCollectWork.dailyLimit || 500),
               isRunning: () => this._status.isRunning,
               onLog: (action: string, details?: string, success?: boolean) => {
                 this.addLog(action, details, success)

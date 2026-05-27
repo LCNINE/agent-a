@@ -137,7 +137,7 @@ export type WorkType = {
   }
   targetFollowerCollectWork: WorkItem & {
     targetUsers: TargetFollowerCollectionTarget[]
-    minDailyLimit: number
+    dailyLimit: number
   }
 }
 

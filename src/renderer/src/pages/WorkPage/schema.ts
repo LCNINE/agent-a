@@ -46,10 +46,9 @@ export const workSchema = z.object({
     skipOldPostsMonths: z.coerce.number().min(0)
   }),
   targetFollowerCollectWork: z.object({
-    count: z.coerce.number().min(1, { message: '최소 1개 이상 입력해주세요.' }),
     enabled: z.boolean(),
     targetUsers: z.array(targetFollowerCollectionTargetSchema),
-    minDailyLimit: z.coerce.number().min(1)
+    dailyLimit: z.coerce.number().min(1)
   })
 })
 
