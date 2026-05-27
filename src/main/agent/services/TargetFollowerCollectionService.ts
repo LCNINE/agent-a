@@ -409,11 +409,11 @@ export class TargetFollowerCollectionService {
     )
   }
 
-  // 랜덤 딜레이: base의 80%~200% 범위
+  // 랜덤 딜레이: base의 100%~350% 범위
   private randomDelay(baseMs: number): number {
-    const base = Math.max(2000, baseMs)
-    const min = Math.floor(base * 0.8)
-    const max = Math.floor(base * 2.0)
+    const base = Math.max(3000, baseMs)
+    const min = Math.floor(base * 1.0)
+    const max = Math.floor(base * 3.5)
     return min + Math.floor(Math.random() * (max - min))
   }
 
