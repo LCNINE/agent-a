@@ -119,15 +119,3 @@ export async function checkForUpdates(): Promise<void> {
     log.error('업데이트 확인 중 오류:', error)
   }
 }
-
-// 주기적으로 업데이트 확인 (운영 환경에서만)
-if (process.env.NODE_ENV !== 'development') {
-  setInterval(
-    () => {
-      autoUpdater.checkForUpdates().catch((err) => {
-        log.error('업데이트 확인 중 오류 발생:', err)
-      })
-    },
-    60 * 60 * 1000
-  )
-}

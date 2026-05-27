@@ -18,11 +18,13 @@ export default function UpdateNotification() {
   const [updateInfo, setUpdateInfo] = useState<{ version: string; releaseNotes: string }>()
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isDownloaded, setIsDownloaded] = useState(false)
+  const [dismissedVersion, setDismissedVersion] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
     window.update.onUpdateAvailable((info) => {
       console.log('업데이트 가능:', info)
+      if (dismissedVersion === info.version) return
       setUpdateInfo(info)
       setShowUpdateDialog(true)
     })
@@ -73,7 +75,10 @@ export default function UpdateNotification() {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setShowUpdateDialog(false)}>나중에</AlertDialogCancel>
+          <AlertDialogCancel onClick={() => {
+            setDismissedVersion(updateInfo?.version ?? null)
+            setShowUpdateDialog(false)
+          }}>나중에</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => window.update.startDownload()}
             disabled={downloadProgress > 0 || isDownloaded}
