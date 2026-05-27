@@ -75,7 +75,7 @@ export type WorkerStatus =
     }
 
 type WorkItem = {
-  count?: number
+  count: number
   enabled: boolean
 }
 

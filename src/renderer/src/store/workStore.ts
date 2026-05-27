@@ -68,6 +68,7 @@ const defaultWorkList: WorkType = {
     skipOldPostsMonths: 0
   },
   targetFollowerCollectWork: {
+    count: 0,
     enabled: false,
     targetUsers: [],
     dailyLimit: 500
