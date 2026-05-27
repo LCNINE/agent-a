@@ -3,7 +3,8 @@ import { Input } from '@renderer/components/ui/input'
 import { Label } from '@renderer/components/ui/label'
 import { ScrollArea } from '@renderer/components/ui/scroll-area'
 import { Switch } from '@renderer/components/ui/switch'
-import { ChevronDown, ChevronUp, FileUp, Star, Trash2, X } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@renderer/components/ui/tooltip'
+import { ChevronDown, ChevronUp, FileUp, HelpCircle, Star, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { WorkCountField } from './WorkCountField'
 import { WorkType } from 'src'
@@ -15,6 +16,7 @@ interface WorkSectionProps {
   type: string
   icon: React.ReactNode
   description: string
+  tooltip?: string
   enabled: boolean
   onToggle: () => void
   hashtags?: string[]
@@ -32,6 +34,7 @@ export default function WorkSection({
   type,
   icon,
   description,
+  tooltip,
   enabled,
   onToggle,
   hashtags,
@@ -80,6 +83,18 @@ export default function WorkSection({
               {icon}
             </div>
             <Label className="font-semibold text-base">{title}</Label>
+            {tooltip && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="w-4 h-4 cursor-help text-muted-foreground shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>{tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
 
           <p className="text-sm text-muted-foreground pl-11">{description}</p>

@@ -625,6 +625,7 @@ export default function WorkPage() {
                   type="targetFollowerCollectWork"
                   icon={<UserSearch className="h-5 w-5 text-apple-orange" />}
                   description="지정한 타겟 유저의 팔로워 목록을 하루 단위로 안정적으로 수집합니다."
+                  tooltip="인스타그램 화면을 직접 건드리지 않고, 내부 API를 통해 조용히 팔로워 목록을 가져옵니다. 화면에 아무런 움직임 없이 백그라운드에서 수집되며, 중간에 중단되어도 마지막 위치부터 이어서 수집합니다."
                   enabled={workList.targetFollowerCollectWork.enabled}
                   onToggle={() => {
                     handleSwitchChange('targetFollowerCollectWork', workList.targetFollowerCollectWork.enabled)

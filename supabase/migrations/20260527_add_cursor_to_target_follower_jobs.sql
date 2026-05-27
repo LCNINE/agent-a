@@ -1,0 +1,3 @@
+ALTER TABLE target_follower_collection_jobs
+ADD COLUMN IF NOT EXISTS next_cursor TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS target_user_id TEXT DEFAULT NULL;
