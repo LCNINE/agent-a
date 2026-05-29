@@ -42,6 +42,7 @@ export interface BotStatus {
   } | null
   logs?: WorkLog[]
   currentAction?: string
+  isCollectingFollowers?: boolean
 }
 
 export class AgentManager {
@@ -1314,6 +1315,8 @@ export class AgentManager {
 
       if (work.targetFollowerCollectWork?.enabled) {
         this.addLog('타겟 유저 팔로워 수집 시작')
+        this._status.isCollectingFollowers = true
+        this.broadcastStatus()
         await this.page.waitForTimeout(2000)
 
         const targets = work.targetFollowerCollectWork.targetUsers || []
@@ -1350,6 +1353,7 @@ export class AgentManager {
           await followerCollectionService.processTargets(targets)
         }
 
+        this._status.isCollectingFollowers = false
         this._status.waiting = null
         this.broadcastStatus()
         this.addLog('타겟 유저 팔로워 수집 완료')

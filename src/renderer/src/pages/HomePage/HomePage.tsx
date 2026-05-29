@@ -8,7 +8,7 @@ import { useAgent } from '@/hooks/useAgent'
 import { useAuthContext } from '@/hooks/useAuth'
 import { useFreeTrialQuery, useStartFreeTrialMutation } from '@/service/free-trial/queries'
 import { useCurrentSubscriptionQuery } from '@/service/subscription/queries'
-import { Activity, CheckCircle, Clock, Loader2, XCircle } from 'lucide-react'
+import { Activity, CheckCircle, Clock, Info, Loader2, XCircle } from 'lucide-react'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BotStatus, WorkLog } from 'src'
@@ -181,6 +181,18 @@ export default function HomePage() {
                         {displayStatus.currentAction}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {displayStatus?.isCollectingFollowers && (
+                  <div className="rounded-xl bg-violet-500/10 p-4 text-sm border border-violet-500/20">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Info className="h-4 w-4 text-violet-500 shrink-0" />
+                      <span className="font-medium text-violet-500">팔로워 수집 중</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      탐지 회피를 위해 피드 스크롤, 해시태그 검색, 게시물 클릭 등 자연스러운 활동을 병행합니다. 이 과정에서 일시적으로 다른 페이지로 이동할 수 있습니다.
+                    </p>
                   </div>
                 )}
 

@@ -5,6 +5,8 @@ import { TargetFollowerCollectionTarget } from '../../..'
 type SupabaseClientAny = SupabaseClient<any>
 type LogCallback = (action: string, details?: string, success?: boolean) => void
 
+const FOLLOWER_COLLECTION_RETRY_DELAY_HOURS = 20
+
 interface TargetFollowerCollectionOptions {
   appUserId: string
   appUserEmail: string
@@ -105,6 +107,23 @@ export class TargetFollowerCollectionService {
           error: undefined
         })
         this.log('이미 수집 완료', `@${targetUsername} ${job.collected_count}명`)
+        return
+      }
+
+      // 한도 소진 후 다음 실행 시간이 아직 안 된 경우 스킵
+      if (job.status === 'waiting' && job.next_run_at && new Date(job.next_run_at) > new Date()) {
+        const nextRunAt = new Date(job.next_run_at)
+        this.options.onTargetStatusUpdate?.(targetUsername, {
+          status: 'waiting',
+          followerCount: job.target_follower_count ?? undefined,
+          collectedCount: job.collected_count,
+          nextRunAt: nextRunAt.getTime(),
+          error: undefined
+        })
+        this.log(
+          '수집 한도 완료',
+          `@${targetUsername} 다음 수집: ${nextRunAt.toLocaleDateString('ko-KR')} ${nextRunAt.toLocaleTimeString('ko-KR')}`
+        )
         return
       }
 
@@ -214,53 +233,89 @@ export class TargetFollowerCollectionService {
     const recentlyCollected: string[] = []
     const dailyLimit = this.options.dailyLimit
 
+    // 스텝 풀: collect=팔로워수집, feed=피드스크롤, feed_click=피드게시물클릭,
+    //          hashtag=해시태그스크롤, hashtag_click=해시태그게시물클릭
+    type Step = 'collect' | 'feed' | 'feed_click' | 'hashtag' | 'hashtag_click'
+    const stepPool: Step[] = [
+      'collect', 'collect', 'collect', 'collect', 'collect',
+      'feed', 'feed',
+      'feed_click',
+      'hashtag',
+      'hashtag_click'
+    ]
+    let prevWasCollect = false
+
     while (this.running && insertedCount < dailyLimit) {
-      // 한 번에 30~50명 랜덤 요청
-      const pageCount = 30 + Math.floor(Math.random() * 21)
-      const pageResult = await this.fetchFollowersPage(targetUserId, cursor, pageCount)
+      let step = stepPool[Math.floor(Math.random() * stepPool.length)]
 
-      if (!pageResult) {
-        suspectedBlock = true
-        this.log('인스타 API 차단 의심', `@${targetUsername} 팔로워 API 요청 실패`, false)
-        break
+      // 연속 수집 방지: 직전이 collect면 반드시 브라우징
+      if (step === 'collect' && prevWasCollect) {
+        const browsingPool: Step[] = ['feed', 'feed_click', 'hashtag', 'hashtag_click']
+        step = browsingPool[Math.floor(Math.random() * browsingPool.length)]
       }
+      prevWasCollect = step === 'collect'
 
-      const { users, nextMaxId } = pageResult
-      nextCursor = nextMaxId
-
-      if (users.length > 0) {
-        const remaining = dailyLimit - insertedCount
-        const toSave = users.slice(0, remaining).map((u) => u.username)
-        const saved = await this.saveFollowers(targetUsername, targetGroup, toSave)
-        insertedCount += saved
-        recentlyCollected.push(...toSave.slice(0, 5))
-        if (recentlyCollected.length > 20) recentlyCollected.splice(0, recentlyCollected.length - 20)
-
-        this.options.onTargetStatusUpdate?.(targetUsername, {
-          status: 'processing',
-          followerCount: followerCount ?? undefined,
-          collectedCount: await this.countCollectedFollowers(targetUsername)
-        })
-
-        if (saved > 0) {
-          this.log('팔로워 저장', `@${targetUsername} 신규 ${saved}명 (총 ${insertedCount}명)`)
-        }
-      }
-
-      if (!nextMaxId) {
-        stoppedByEnd = true
-        this.log('팔로워 목록 끝 감지', `@${targetUsername}`)
-        break
-      }
-
-      cursor = nextMaxId
-
-      if (this.running) {
-        await this.browseRandomly(recentlyCollected)
-        // 브라우징 후 instagram.com 도메인 확인
+      if (step === 'collect') {
         if (!this.page.url().includes('instagram.com')) {
           await this.page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded', timeout: 30000 })
           await this.page.waitForTimeout(2000)
+        }
+
+        const pageCounts = [12, 12, 12, 24, 12, 12, 24]
+        const pageCount = pageCounts[Math.floor(Math.random() * pageCounts.length)]
+        const pageResult = await this.fetchFollowersPage(targetUserId, targetUsername, cursor, pageCount)
+
+        if (!pageResult) {
+          suspectedBlock = true
+          this.log('인스타 API 차단 의심', `@${targetUsername} 팔로워 API 요청 실패`, false)
+          break
+        }
+        if (pageResult.error) {
+          suspectedBlock = true
+          this.log('팔로워 API 실패', `@${targetUsername} ${pageResult.error}`, false)
+          break
+        }
+
+        const { users, nextMaxId } = pageResult
+        nextCursor = nextMaxId
+
+        if (users.length > 0) {
+          const remaining = dailyLimit - insertedCount
+          const toSave = users.slice(0, remaining).map((u) => u.username)
+          const saved = await this.saveFollowers(targetUsername, targetGroup, toSave)
+          insertedCount += saved
+          recentlyCollected.push(...toSave.slice(0, 5))
+          if (recentlyCollected.length > 20) recentlyCollected.splice(0, recentlyCollected.length - 20)
+
+          this.options.onTargetStatusUpdate?.(targetUsername, {
+            status: 'processing',
+            followerCount: followerCount ?? undefined,
+            collectedCount: await this.countCollectedFollowers(targetUsername)
+          })
+          if (saved > 0) {
+            this.log('팔로워 저장', `@${targetUsername} 신규 ${saved}명 (총 ${insertedCount}명)`)
+          }
+        }
+
+        if (!nextMaxId) {
+          stoppedByEnd = true
+          this.log('팔로워 목록 끝 감지', `@${targetUsername}`)
+          break
+        }
+        cursor = nextMaxId
+      } else {
+        try {
+          if (step === 'feed') {
+            await this.browseFeed(false)
+          } else if (step === 'feed_click') {
+            await this.browseFeed(true)
+          } else if (step === 'hashtag') {
+            await this.browseHashtag(false)
+          } else {
+            await this.browseHashtag(true)
+          }
+        } catch {
+          // 브라우징 실패해도 계속 진행
         }
       }
     }
@@ -275,61 +330,91 @@ export class TargetFollowerCollectionService {
     }
   }
 
-  private async browseRandomly(collectedUsernames: string[]): Promise<void> {
-    // 피드 40%, 탐색 30%, 수집한 프로필 30%
-    const weights = [4, 3, 3]
-    const total = weights.reduce((a, b) => a + b, 0)
-    let rand = Math.random() * total
-    let choice: 'feed' | 'explore' | 'profile' = 'feed'
+  private async browseFeed(withClick: boolean): Promise<void> {
+    this.log('브라우징', withClick ? '피드 게시물 클릭' : '피드 스크롤')
+    await this.page.goto('https://www.instagram.com/', { waitUntil: 'domcontentloaded', timeout: 30000 })
+    await this.page.waitForTimeout(2000 + Math.floor(Math.random() * 2000))
 
-    if (rand < weights[0]) {
-      choice = 'feed'
-    } else if (rand < weights[0] + weights[1]) {
-      choice = 'explore'
-    } else {
-      choice = collectedUsernames.length > 0 ? 'profile' : 'feed'
+    // 3~6회 스크롤 (무한스크롤 피드 API 자동 호출)
+    const scrollCount = 3 + Math.floor(Math.random() * 4)
+    for (let i = 0; i < scrollCount; i++) {
+      if (!this.running) break
+      await this.page.evaluate((y) => window.scrollBy(0, y), 350 + Math.floor(Math.random() * 400))
+      await this.page.waitForTimeout(1500 + Math.floor(Math.random() * 3000))
     }
 
-    try {
-      if (choice === 'profile' && collectedUsernames.length > 0) {
-        const randomUser = collectedUsernames[Math.floor(Math.random() * collectedUsernames.length)]
-        this.log('랜덤 브라우징', `프로필 방문: @${randomUser}`)
-        await this.page.goto(`https://www.instagram.com/${randomUser}/`, {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        })
-      } else if (choice === 'explore') {
-        this.log('랜덤 브라우징', '탐색 페이지 방문')
-        await this.page.goto('https://www.instagram.com/explore/', {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        })
-      } else {
-        this.log('랜덤 브라우징', '피드 방문')
-        await this.page.goto('https://www.instagram.com/', {
-          waitUntil: 'domcontentloaded',
-          timeout: 30000
-        })
+    if (withClick) {
+      try {
+        const posts = await this.page.locator('main article a[href*="/p/"]').all()
+        if (posts.length > 0) {
+          const idx = Math.floor(Math.random() * Math.min(posts.length, 5))
+          await posts[idx].click()
+          await this.page.waitForTimeout(3000 + Math.floor(Math.random() * 4000))
+
+          const scrollCount2 = 1 + Math.floor(Math.random() * 3)
+          for (let i = 0; i < scrollCount2; i++) {
+            await this.page.keyboard.press('ArrowDown')
+            await this.page.waitForTimeout(800 + Math.floor(Math.random() * 1500))
+          }
+          await this.page.keyboard.press('Escape')
+          await this.page.waitForTimeout(1500)
+        }
+      } catch {
+        // 클릭 실패 시 무시
       }
-
-      await this.page.waitForTimeout(2000 + Math.floor(Math.random() * 2000))
-
-      // 1~4회 랜덤 스크롤
-      const scrollCount = 1 + Math.floor(Math.random() * 4)
-      for (let i = 0; i < scrollCount; i++) {
-        await this.page.evaluate(() => {
-          window.scrollBy(0, 300 + Math.floor(Math.random() * 400))
-        })
-        await this.page.waitForTimeout(1500 + Math.floor(Math.random() * 2500))
-      }
-
-      // 30~120초 랜덤 대기
-      const browseTime = 30000 + Math.floor(Math.random() * 90000)
-      this.log('브라우징 대기', `${Math.round(browseTime / 1000)}초`)
-      await this.page.waitForTimeout(browseTime)
-    } catch {
-      // 브라우징 실패해도 수집 계속 진행
     }
+
+    const readTime = 10000 + Math.floor(Math.random() * 20000)
+    this.log('브라우징 대기', `피드 ${Math.round(readTime / 1000)}초`)
+    await this.page.waitForTimeout(readTime)
+  }
+
+  private async browseHashtag(withClick: boolean): Promise<void> {
+    const hashtags = [
+      '고양이', '강아지', '맛집', '카페', '여행', '일상', '패션', '뷰티',
+      '운동', '음식', '인테리어', '자연', '사진', '셀스타그램', '감성'
+    ]
+    const tag = hashtags[Math.floor(Math.random() * hashtags.length)]
+    this.log('브라우징', `해시태그 #${tag}${withClick ? ' 게시물 클릭' : ' 스크롤'}`)
+
+    await this.page.goto(`https://www.instagram.com/explore/tags/${encodeURIComponent(tag)}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000
+    })
+    await this.page.waitForTimeout(2000 + Math.floor(Math.random() * 2000))
+
+    // 스크롤 (무한스크롤 API 호출)
+    const scrollCount = 2 + Math.floor(Math.random() * 4)
+    for (let i = 0; i < scrollCount; i++) {
+      if (!this.running) break
+      await this.page.evaluate(() => window.scrollBy(0, 400 + Math.floor(Math.random() * 400)))
+      await this.page.waitForTimeout(1500 + Math.floor(Math.random() * 2500))
+    }
+
+    if (withClick) {
+      try {
+        const posts = await this.page.locator('main a[href*="/p/"]').all()
+        if (posts.length > 0) {
+          const idx = Math.floor(Math.random() * Math.min(posts.length, 9))
+          await posts[idx].click()
+          await this.page.waitForTimeout(3000 + Math.floor(Math.random() * 4000))
+
+          const scrollCount2 = 1 + Math.floor(Math.random() * 3)
+          for (let i = 0; i < scrollCount2; i++) {
+            await this.page.keyboard.press('ArrowDown')
+            await this.page.waitForTimeout(800 + Math.floor(Math.random() * 1500))
+          }
+          await this.page.keyboard.press('Escape')
+          await this.page.waitForTimeout(1500 + Math.floor(Math.random() * 1500))
+        }
+      } catch {
+        // 클릭 실패 시 무시
+      }
+    }
+
+    const readTime = 10000 + Math.floor(Math.random() * 20000)
+    this.log('브라우징 대기', `해시태그 ${Math.round(readTime / 1000)}초`)
+    await this.page.waitForTimeout(readTime)
   }
 
   private async fetchProfileInfo(
@@ -367,42 +452,54 @@ export class TargetFollowerCollectionService {
 
   private async fetchFollowersPage(
     userId: string,
+    targetUsername: string,
     cursor: string | null,
-    count: number = 50
-  ): Promise<{ users: Array<{ username: string }>; nextMaxId: string | null } | null> {
+    count: number = 12
+  ): Promise<{ users: Array<{ username: string }>; nextMaxId: string | null; error?: string } | null> {
     return await this.page.evaluate(
-      async ({ userId, cursor, count }) => {
-        try {
-          const csrfToken =
-            document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] ?? ''
+      async ({ userId, targetUsername, cursor, count }) => {
+        const csrfToken =
+          document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] ?? ''
+        const referer = `https://www.instagram.com/${targetUsername}/followers/`
 
+        const commonHeaders = {
+          'x-ig-app-id': '936619743392459',
+          'x-requested-with': 'XMLHttpRequest',
+          'x-csrftoken': csrfToken,
+          Referer: referer,
+          'x-ig-www-claim': sessionStorage.getItem('www-claim-v2') ?? ''
+        }
+
+        try {
           const url = new URL(`https://www.instagram.com/api/v1/friendships/${userId}/followers/`)
           url.searchParams.set('count', String(count))
           if (cursor) url.searchParams.set('max_id', cursor)
 
           const res = await fetch(url.toString(), {
-            headers: {
-              'x-ig-app-id': '936619743392459',
-              'x-requested-with': 'XMLHttpRequest',
-              'x-csrftoken': csrfToken
-            },
+            headers: commonHeaders,
             credentials: 'include'
           })
 
-          if (!res.ok) return null
+          if (!res.ok) {
+            const body = await res.text().catch(() => '')
+            return {
+              users: [],
+              nextMaxId: null,
+              error: `HTTP ${res.status}${body ? ` - ${body.slice(0, 200)}` : ''}`
+            }
+          }
 
           const data = await res.json()
           const users: Array<{ username: string }> = (data.users ?? []).map((u: any) => ({
             username: String(u.username)
           }))
           const nextMaxId: string | null = data.next_max_id ?? null
-
           return { users, nextMaxId }
         } catch {
           return null
         }
       },
-      { userId, cursor, count }
+      { userId, targetUsername, cursor, count }
     )
   }
 
@@ -428,10 +525,12 @@ export class TargetFollowerCollectionService {
     }))
 
     const beforeCount = await this.countCollectedFollowers(targetUsername)
+    // cursor 기반 페이지네이션이라 중복 없음, 혹시 모를 재시도 대비 ignoreDuplicates
     const { error } = await this.supabase
       .from('target_followers')
       .upsert(rows, {
-        onConflict: 'app_user_id,target_username,follower_username'
+        onConflict: 'app_user_id,target_username,follower_username',
+        ignoreDuplicates: true
       })
 
     if (error) {
@@ -514,10 +613,7 @@ export class TargetFollowerCollectionService {
   }
 
   private getNextRunAt(): Date {
-    const next = new Date()
-    next.setDate(next.getDate() + 1)
-    next.setHours(9, 0, 0, 0)
-    return next
+    return new Date(Date.now() + FOLLOWER_COLLECTION_RETRY_DELAY_HOURS * 60 * 60 * 1000)
   }
 
   private normalizeUsername(value: string): string {

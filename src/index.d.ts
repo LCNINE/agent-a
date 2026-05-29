@@ -157,6 +157,7 @@ export interface BotStatus {
   } | null
   logs?: WorkLog[]
   currentAction?: string
+  isCollectingFollowers?: boolean
 }
 
 export type AgentConfig = {
