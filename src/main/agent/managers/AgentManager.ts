@@ -25,6 +25,7 @@ import { app, BrowserWindow } from 'electron'
 import { createClient } from '@supabase/supabase-js'
 import { Database } from '../../../renderer/src/supabase/database.types'
 import { stopPowerSaveBlocker } from '../../index'
+import { createResilientFetch } from '../common/resilientFetch'
 
 export interface WorkLog {
   timestamp: number
@@ -63,7 +64,12 @@ export class AgentManager {
   private userCollectionService: UserCollectionService | null = null
   private supabase = createClient<Database>(
     'https://xszdgbmgwnaxbyekqons.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzemRnYm1nd25heGJ5ZWtxb25zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzODAxMDcsImV4cCI6MjA1Mzk1NjEwN30.S4fGG1sv9drG9f04ejWCpmeGyrLkRTdXnxq_UaZzlUg'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzemRnYm1nd25heGJ5ZWtxb25zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzODAxMDcsImV4cCI6MjA1Mzk1NjEwN30.S4fGG1sv9drG9f04ejWCpmeGyrLkRTdXnxq_UaZzlUg',
+    {
+      // undici keep-alive 죽은-소켓 재사용 실패("fetch failed")를 재시도로 흡수.
+      // 모든 supabase 호출(block_account, comment_history, target_followers ...)이 자동 보호됨.
+      global: { fetch: createResilientFetch() }
+    }
   )
 
   constructor(

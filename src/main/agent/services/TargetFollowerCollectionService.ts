@@ -1,6 +1,7 @@
 import { Page } from 'playwright-core'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { TargetFollowerCollectionTarget } from '../../..'
+import { isTransientNetworkError, networkErrorCause } from '../common/resilientFetch'
 
 type SupabaseClientAny = SupabaseClient<any>
 type LogCallback = (action: string, details?: string, success?: boolean) => void
@@ -15,37 +16,9 @@ const CURSOR_SAVE_EVERY_N_PAGES = 5
 // 인스타 API가 null(브라우저 fetch throw=일시적 네트워크 실패) 반환 시 재시도 횟수
 const IG_FETCH_MAX_RETRY = 2
 
-// 일시적 네트워크 에러 패턴 (재시도 대상). "fetch failed"는 Node undici(supabase-js)가
-// 네트워크 실패 시 던지는 정확한 메시지. 이런 일시적 끊김을 영구 실패로 취급하면 안 됨.
-const TRANSIENT_NETWORK_PATTERNS = [
-  'fetch failed',
-  'failed to fetch',
-  'econnreset',
-  'etimedout',
-  'enotfound',
-  'econnrefused',
-  'eai_again', // DNS 일시 실패
-  'socket hang up',
-  'network',
-  'timeout',
-  'und_err', // undici 내부 에러
-  'terminated' // undici 'other side closed'
-]
-
-/** Error 객체 또는 supabase PostgrestError를 받아 일시적 네트워크 에러인지 판정 */
-function isTransientNetworkError(err: unknown): boolean {
-  if (!err) return false
-  const parts: string[] = []
-  const anyErr = err as any
-  if (typeof anyErr?.message === 'string') parts.push(anyErr.message)
-  if (typeof anyErr?.code === 'string') parts.push(anyErr.code)
-  if (typeof anyErr?.cause?.code === 'string') parts.push(anyErr.cause.code)
-  if (typeof anyErr?.cause?.message === 'string') parts.push(anyErr.cause.message)
-  if (typeof anyErr?.details === 'string') parts.push(anyErr.details) // PostgrestError
-  if (typeof err === 'string') parts.push(err)
-  const haystack = parts.join(' ').toLowerCase()
-  return TRANSIENT_NETWORK_PATTERNS.some((p) => haystack.includes(p))
-}
+// 일시적 네트워크 에러 판정(isTransientNetworkError)은 ../common/resilientFetch 로 통합됨.
+// 메인 프로세스 supabase 클라이언트의 global.fetch 자체가 재시도하므로,
+// 아래 withSupabaseRetry는 { error }로 변환되어 넘어온 케이스를 잡는 2차 안전망이다.
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -272,9 +245,10 @@ export class TargetFollowerCollectionService {
       // 일시적 네트워크 실패(Supabase "fetch failed" 등)는 20시간 정지시키지 않는다.
       // 커서/수집수는 절대 덮어쓰지 않고(resume 보존), status=pending으로 두어 다음 사이클에 즉시 재개.
       if (isTransientNetworkError(error)) {
+        const cause = networkErrorCause(error)
         this.log(
           '타겟 팔로워 수집 일시 중단 (네트워크)',
-          `@${targetUsername}: ${message} — 다음 사이클에 재시도`,
+          `@${targetUsername}: ${message}${cause ? ` [${cause}]` : ''} — 다음 사이클에 재시도`,
           false
         )
 
