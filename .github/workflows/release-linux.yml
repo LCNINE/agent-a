@@ -35,8 +35,18 @@ jobs:
       - name: Build application
         run: npm run build
 
-      # snap 은 snapcraft 가 필요해서 제외
-      - name: Build & Publish to GitHub Releases
+      # AppImage 만: snap 은 snapcraft 가, deb 는 maintainer 이메일이 필요하다
+      - name: Build Linux artifacts
+        run: npx electron-builder --linux AppImage -p never
+
+      # electron-builder 의 publisher 대신 gh 로 올린다.
+      # publisher 는 draft 릴리스에만 올리려 해서 이미 게시된 릴리스에 붙일 수 없다.
+      - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux AppImage deb -p always
+        run: |
+          tag="v$(node -p "require('./package.json').version")"
+          files=(dist/*.AppImage)
+          # 자동 업데이트 메타파일은 생성될 때만 첨부
+          [ -f dist/latest-linux.yml ] && files+=(dist/latest-linux.yml) || true
+          gh release upload "$tag" "${files[@]}" --clobber
