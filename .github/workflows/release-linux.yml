@@ -1,20 +1,23 @@
-name: Release
+name: Release (Linux)
 
 on:
   push:
     tags:
       - 'v*'
+  # 이미 나간 릴리스에 리눅스 산출물만 뒤늦게 붙일 때 수동 실행.
+  # package.json 의 version 과 같은 태그의 릴리스에 업로드된다.
+  workflow_dispatch:
 
 permissions:
   contents: write
 
-# release-linux.yml 과 같은 그룹 — 두 워크플로가 동시에 릴리스를 만들려다 충돌하지 않게 직렬화
+# release.yml 과 같은 그룹 — 두 워크플로가 동시에 릴리스를 만들려다 충돌하지 않게 직렬화
 concurrency:
   group: release-${{ github.ref }}
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build-linux:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -32,7 +35,8 @@ jobs:
       - name: Build application
         run: npm run build
 
+      # snap 은 snapcraft 가 필요해서 제외
       - name: Build & Publish to GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win -p always
+        run: npx electron-builder --linux AppImage deb -p always
